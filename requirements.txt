@@ -3,7 +3,7 @@ selenium_youtube
 pydot==1.4.1
 # pydrive==1.3.1
 youtube_dl==2020.12.29
-numpy==1.19.4
+numpy==1.22.0
 openpyxl==3.0.5
 aiohttp==3.7.1
 amqp==5.0.1
