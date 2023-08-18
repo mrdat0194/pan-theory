@@ -125,7 +125,7 @@ webencodings==0.5.1
 widgetsnbextension==3.5.1
 yarl==1.6.2
 zope.interface==5.1.0
-PyPDF2==1.26.0
+PyPDF2==1.27.5
 pyttsx3==2.90
 keras==2.4.3
 # xlrd==2.0.1-py2.py3-none-any
