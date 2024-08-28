@@ -193,16 +193,7 @@ if __name__ == '__main__':
     print(len(Extract_join))
 
     Extract_join['check_email'] = 'NA'
-    # Extract_join['check_email'].loc[0] = 'chablis.ngocminh@gmail.com'
-    # Extract_join['check_email'].loc[1] = 'TRANGVT.25@GMAIL.COM'
-    # Extract_join['check_email'].loc[2] = 'christinahang77@gmail.com'
-    # Extract_join['check_email'].loc[3] = 'tvbngoc@gmail.com'
-    # Extract_join['check_email'].loc[4] = 'eddynouzmusic@gmail.com'
-    # Extract_join['check_email'].loc[5] = 'doantram3009@gmail.com'
-    # Extract_join['check_email'].loc[6] = 'slimvu1008@gmail.com'
-    # Extract_join['check_email'].loc[7] = 'th1432002qwe@gmail.com'
-    # Extract_join['check_email'].loc[8] = 'nguyenly5974@gmail.com'
-    # Extract_join['check_email'].loc[9] = 'khoanguyenxuan115@gmail.com'
+
 
     # print(Extract_join)
 
@@ -273,41 +264,3 @@ if __name__ == '__main__':
     print(df_result)
 
     df_result.to_csv("/Users/petern/Desktop/Mypage/pan-theory/adHoc/kasa/Customer_Match_Upload_sample100.csv", index=False)
-
-    #
-    # df3['Memo'] = df3['Memo'].str.lower()
-    # df3['insert'] = '0'
-    # # print(df3['content to add'].apply(lambda x: 1 if len(x) > 10 else 0))
-    # df3['insert'] = df3['content to add'].apply(lambda x: 1 if len(x) > 10 else 0)
-    # df3['content to add'] = df3['content to add'].str.replace("'", r"\'")
-    # df3['content to add'] = df3['content to add'].str.replace('"', r'\"')
-    # print(df3['content to add'][df3['insert'] == 1])
-    #
-    #
-    #
-    # df3['insert'] = '0'
-    #
-    # artist_filter = df3[
-    #       (df3['content to add'].notnull())
-    #     & (df3['Artist_uuid'] != '')
-    #     & (df3['url_to_add'].notnull())
-    #     & (df3['url_to_add'] != '')
-    #     & (df3['Memo'] == "added")
-    #     & (df3['content to add'].notnull())
-    #     ][['url_to_add', 'Artist_uuid', 'Memo']].drop_duplicates('Artist_uuid', keep='first')
-    #
-    # row_indexes = artist_filter.index
-    # for row in row_indexes:
-    #         artist_uuid = artist_filter['Artist_uuid'].loc[row]
-    #         url_to_add = artist_filter['url_to_add'].loc[row]
-    #         str_insert = f"insert into v4.crawlingtasks(Id, ActionId,objectid ,TaskDetail, Priority) values (uuid4(), 'OA9CPKSUT6PBGI1ZHPLQUPQCGVYQ71S9','{artist_uuid}',JSON_SET(IFNULL(crawlingtasks.TaskDetail, JSON_OBJECT()), '$.url','{url_to_add}','$.object_type','artist','$.when_exists','replace','$.PIC','Copy of  Artist Page 30.11.2020'),99);"
-    #         df3.loc[row, 'insert'] = str_insert
-    # print(df3['insert'][0])
-    #
-    # list_update = df3['insert'].tolist()
-    # list_update.insert(0, 'insert')
-    # list_update = extractDigits(list_update)
-    # range_name = f"{SAMPLE_RANGE_NAME}!J1"
-    # print(list_update)
-    # print(range_name)
-

@@ -133,4 +133,4 @@ keras==2.4.3
 pymc3==3.11.1
 librosa==0.8.1
 hmmlearn==0.2.6
-scrapy
+# scrapy
