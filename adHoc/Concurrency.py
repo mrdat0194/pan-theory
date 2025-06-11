@@ -29,18 +29,26 @@
 #####
 import asyncio
 import aiohttp
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 async def fetch_data(url):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            return await response.text()
-
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                return await response.text()
+    except Exception as e:
+        logger.error(f"Error fetching data from {url}: {e}")
+        return None
 
 async def main():
     urls = [
-        "https://api.example.com/data1",
-        "https://api.example.com/data2",
-        "https://api.example.com/data3"
+        "https://jsonplaceholder.typicode.com/posts/1",
+        "https://jsonplaceholder.typicode.com/posts/2",
+        "https://jsonplaceholder.typicode.com/posts/3"
     ]
 
     # Fan-out: Create tasks for each URL
@@ -50,7 +58,8 @@ async def main():
     results = await asyncio.gather(*tasks)
 
     for result in results:
-        print(result)
+        if result:
+            print(result)
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -77,16 +86,6 @@ if __name__ == "__main__":
     except ImportError:
         pass  # uvloop not installed, fallback to default loop
 
-    asyncio.run(main(), use_uvloop=True)  # Explicitly use uvloop if available
+    asyncio.run(main())
 
-#####
-try:
-    transport_extra['peername'] = sock.getpeername()
-except socket.error:
-    if transport.loop.get_debug():
-        logger.warning('getpeername failed on %r: %s', sock, exc_info=True)
 
-if 'peername' not in transport_extra:
-    transport_extra['peername'] = None
-
-# ...

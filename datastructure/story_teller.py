@@ -1,6 +1,4 @@
 #!/bin/python3
-
-
 import os
 import math
 import random

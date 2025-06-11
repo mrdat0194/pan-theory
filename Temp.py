@@ -5,10 +5,73 @@ Created on Thu Jul 11 16:16:49 2019
 
 @author: petern
 """
-import pandas as pd
 
 
+def solution(grid) -> int:
+    m = len(grid)
+    if m == 0:
+        return 0
+    n = len(grid[0])
+    if n == 0:
+        return 0
 
+    max_overall_score = -float('inf')
+
+    # --- Step 1: Populate the max_val_suffix DP table ---
+    # This entire block needs to be placed BEFORE the loops for max_overall_score
+    max_val_suffix = [[0 for _ in range(n)] for _ in range(m)]
+
+    max_val_suffix[m - 1][n - 1] = grid[m - 1][n - 1]
+
+    for j in range(n - 2, -1, -1):
+        max_val_suffix[m - 1][j] = max(grid[m - 1][j], max_val_suffix[m - 1][j + 1])
+
+    for i in range(m - 2, -1, -1):
+        max_val_suffix[i][n - 1] = max(grid[i][n - 1], max_val_suffix[i + 1][n - 1])
+
+    for i in range(m - 2, -1, -1):
+        for j in range(n - 2, -1, -1):
+            max_val_suffix[i][j] = max(
+                grid[i][j],
+                max_val_suffix[i + 1][j],
+                max_val_suffix[i][j + 1],
+                max_val_suffix[i + 1][j + 1]
+            )
+    # --- End Step 1 ---
+
+    # --- Step 2: Calculate the maximum overall score ---
+    # This is where your provided code snippet belongs, with corrections.
+    for i in range(m):
+        for j in range(n):
+            current_start_value = grid[i][j]
+
+            max_valid_end_value = -float('inf')
+
+            if i + 1 < m:
+                # CORRECTED: Use max_val_suffix, not max_value_end
+                max_valid_end_value = max(max_valid_end_value, max_val_suffix[i + 1][j])
+
+            if j + 1 < n:
+                # CORRECTED: Use max_val_suffix, not max_value_end
+                max_valid_end_value = max(max_valid_end_value, max_val_suffix[i][j + 1])
+
+            if max_valid_end_value != -float('inf'):
+                max_overall_score = max(max_overall_score, max_valid_end_value - current_start_value)
+
+    # --- End Step 2 ---
+
+    # CORRECTED: Return AFTER all loops have completed
+    return max_overall_score
+
+if __name__ == '__main__':
+    # Example 1 from problem description
+    grid1 = '[[10, 3, 6, 4], [5, 11, 8, 2], [7, 8, 15, 2], [4, 6, 5, 13]]'
+    line = grid1
+    mtx = [[int(num) for num in data.split(',')] for data in line[2:-2].split('], [')]
+    # print(mtx)
+    print(solution(mtx))
+
+    # print(f"Example 1 Output: {solution(grid1)}")
 #
 # data = {'id': [1, 2, 3, 4], 'name': ['Alice', 'Bob', 'Charlie', 'David']}
 # df = pd.DataFrame(data)

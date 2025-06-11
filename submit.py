@@ -285,11 +285,11 @@ class T3sum:
 
     eg:
     import time
-    start = time.time()
     from collections import Counter
-    arr1 = [1, 2]
-    arr2 = [1, 2, 1]
 
+    arr1 = [1, 2, 2, 1 ,3]
+    arr2 = [1, 2, 1, 1,2,3,4,5,1,1,1,1,1,1,1,1,1]
+    start = time.time()
     sum = []
     for ar1 in arr1:
         for ar2 in arr2:
@@ -298,12 +298,14 @@ class T3sum:
     print(Counter(sum))
 
     end = time.time()
-    print(end - start)
+
+    print(f"{end - start:.9f}")
 
     start = time.time()
     T3sum.findCount(arr1, arr2)
     end = time.time()
-    print(end - start)
+    print(f"{end - start:.9f}")
+
     """
 
     def multiply(A,B):
@@ -333,7 +335,7 @@ class T3sum:
         return result
 
     def findCount(Arr1, Arr2):
-
+        print(max(max(Arr1), max(Arr2)))
         MAX = max(max(Arr1), max(Arr2))
 
         n = len(Arr1)
@@ -350,6 +352,7 @@ class T3sum:
         P = T3sum.multiply(A,B)
 
         for i in range(2*MAX+1):
+
             if P[i] > 0:
                 print(str(i) + "->" + str(P[i]))
 
