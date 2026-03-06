@@ -2,18 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$USER_HOME$/Clean-Code-in-Python-Second-Edition" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/adHoc/F/Rico/codebase" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/adHoc/Testing/F/Rico/codebase" vcs="Git" />
-    <mapping directory="$USER_HOME$/NYU-DLSP21" vcs="Git" />
-    <mapping directory="$USER_HOME$/VMLS-Companions" vcs="Git" />
-    <mapping directory="$USER_HOME$/audioDataAugmentationTutorial" vcs="Git" />
-    <mapping directory="$USER_HOME$/dspguide-code" vcs="Git" />
-    <mapping directory="$USER_HOME$/hum2song" vcs="Git" />
-    <mapping directory="$USER_HOME$/machine-learning-imbalanced-data" vcs="Git" />
-    <mapping directory="$USER_HOME$/pyrs" vcs="Git" />
-    <mapping directory="$USER_HOME$/pytorch-Deep-Learning" vcs="Git" />
-    <mapping directory="$USER_HOME$/smac" vcs="Git" />
-    <mapping directory="$USER_HOME$/solid.python" vcs="Git" />
   </component>
 </project>
