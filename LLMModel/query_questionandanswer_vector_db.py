@@ -1,0 +1,98 @@
+"""
+Query the VectorDB built from `questionandanswer.pdf`.
+
+This is the "query/run" step: it loads your persisted ChromaDB and retrieves
+top-k relevant chunks for a question.
+
+Run:
+  python -m LLMModel.query_questionandanswer_vector_db --backend local --question "your question"
+
+Optional interactive mode:
+  python -m LLMModel.query_questionandanswer_vector_db --backend local
+  (then type questions)
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+from LLMModel.rag import RAGPipeline
+
+
+def make_rag(backend: str, persist_dir: Path, collection_name: str) -> object:
+    if backend == "local":
+        return RAGPipeline(
+            persist_directory=str(persist_dir),
+            embedding_provider="sentence_transformers",
+            collection_name=collection_name,
+        )
+
+    if backend == "gemini":
+        from LLMModel.rag_langchain import RAGPipelineLangChain
+
+        return RAGPipelineLangChain(
+            persist_directory=str(persist_dir),
+            collection_name=collection_name,
+            embedding_model_name="models/text-embedding-004",
+        )
+
+    raise ValueError(f"Unknown backend: {backend}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--backend",
+        choices=["local", "gemini"],
+        default="local",
+        help="Embedding backend to use for query-time embeddings.",
+    )
+    parser.add_argument("--top-k", type=int, default=3, help="How many chunks to retrieve.")
+    parser.add_argument("--question", type=str, default="", help="Question to ask. If empty, runs interactive mode.")
+    args = parser.parse_args()
+
+    base_dir = Path(__file__).resolve().parent
+    collection_name = "questionandanswer_full"
+    persist_dir = base_dir / ("rag_db_gemini" if args.backend == "gemini" else "rag_db_local")
+
+    rag = make_rag(args.backend, persist_dir, collection_name)
+
+    def run_one(q: str):
+        out = rag.query(q, n_results=args.top_k, include_documents=True)
+        context = out.get("context", "") or ""
+        chunks = out.get("chunks", []) or []
+
+        print("\n" + "=" * 80)
+        print(f"Question: {q}")
+
+        if not chunks or not context.strip():
+            print("No matches found. Run the build script first:")
+            print("  python -m LLMModel.build_questionandanswer_vector_index --backend", args.backend)
+            return
+
+        best = chunks[0]
+        print("\nAnswer (best retrieved chunk):")
+        print(best.get("text", "").strip())
+
+        print("\nRetrieved chunks (top-k):")
+        for i, c in enumerate(chunks, 1):
+            dist = c.get("distance", None)
+            meta = c.get("metadata", {}) or {}
+            meta_str = ", ".join(f"{k}={v}" for k, v in meta.items()) if meta else "(no metadata)"
+            print(f"\n[{i}] distance={dist} | {meta_str}")
+            print(c.get("text", "").strip()[:600] + ("..." if len(c.get("text", "")) > 600 else ""))
+
+    if args.question.strip():
+        run_one(args.question.strip())
+    else:
+        while True:
+            q = input("\nAsk a question (Enter to quit): ").strip()
+            if not q:
+                break
+            run_one(q)
+
+
+if __name__ == "__main__":
+    main()
+

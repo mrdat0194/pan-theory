@@ -36,7 +36,31 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 def get_credentials():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     token_path = os.path.join(BASE_DIR, 'token.pickle')
-    json_path = os.path.join(BASE_DIR, 'credentials.json')
+    json_path = os.path.join(BASE_DIR, 'bubbly-cascade-398303-5f3dd0a21703.json')
+
+    # Check if Gdrive_secrets.json is a service account
+    if os.path.exists(json_path):
+        import json
+        try:
+            with open(json_path, 'r') as f:
+                creds_data = json.load(f)
+            if creds_data.get('type') == 'service_account':
+                from google.oauth2 import service_account
+                print(f"Using Service Account credentials from: {json_path}")
+                print(f"Service Account Email: {creds_data.get('client_email')}")
+                # Ensure the private key has correct line breaks and no hidden garbage
+                private_key = creds_data.get('private_key', '')
+                if private_key:
+                    # Remove any non-ASCII characters and weird whitespace, keeping valid PEM chars
+                    import re
+                    # Keep only A-Z, a-z, 0-9, +, /, =, -, and whitespace (\s includes \n)
+                    # This helps if there were non-breaking spaces or other invisible chars
+                    private_key = re.sub(r'[^A-Za-z0-9+/=\-\s]', '', private_key)
+                    creds_data['private_key'] = private_key
+                
+                return service_account.Credentials.from_service_account_info(creds_data, scopes=SCOPES)
+        except Exception as e:
+            print(f"Warning: Could not parse credentials.json as service account: {e}")
 
     creds = None
     if os.path.exists(token_path):

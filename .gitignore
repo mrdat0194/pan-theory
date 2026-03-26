@@ -1,0 +1,22 @@
+# Data files
+*.csv
+*.json
+*.txt
+!ignored_files_log.txt
+*.xlsx
+*.parquet
+
+# Image files
+*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# IDEs
+.idea/
+.vscode/
