@@ -5,14 +5,14 @@ This is the "index/build" step only: it loads the PDF, chunks it, embeds it,
 and stores vectors in ChromaDB.
 
 Run:
-  python -m LLMModel.build_questionandanswer_vector_index --backend local
+  python -m LLMModel.build_questionandanswer_vector_index --backend gemini
 
 Gemini (embeddings) variant:
   set GOOGLE_API_KEY=...
   python -m LLMModel.build_questionandanswer_vector_index --backend gemini
 
 By default, it uses:
-  - backend: local embeddings (sentence-transformers)
+  - backend: gemini embeddings
   - persist dir:
       LLMModel/rag_db_local   (local)
       LLMModel/rag_db_gemini  (gemini)
@@ -34,11 +34,20 @@ def get_pdf_and_paths() -> tuple[Path, Path, str]:
     return pdf_path, base_dir, collection_name
 
 
-def make_rag(backend: str, persist_dir: Path, collection_name: str) -> object:
+def _normalize_local_embedding_model(model_name: str) -> str:
+    # Xenova model naming is common in JS tooling; for Python sentence-transformers
+    # use the HuggingFace id directly.
+    if model_name == "Xenova/multilingual-e5-small":
+        return "intfloat/multilingual-e5-small"
+    return model_name
+
+
+def make_rag(backend: str, persist_dir: Path, collection_name: str, local_embedding_model: str) -> object:
     if backend == "local":
         return RAGPipeline(
             persist_directory=str(persist_dir),
             embedding_provider="sentence_transformers",
+            embedding_model_name=_normalize_local_embedding_model(local_embedding_model),
             collection_name=collection_name,
         )
 
@@ -60,7 +69,7 @@ def main():
     parser.add_argument(
         "--backend",
         choices=["local", "gemini"],
-        default="local",
+        default="gemini",
         help="Embedding backend to use for indexing.",
     )
     parser.add_argument(
@@ -70,6 +79,12 @@ def main():
     )
     parser.add_argument("--chunk-size", type=int, default=500)
     parser.add_argument("--chunk-overlap", type=int, default=100)
+    parser.add_argument(
+        "--local-embedding-model",
+        type=str,
+        default="Xenova/multilingual-e5-small",
+        help="Local sentence-transformers embedding model.",
+    )
     args = parser.parse_args()
 
     pdf_path, base_dir, collection_name = get_pdf_and_paths()
@@ -85,7 +100,12 @@ def main():
         print("Use --rebuild to force rebuilding.")
         return
 
-    rag = make_rag(args.backend, persist_dir, collection_name)
+    rag = make_rag(
+        args.backend,
+        persist_dir,
+        collection_name,
+        local_embedding_model=args.local_embedding_model,
+    )
 
     if args.rebuild:
         print("Clearing existing vectors/collection...")

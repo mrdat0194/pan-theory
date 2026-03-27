@@ -83,6 +83,50 @@ bot = RAGChatbot(rag, llm_callback=my_llm)
 answer = bot.reply("How do I reset my password?")
 ```
 
+## PDF Build/Query Scripts (Current Default)
+
+For `questionandanswer.pdf`, two ready scripts are included:
+
+- `build_questionandanswer_vector_index.py` (index/build step)
+- `query_questionandanswer_vector_db.py` (query step)
+
+These scripts currently default to:
+
+- `--backend gemini` (Gemini embeddings via `RAGPipelineLangChain`)
+- `--brain gemini` (Gemini answer generation in query script)
+- Local fallback model arg: `Xenova/multilingual-e5-small` (mapped to `intfloat/multilingual-e5-small` in Python)
+
+Set environment variable first:
+
+```powershell
+$env:GOOGLE_API_KEY="YOUR_KEY"
+```
+
+Build index:
+
+```bash
+python -m LLMModel.build_questionandanswer_vector_index --rebuild
+```
+
+Query:
+
+```bash
+python -m LLMModel.query_questionandanswer_vector_db --question "your question"
+```
+
+Interactive query mode:
+
+```bash
+python -m LLMModel.query_questionandanswer_vector_db
+```
+
+Use local embeddings instead:
+
+```bash
+python -m LLMModel.build_questionandanswer_vector_index --backend local --local-embedding-model Xenova/multilingual-e5-small --rebuild
+python -m LLMModel.query_questionandanswer_vector_db --backend local --brain gemini --question "your question"
+```
+
 ## Embeddings: Open-source vs Gemini vs OpenAI
 
 The default **does not** use Gemini or Google knowledge. It uses **sentence-transformers** (e.g. `all-MiniLM-L6-v2`): open-source weights, runs locally, no API key.
@@ -205,6 +249,8 @@ LLMModel/
 ├── README.md           # This intro
 ├── requirements.txt    # chromadb, sentence-transformers, PyPDF2; optional LangChain
 ├── __init__.py         # RAGPipeline, RAGPipelineLangChain (if deps), RAGChatbot
+├── build_questionandanswer_vector_index.py  # Build/index questionandanswer.pdf
+├── query_questionandanswer_vector_db.py     # Query persisted VectorDB
 ├── document_loader.py  # Load PDF/TXT/MD and chunk
 ├── embeddings.py       # Embedding backends: sentence_transformers, gemini, openai
 ├── rag.py              # RAG pipeline (index + query)

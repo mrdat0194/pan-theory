@@ -5,26 +5,34 @@ This is the "query/run" step: it loads your persisted ChromaDB and retrieves
 top-k relevant chunks for a question.
 
 Run:
-  python -m LLMModel.query_questionandanswer_vector_db --backend local --question "your question"
+  python -m LLMModel.query_questionandanswer_vector_db --backend gemini --brain gemini --question "your question"
 
 Optional interactive mode:
-  python -m LLMModel.query_questionandanswer_vector_db --backend local
+  python -m LLMModel.query_questionandanswer_vector_db --backend gemini
   (then type questions)
 """
 
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 
 from LLMModel.rag import RAGPipeline
 
 
-def make_rag(backend: str, persist_dir: Path, collection_name: str) -> object:
+def _normalize_local_embedding_model(model_name: str) -> str:
+    if model_name == "Xenova/multilingual-e5-small":
+        return "intfloat/multilingual-e5-small"
+    return model_name
+
+
+def make_rag(backend: str, persist_dir: Path, collection_name: str, local_embedding_model: str) -> object:
     if backend == "local":
         return RAGPipeline(
             persist_directory=str(persist_dir),
             embedding_provider="sentence_transformers",
+            embedding_model_name=_normalize_local_embedding_model(local_embedding_model),
             collection_name=collection_name,
         )
 
@@ -40,13 +48,53 @@ def make_rag(backend: str, persist_dir: Path, collection_name: str) -> object:
     raise ValueError(f"Unknown backend: {backend}")
 
 
+def gemini_answer(question: str, context: str, model_name: str) -> str:
+    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        return "Gemini disabled: set GOOGLE_API_KEY in your environment."
+
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return "Gemini disabled: install package `google-generativeai`."
+
+    genai.configure(api_key=api_key)
+    prompt = (
+        "Answer the user's question using only the provided context. "
+        "If context is insufficient, say you do not have enough information.\n\n"
+        f"Context:\n{context}\n\n"
+        f"Question: {question}\n"
+        "Answer:"
+    )
+    response = genai.GenerativeModel(model_name).generate_content(prompt)
+    return (response.text or "").strip() if response else ""
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--backend",
         choices=["local", "gemini"],
-        default="local",
+        default="gemini",
         help="Embedding backend to use for query-time embeddings.",
+    )
+    parser.add_argument(
+        "--brain",
+        choices=["none", "gemini"],
+        default="gemini",
+        help="Optional answer generation model on top of retrieved context.",
+    )
+    parser.add_argument(
+        "--gemini-model",
+        type=str,
+        default="gemini-1.5-flash",
+        help="Gemini model used as answer generator.",
+    )
+    parser.add_argument(
+        "--local-embedding-model",
+        type=str,
+        default="Xenova/multilingual-e5-small",
+        help="Local sentence-transformers embedding model.",
     )
     parser.add_argument("--top-k", type=int, default=3, help="How many chunks to retrieve.")
     parser.add_argument("--question", type=str, default="", help="Question to ask. If empty, runs interactive mode.")
@@ -56,7 +104,12 @@ def main():
     collection_name = "questionandanswer_full"
     persist_dir = base_dir / ("rag_db_gemini" if args.backend == "gemini" else "rag_db_local")
 
-    rag = make_rag(args.backend, persist_dir, collection_name)
+    rag = make_rag(
+        args.backend,
+        persist_dir,
+        collection_name,
+        local_embedding_model=args.local_embedding_model,
+    )
 
     def run_one(q: str):
         out = rag.query(q, n_results=args.top_k, include_documents=True)
@@ -74,6 +127,11 @@ def main():
         best = chunks[0]
         print("\nAnswer (best retrieved chunk):")
         print(best.get("text", "").strip())
+
+        if args.brain == "gemini":
+            final_answer = gemini_answer(q, context, model_name=args.gemini_model)
+            print("\nFinal answer (Gemini):")
+            print(final_answer or "(No text returned by Gemini.)")
 
         print("\nRetrieved chunks (top-k):")
         for i, c in enumerate(chunks, 1):
