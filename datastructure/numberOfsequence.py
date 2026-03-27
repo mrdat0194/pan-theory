@@ -1,6 +1,5 @@
 #!/bin/python3
 # https://www.hackerrank.com/contests/w22/challenges/number-of-sequences/
-import itertools
 
 '''
 So for those who are confused, here's an explanation of the problem that makes sense for me (and hopefully will help you too):
