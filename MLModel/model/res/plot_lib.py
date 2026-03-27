@@ -114,7 +114,7 @@ def _get_clr(value):
               '#f9e8e8', '#f9d4d4', '#f9bdbd', '#f8a8a8', '#f68f8f',
               '#f47676', '#f45f5f', '#f34343', '#f33b3b', '#f42e2e')
     value = int((value * 100) / 5)
-    if value == len(colors): value -= 1  # fixing bugs...
+    value = max(0, min(value, len(colors) - 1))
     return colors[value]
 
 def _visualise_values(output_values, result_list):

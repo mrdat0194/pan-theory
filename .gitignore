@@ -5,6 +5,9 @@
 !ignored_files_log.txt
 *.xlsx
 *.parquet
+*.bin
+*.sqlite3
+*.marker
 
 # Image files
 *.png

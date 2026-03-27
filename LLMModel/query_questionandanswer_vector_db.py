@@ -16,9 +16,21 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 
 from LLMModel.rag import RAGPipeline
+
+# Windows console sometimes uses a legacy code page (cp1258), which can crash
+# `print()` for Vietnamese characters. Force UTF-8 for stdout/stderr if possible.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+try:
+    sys.stderr.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 
 def _normalize_local_embedding_model(model_name: str) -> str:
@@ -66,8 +78,12 @@ def gemini_answer(question: str, context: str, model_name: str) -> str:
         f"Question: {question}\n"
         "Answer:"
     )
-    response = genai.GenerativeModel(model_name).generate_content(prompt)
-    return (response.text or "").strip() if response else ""
+    try:
+        response = genai.GenerativeModel(model_name).generate_content(prompt)
+        return (response.text or "").strip() if response else ""
+    except Exception as e:
+        # Keep retrieval usable even if Gemini fails (bad key, model not found, etc.)
+        return f"Gemini error: {e}"
 
 
 def main():
@@ -87,7 +103,7 @@ def main():
     parser.add_argument(
         "--gemini-model",
         type=str,
-        default="gemini-1.5-flash",
+        default="gemini-2.5-flash",
         help="Gemini model used as answer generator.",
     )
     parser.add_argument(

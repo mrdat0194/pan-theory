@@ -4,10 +4,12 @@ A basic **Retrieval-Augmented Generation (RAG)** pipeline that indexes your docu
 
 ## Overview
 
-| | |
-|---|---|
-| **Input** | Document files (PDF, TXT, MD) |
+
+|            |                                                                |
+| ---------- | -------------------------------------------------------------- |
+| **Input**  | Document files (PDF, TXT, MD)                                  |
 | **Output** | Retrieved context + optional prompt ready for an LLM / chatbot |
+
 
 Flow:
 
@@ -131,11 +133,13 @@ python -m LLMModel.query_questionandanswer_vector_db --backend local --brain gem
 
 The default **does not** use Gemini or Google knowledge. It uses **sentence-transformers** (e.g. `all-MiniLM-L6-v2`): open-source weights, runs locally, no API key.
 
-| Option | What it uses | Best when |
-|--------|----------------|-----------|
-| **Open-source** (`sentence_transformers`) | Local model (e.g. MiniLM, all-mpnet). No external API. | Free, private, offline, good enough for many RAG apps. |
-| **Gemini API** | Google’s embedding models (e.g. `text-embedding-004`). Uses Google’s weights/knowledge only for *embedding* (not search over the web). | You want high-quality embeddings and are fine with API cost and sending text to Google. |
-| **OpenAI** | OpenAI embedding models (e.g. `text-embedding-3-small`). | You already use OpenAI; same tradeoffs as Gemini (cost, data sent to provider). |
+
+| Option                                    | What it uses                                                                                                                           | Best when                                                                               |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Open-source** (`sentence_transformers`) | Local model (e.g. MiniLM, all-mpnet). No external API.                                                                                 | Free, private, offline, good enough for many RAG apps.                                  |
+| **Gemini API**                            | Google’s embedding models (e.g. `text-embedding-004`). Uses Google’s weights/knowledge only for *embedding* (not search over the web). | You want high-quality embeddings and are fine with API cost and sending text to Google. |
+| **OpenAI**                                | OpenAI embedding models (e.g. `text-embedding-3-small`).                                                                               | You already use OpenAI; same tradeoffs as Gemini (cost, data sent to provider).         |
+
 
 **Which is better?**
 
@@ -165,7 +169,7 @@ rag = RAGPipeline(
 
 ## LangChain version (Gemini + Chroma + Document)
 
-To match the **LangChain** example (e.g. `GoogleGenerativeAIEmbeddings`, `langchain_chroma.Chroma`, `Document`), use **`RAGPipelineLangChain`**. Same API as `RAGPipeline`: `index_documents(doc_paths)` and `query(question)` → `{context, chunks, query}`.
+To match the **LangChain** example (e.g. `GoogleGenerativeAIEmbeddings`, `langchain_chroma.Chroma`, `Document`), use `**RAGPipelineLangChain`**. Same API as `RAGPipeline`: `index_documents(doc_paths)` and `query(question)` → `{context, chunks, query}`.
 
 **Install:**
 
@@ -214,12 +218,14 @@ print(results["chunks"][0]["metadata"]["page"])
 
 **What changed vs current LLMModel:**
 
-| Your LangChain example | LLMModel adaptation |
-|------------------------|---------------------|
-| `GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")` | Used inside `RAGPipelineLangChain` (same model) |
-| `Chroma.from_documents(documents=chunks, embedding=gemini_embeddings)` | `index_documents(doc_paths)` or `index_langchain_documents(chunks)` |
-| `vector_store.similarity_search(user_question, k=1)` | `rag.query(question, n_results=1)` → same content in `out["context"]` and `out["chunks"]` |
-| `Document(page_content=..., metadata=...)` | Supported via `index_langchain_documents()`; from files we build `Document` internally |
+
+| Your LangChain example                                                 | LLMModel adaptation                                                                       |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")`      | Used inside `RAGPipelineLangChain` (same model)                                           |
+| `Chroma.from_documents(documents=chunks, embedding=gemini_embeddings)` | `index_documents(doc_paths)` or `index_langchain_documents(chunks)`                       |
+| `vector_store.similarity_search(user_question, k=1)`                   | `rag.query(question, n_results=1)` → same content in `out["context"]` and `out["chunks"]` |
+| `Document(page_content=..., metadata=...)`                             | Supported via `index_langchain_documents()`; from files we build `Document` internally    |
+
 
 `RAGChatbot` works with `RAGPipelineLangChain` as well (same `.query()` interface).
 
@@ -232,11 +238,9 @@ print(results["chunks"][0]["metadata"]["page"])
   - `embedding_api_key`: API key for Gemini/OpenAI (or use env `GOOGLE_API_KEY` / `OPENAI_API_KEY`).
   - `collection_name`: ChromaDB collection name.
   - `chunk_size` / `chunk_overlap`: Document chunking (default 500 / 100 chars).
-
 - **RAGPipelineLangChain** (optional; requires langchain-google-genai, langchain-chroma, langchain-core)
   - Same as above where applicable; uses `GoogleGenerativeAIEmbeddings` and `langchain_chroma.Chroma`.
   - `index_langchain_documents(documents)` to index a list of LangChain `Document` objects.
-
 - **RAGChatbot**
   - `n_retrieve`: Number of chunks to retrieve per query.
   - `prompt_template`: Custom template with `{context}` and `{query}`.
@@ -262,3 +266,4 @@ LLMModel/
 
 - **Input**: Docs (PDF, TXT, MD) → indexed into VectorDB (ChromaDB).
 - **Output**: For each user question you get **context** (retrieved chunks) and a **prompt** string, so you can plug any LLM and use the result in your chatbot.
+
