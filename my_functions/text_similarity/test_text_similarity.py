@@ -55,7 +55,8 @@ class TestTextSimilarity(unittest.TestCase):
     def test_get_token_set_ratio_subset_match(self):
         """Test subset strings using token set ratio."""
         self.assertEqual(get_token_set_ratio("fox", "the quick brown fox"), 100)
-        
+
+
         # 'honey bee' vs 'gloria gaynor honeybee' does not tokenize exactly due to missing space in honeybee
         score = get_token_set_ratio("Honey Bee", "Gloria Gaynor - Honeybee")
         self.assertTrue(30 <= score <= 50) # Expected around 39
