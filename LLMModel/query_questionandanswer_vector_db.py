@@ -72,8 +72,11 @@ def gemini_answer(question: str, context: str, model_name: str) -> str:
 
     genai.configure(api_key=api_key)
     prompt = (
-        "Answer the user's question using only the provided context. "
-        "If context is insufficient, say you do not have enough information.\n\n"
+        "You are an objective AI assistant. Answer the user's question using the provided context.\n"
+        "IMPORTANT: If the context mentions specific company names like 'VNA' or 'Vortex' in a way that describes "
+        "their specific implementation, generalize the answer to refer to 'the user', 'the enterprise', or 'the client' "
+        "whenever appropriate. The goal is to provide a white-label, objective answer that applies to any user, "
+        "unless the question specifically asks about a named entity.\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {question}\n"
         "Answer:"

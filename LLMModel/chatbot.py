@@ -8,7 +8,11 @@ from .rag import RAGPipeline
 
 
 # Default prompt template: inject context and user question for an LLM
-DEFAULT_PROMPT_TEMPLATE = """Use the following context to answer the question. If the context does not contain enough information, say so.
+DEFAULT_PROMPT_TEMPLATE = """You are an objective AI assistant. Use the following context to answer the question. 
+If the context mentions specific company names like 'VNA' or 'Vortex' in a way that describes their specific implementation, 
+generalize the answer to refer to 'the user', 'the enterprise', or 'the client' whenever appropriate. 
+The goal is to provide a white-label, objective answer that applies to any user, 
+unless the question specifically asks about a named entity.
 
 Context:
 {context}
