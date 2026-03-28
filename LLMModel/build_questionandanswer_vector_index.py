@@ -23,8 +23,15 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import pdfplumber
 
 from LLMModel.rag import RAGPipeline
+
+def clean_text(text):
+    if not text:
+        return ""
+    return " ".join(text.split())
+
 
 
 def get_pdf_and_paths() -> tuple[Path, Path, str]:
@@ -114,8 +121,64 @@ def main():
         except Exception:
             pass
 
-    print(f"Indexing {pdf_path.name} into: {persist_dir}")
-    n = rag.index_documents([pdf_path], chunk_size=args.chunk_size, chunk_overlap=args.chunk_overlap)
+    print(f"Extracting structured Q&A from {pdf_path} into: {persist_dir}")
+    
+    qa_pairs = []
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            tables = page.extract_tables()
+            for table in tables:
+                for row in table:
+                    if len(row) < 3:
+                        continue
+                    question = clean_text(row[1])
+                    answer = clean_text(row[2])
+                    if not question or not answer:
+                        continue
+                    if "Anh Thành hỏi" in question or "Gợi ý trả lời" in answer:
+                        continue
+                    if "Chị Trang hỏi" in question:
+                        continue
+                    
+                    doc_content = f"Question: {question}\nAnswer: {answer}"
+                    qa_pairs.append({
+                        "content": doc_content,
+                        "metadata": {
+                            "question": question,
+                            "answer": answer,
+                            "source": str(pdf_path),
+                            "type": "qa_pair"
+                        }
+                    })
+
+    if not qa_pairs:
+        print("No Q&A pairs found in the table.")
+        return
+
+    n = len(qa_pairs)
+    print(f"Found {n} Q&A pairs. Indexing chunks...")
+
+    if args.backend == "local":
+        collection = rag._get_collection()
+        embed_fn = rag._get_embedding_fn()
+        documents = [p["content"] for p in qa_pairs]
+        metadatas = [p["metadata"] for p in qa_pairs]
+        ids = [f"qa_{i}" for i in range(n)]
+        embeddings = embed_fn(documents)
+        collection.add(
+            embeddings=embeddings,
+            documents=documents,
+            metadatas=metadatas,
+            ids=ids
+        )
+    elif args.backend == "gemini":
+        from langchain_core.documents import Document
+        docs = [
+            Document(page_content=p["content"], metadata=p["metadata"])
+            for p in qa_pairs
+        ]
+        rag.index_langchain_documents(docs)
+
     print(f"Indexed {n} chunks.")
 
     marker.write_text("ok", encoding="utf-8")
