@@ -113,9 +113,9 @@ def _get_clr(value):
               '#b2d9ec', '#baddee', '#c2e1f0', '#eff7fb', '#f9e8e8',
               '#f9e8e8', '#f9d4d4', '#f9bdbd', '#f8a8a8', '#f68f8f',
               '#f47676', '#f45f5f', '#f34343', '#f33b3b', '#f42e2e')
-    value = int((value * 100) / 5)
-    if value == len(colors): value -= 1  # fixing bugs...
-    return colors[value]
+    index = int((value * 100) / 5)
+    index = max(0, min(index, len(colors) - 1))
+    return colors[index]
 
 def _visualise_values(output_values, result_list):
     text_colours = []
