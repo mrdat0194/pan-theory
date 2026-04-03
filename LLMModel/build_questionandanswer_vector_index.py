@@ -14,8 +14,9 @@ Gemini (embeddings) variant:
 By default, it uses:
   - backend: gemini embeddings
   - persist dir:
-      LLMModel/rag_db_local   (local)
-      LLMModel/rag_db_gemini  (gemini)
+  - persist dir:
+      LLMModel/db/local   (local)
+      LLMModel/db/gemini  (gemini)
   - collection name: questionandanswer_full
 """
 
@@ -65,7 +66,7 @@ def make_rag(backend: str, persist_dir: Path, collection_name: str, local_embedd
         return RAGPipelineLangChain(
             persist_directory=str(persist_dir),
             collection_name=collection_name,
-            embedding_model_name="models/text-embedding-004",
+            embedding_model_name="models/gemini-embedding-001",
         )
 
     raise ValueError(f"Unknown backend: {backend}")
@@ -98,7 +99,7 @@ def main():
     if not pdf_path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
 
-    persist_dir = base_dir / ("rag_db_gemini" if args.backend == "gemini" else "rag_db_local")
+    persist_dir = base_dir / "db" / ("gemini" if args.backend == "gemini" else "local")
     marker = persist_dir / f"indexed_questionandanswer_{args.backend}_{collection_name}.marker"
     persist_dir.mkdir(parents=True, exist_ok=True)
 

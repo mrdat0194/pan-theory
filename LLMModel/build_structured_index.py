@@ -74,7 +74,7 @@ def main():
     
     # We'll use a specific collection/directory for structured data to avoid mixing
     rag = RAGPipeline(
-        persist_directory="LLMModel/chroma_db",
+        persist_directory="LLMModel/db/structured",
         collection_name="structured_qa"
     )
     

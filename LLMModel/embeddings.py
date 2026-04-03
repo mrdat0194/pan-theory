@@ -15,13 +15,13 @@ def encode_sentence_transformers(texts: List[str], model_name: str = "all-MiniLM
 
 def encode_gemini(
     texts: List[str],
-    model_name: str = "models/text-embedding-004",
+    model_name: str = "models/gemini-embedding-001",
     api_key: str = None,
     task_type: str = "retrieval_document",
 ) -> List[List[float]]:
     """Google Gemini embedding API. task_type: 'retrieval_document' for index, 'retrieval_query' for search."""
     import google.generativeai as genai
-    key = api_key or _get_env("GOOGLE_API_KEY")
+    key = api_key or _get_env("GEMINI_API_KEY") or _get_env("GOOGLE_API_KEY")
     if not key:
         raise ValueError("Gemini requires GOOGLE_API_KEY or embedding_api_key")
     genai.configure(api_key=key)
@@ -54,7 +54,7 @@ def get_embedding_fn(provider: str, model_name: str = None, api_key: str = None)
     """Return a callable: (texts: List[str]) -> List[List[float]]."""
     model_name = model_name or {
         "sentence_transformers": "all-MiniLM-L6-v2",
-        "gemini": "models/text-embedding-004",
+        "gemini": "models/gemini-embedding-001",
         "openai": "text-embedding-3-small",
     }.get(provider)
     if provider == "sentence_transformers":

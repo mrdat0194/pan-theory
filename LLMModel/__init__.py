@@ -4,11 +4,10 @@ Input: document files (PDF, TXT, MD). Output: context for chatbot.
 """
 
 from .rag import RAGPipeline
-from .chatbot import RAGChatbot
 
 try:
     from .rag_langchain import RAGPipelineLangChain
-    __all__ = ["RAGPipeline", "RAGPipelineLangChain", "RAGChatbot"]
+    __all__ = ["RAGPipeline", "RAGPipelineLangChain"]
 except ImportError:
     RAGPipelineLangChain = None  # type: ignore
-    __all__ = ["RAGPipeline", "RAGChatbot"]
+    __all__ = ["RAGPipeline"]

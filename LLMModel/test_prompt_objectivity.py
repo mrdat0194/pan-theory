@@ -21,7 +21,7 @@ def test_prompt_objectivity():
         mock_model_class.return_value = mock_model
         
         # We want to see if the prompt sent to generate_content contains our instructions
-        gemini_answer(question, context, "gemini-1.5-flash")
+        gemini_answer(question, context, "gemini-2.5-flash")
         
         # Check the call arguments
         args, kwargs = mock_model.generate_content.call_args
@@ -33,7 +33,10 @@ def test_prompt_objectivity():
         assert "objective AI assistant" in prompt
         assert "generalize the answer" in prompt
         assert "white-label" in prompt
-        print("\nPrompt correctly contains objectivity instructions!")
+        assert "khách hàng" in prompt
+        assert "người dùng" in prompt
+        assert "TUYỆT ĐỐI KHÔNG" in prompt
+        print("\nPrompt correctly contains objectivity and specific Vietnamese instructions!")
 
 if __name__ == "__main__":
     try:

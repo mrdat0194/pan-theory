@@ -15,7 +15,7 @@ def main():
     print("Initializing RAG pipeline from persisted database...")
     # Initialize the RAG pipeline pointing to the same persist directory
     rag = RAGPipeline(
-        persist_directory="LLMModel/chroma_db",
+        persist_directory="LLMModel/db/structured",
         collection_name="structured_qa"
     )
     

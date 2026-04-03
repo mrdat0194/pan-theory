@@ -28,7 +28,7 @@ class RAGPipelineLangChain:
     def __init__(
         self,
         persist_directory: Optional[str] = None,
-        embedding_model_name: str = "models/text-embedding-004",
+        embedding_model_name: str = "models/gemini-embedding-001",
         embedding_api_key: Optional[str] = None,
         collection_name: str = "rag_docs",
         chunk_size: int = 500,

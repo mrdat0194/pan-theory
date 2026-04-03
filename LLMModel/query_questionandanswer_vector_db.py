@@ -54,14 +54,14 @@ def make_rag(backend: str, persist_dir: Path, collection_name: str, local_embedd
         return RAGPipelineLangChain(
             persist_directory=str(persist_dir),
             collection_name=collection_name,
-            embedding_model_name="models/text-embedding-004",
+            embedding_model_name="models/gemini-embedding-001",
         )
 
     raise ValueError(f"Unknown backend: {backend}")
 
 
 def gemini_answer(question: str, context: str, model_name: str) -> str:
-    api_key = os.environ.get("GOOGLE_API_KEY", "").strip()
+    api_key = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or "").strip()
     if not api_key:
         return "Gemini disabled: set GOOGLE_API_KEY in your environment."
 
@@ -75,8 +75,9 @@ def gemini_answer(question: str, context: str, model_name: str) -> str:
         "You are an objective AI assistant. Answer the user's question using the provided context.\n"
         "IMPORTANT: If the context mentions specific company names like 'VNA' or 'Vortex' in a way that describes "
         "their specific implementation, generalize the answer to refer to 'the user', 'the enterprise', or 'the client' "
-        "whenever appropriate. The goal is to provide a white-label, objective answer that applies to any user, "
-        "unless the question specifically asks about a named entity.\n\n"
+        "whenever appropriate. In Vietnamese, use terms like 'khách hàng', 'người dùng', 'doanh nghiệp' or 'đơn vị'.\n"
+        "TUYỆT ĐỐI KHÔNG nhắc đến tên các công ty cụ thể như 'VNA' hay 'Vortex' trừ khi câu hỏi yêu cầu trực tiếp thông tin về họ. "
+        "The goal is to provide a white-label, objective answer that applies to any user.\n\n"
         f"Context:\n{context}\n\n"
         f"Question: {question}\n"
         "Answer:"
@@ -121,7 +122,7 @@ def main():
 
     base_dir = Path(__file__).resolve().parent
     collection_name = "questionandanswer_full"
-    persist_dir = base_dir / ("rag_db_gemini" if args.backend == "gemini" else "rag_db_local")
+    persist_dir = base_dir / "db" / ("gemini" if args.backend == "gemini" else "local")
 
     rag = make_rag(
         args.backend,

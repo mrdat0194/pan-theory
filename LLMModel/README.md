@@ -15,7 +15,7 @@ Flow:
 
 1. **Index**: Load docs → chunk text → embed (open-source, Gemini, or OpenAI) → store in **ChromaDB** (VectorDB).
 2. **Query**: User question → embed → similarity search → return top-k chunks as **context**.
-3. **Chatbot**: Context + question are combined into a prompt you can send to any LLM, or use the provided `RAGChatbot` helper.
+3. **Chatbot**: Context + question are combined into a prompt you can send to any LLM.
 
 ## Setup
 
@@ -30,7 +30,7 @@ Dependencies:
 - **chromadb** – in-memory or persistent vector store
 - **sentence-transformers** – default embeddings (open-source, local)
 - **PyPDF2** – PDF text extraction (optional if you only use .txt/.md)
-- For **Gemini** embeddings: `pip install google-generativeai` and set `GOOGLE_API_KEY`
+- For **Gemini** embeddings: `pip install google-generativeai` and set `GEMINI_API_KEY`
 - For **OpenAI** embeddings: `pip install openai` and set `OPENAI_API_KEY`
 
 ## Quick Start
@@ -41,7 +41,7 @@ Dependencies:
 from pathlib import Path
 from LLMModel import RAGPipeline
 
-rag = RAGPipeline(persist_directory="./rag_db")  # or None for in-memory only
+rag = RAGPipeline(persist_directory="./db/local")  # or None for in-memory only
 
 doc_paths = [
     Path("path/to/manual.pdf"),
@@ -63,27 +63,6 @@ print(out["query"])     # Original question
 print(out["chunks"])    # List of { "text", "metadata", "distance" }
 ```
 
-### 3. Use the chatbot helper
-
-```python
-from LLMModel import RAGPipeline, RAGChatbot
-
-rag = RAGPipeline(persist_directory="./rag_db")
-rag.index_documents([Path("docs/faq.pdf")])
-
-# Option A: Get prompt string only (you call your LLM)
-bot = RAGChatbot(rag, n_retrieve=5)
-prompt = bot.get_prompt("How do I reset my password?")
-# Send `prompt` to OpenAI, Anthropic, local model, etc.
-
-# Option B: Plug an LLM callback for full reply
-def my_llm(prompt: str) -> str:
-    # Your API or local model call here
-    return "Based on the context, ..."
-
-bot = RAGChatbot(rag, llm_callback=my_llm)
-answer = bot.reply("How do I reset my password?")
-```
 
 ## PDF Build/Query Scripts (Current Default)
 
@@ -101,7 +80,7 @@ These scripts currently default to:
 Set environment variable first:
 
 ```powershell
-$env:GOOGLE_API_KEY="YOUR_KEY"
+$env:GEMINI_API_KEY="YOUR_KEY"
 ```
 
 Build index:
@@ -150,18 +129,18 @@ You can switch by setting `embedding_provider` (and optionally `embedding_model_
 
 ```python
 # Default: open-source, local (no Gemini/Google knowledge)
-rag = RAGPipeline(persist_directory="./rag_db")
+rag = RAGPipeline(persist_directory="./db/local")
 
-# Gemini API (set GOOGLE_API_KEY or pass embedding_api_key)
+# Gemini API (set GEMINI_API_KEY or pass embedding_api_key)
 rag = RAGPipeline(
-    persist_directory="./rag_db",
+    persist_directory="./db/gemini",
     embedding_provider="gemini",
     embedding_model_name="models/text-embedding-004",
 )
 
 # OpenAI
 rag = RAGPipeline(
-    persist_directory="./rag_db",
+    persist_directory="./db/openai",
     embedding_provider="openai",
     embedding_model_name="text-embedding-3-small",
 )
@@ -183,10 +162,10 @@ pip install langchain-google-genai langchain-chroma langchain-core
 from pathlib import Path
 from LLMModel import RAGPipelineLangChain
 
-# os.environ["GOOGLE_API_KEY"] = "your-api-key-here"
+# os.environ["GEMINI_API_KEY"] = "your-api-key-here"
 
 rag = RAGPipelineLangChain(
-    persist_directory="./chroma_db",
+    persist_directory="./db/gemini",
     embedding_model_name="models/text-embedding-004",
 )
 rag.index_documents([Path("path/to/doc.pdf")])
@@ -202,7 +181,7 @@ print(out["chunks"][0]["metadata"])
 from langchain_core.documents import Document
 from LLMModel import RAGPipelineLangChain
 
-rag = RAGPipelineLangChain(persist_directory="./chroma_db")
+rag = RAGPipelineLangChain(persist_directory="./db/gemini")
 
 chunks = [
     Document(page_content="Employees get 15 days of paid time off per year.", metadata={"page": 1}),
@@ -227,7 +206,6 @@ print(results["chunks"][0]["metadata"]["page"])
 | `Document(page_content=..., metadata=...)`                             | Supported via `index_langchain_documents()`; from files we build `Document` internally    |
 
 
-`RAGChatbot` works with `RAGPipelineLangChain` as well (same `.query()` interface).
 
 ## Configuration
 
@@ -235,31 +213,28 @@ print(results["chunks"][0]["metadata"]["page"])
   - `persist_directory`: Directory for ChromaDB persistence; `None` = ephemeral.
   - `embedding_provider`: `"sentence_transformers"` (default), `"gemini"`, or `"openai"`.
   - `embedding_model_name`: Model name for the chosen provider (optional; defaults per provider).
-  - `embedding_api_key`: API key for Gemini/OpenAI (or use env `GOOGLE_API_KEY` / `OPENAI_API_KEY`).
+  - `embedding_api_key`: API key for Gemini/OpenAI (or use env `GEMINI_API_KEY` / `OPENAI_API_KEY`).
   - `collection_name`: ChromaDB collection name.
   - `chunk_size` / `chunk_overlap`: Document chunking (default 500 / 100 chars).
 - **RAGPipelineLangChain** (optional; requires langchain-google-genai, langchain-chroma, langchain-core)
   - Same as above where applicable; uses `GoogleGenerativeAIEmbeddings` and `langchain_chroma.Chroma`.
   - `index_langchain_documents(documents)` to index a list of LangChain `Document` objects.
-- **RAGChatbot**
-  - `n_retrieve`: Number of chunks to retrieve per query.
-  - `prompt_template`: Custom template with `{context}` and `{query}`.
-  - `llm_callback`: Optional `(prompt: str) -> str` for reply generation.
 
 ## File Layout
 
 ```
 LLMModel/
 ├── README.md           # This intro
+├── RAG_SYSTEM.md       # Comprehensive Architecture & Deployment Guide
 ├── requirements.txt    # chromadb, sentence-transformers, PyPDF2; optional LangChain
-├── __init__.py         # RAGPipeline, RAGPipelineLangChain (if deps), RAGChatbot
+├── __init__.py         # RAGPipeline, RAGPipelineLangChain (if deps)
 ├── build_questionandanswer_vector_index.py  # Build/index questionandanswer.pdf
 ├── query_questionandanswer_vector_db.py     # Query persisted VectorDB
 ├── document_loader.py  # Load PDF/TXT/MD and chunk
 ├── embeddings.py       # Embedding backends: sentence_transformers, gemini, openai
 ├── rag.py              # RAG pipeline (index + query)
 ├── rag_langchain.py    # LangChain: Gemini + Chroma + Document (same API)
-└── chatbot.py          # Chatbot using RAG output
+└── rag_langchain.py    # LangChain: Gemini + Chroma + Document (same API)
 ```
 
 ## Summary
