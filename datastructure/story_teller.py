@@ -1,14 +1,8 @@
 #!/bin/python3
 import os
-import math
-import random
-import re
-import sys
 import itertools
-from collections import Counter
+from collections import defaultdict, Counter
 from functools import cmp_to_key
-from functools import partial
-from collections import defaultdict
 import heapq
 from typing import Set
 from typing import List
@@ -887,17 +881,18 @@ class DisjointSet:
     def get_total(self, a):
         return self.total[self.find(a)]
 
-N = int(input())
-ds = DisjointSet(N)
-for i in range(N - 1):
-    x, y, color = input().split()
-    if color == 'b':
-        ds.union(int(x) - 1, int(y) - 1)
-set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
-complement = sum(x * (x - 1) * (N - x) // 2 +              #1
-                 x * (x - 1) * (x - 2) // 6                #2
-                 for x in set_size.values())
-print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
+if __name__ == '__main__':
+    N = int(input())
+    ds = DisjointSet(N)
+    for i in range(N - 1):
+        x, y, color = input().split()
+        if color == 'b':
+            ds.union(int(x) - 1, int(y) - 1)
+    set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
+    complement = sum(x * (x - 1) * (N - x) // 2 +              #1
+                     x * (x - 1) * (x - 2) // 6                #2
+                     for x in set_size.values())
+    print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
 
 
 # super maximum cost query
@@ -1270,8 +1265,7 @@ def hourglassSum(arr):
     return a
 
 
-if __name__ == '__main__':
-    pass
+
 
 
 

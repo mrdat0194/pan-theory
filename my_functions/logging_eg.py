@@ -43,17 +43,18 @@ def divide(x, y):
         return result
 
 
-num_1 = 10
-num_2 = 0
+if __name__ == '__main__':
+    num_1 = 10
+    num_2 = 0
 
-add_result = add(num_1, num_2)
-logger.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
+    add_result = add(num_1, num_2)
+    logger.debug('Add: {} + {} = {}'.format(num_1, num_2, add_result))
 
-sub_result = subtract(num_1, num_2)
-logger.debug('Sub: {} - {} = {}'.format(num_1, num_2, sub_result))
+    sub_result = subtract(num_1, num_2)
+    logger.debug('Sub: {} - {} = {}'.format(num_1, num_2, sub_result))
 
-mul_result = multiply(num_1, num_2)
-logger.debug('Mul: {} * {} = {}'.format(num_1, num_2, mul_result))
+    mul_result = multiply(num_1, num_2)
+    logger.debug('Mul: {} * {} = {}'.format(num_1, num_2, mul_result))
 
-div_result = divide(num_1, num_2)
-logger.debug('Div: {} / {} = {}'.format(num_1, num_2, div_result))
+    div_result = divide(num_1, num_2)
+    logger.debug('Div: {} / {} = {}'.format(num_1, num_2, div_result))
