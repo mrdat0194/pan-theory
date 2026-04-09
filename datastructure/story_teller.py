@@ -576,8 +576,21 @@ class Player:
         aakansha 75
         aleksa 150
         :return:
+
+        data = [
+            Player("amy", 100),
+            Player("david", 100),
+            Player("heraldo", 50),
+            Player("aakansha", 75),
+            Player("aleksa", 150)
+        ]
+        
+        print("Running score_billboard:")
+        Player.score_billboard(data)
         """
         data = sorted(data, key=cmp_to_key(Player.comparator))
+        # data = sorted(data, key=lambda p: (-p.score, p.name)
+
         for i in data:
             print(i.name, i.score)
 
