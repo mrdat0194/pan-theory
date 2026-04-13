@@ -4,8 +4,7 @@ import itertools
 from collections import defaultdict, Counter
 from functools import cmp_to_key
 import heapq
-from typing import Set
-from typing import List
+from typing import Set, List
 
 from my_functions.timer import print_param, timer
 
