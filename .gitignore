@@ -18,7 +18,10 @@ __pycache__/
 *$py.class
 .venv/
 venv/
-my_functions/VAE_LSTM/
+VAE/VAE_LSTM/
+VAE/iVAE/
+VAE/Beta-VAE/
+datastructure/problem/
 espnet_artifact/
 
 # IDEs
