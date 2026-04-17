@@ -9,28 +9,34 @@ Output:  Following words of dictionary are present
 """
 
 
-def findWordsUtil(words, boggle, visited, found, r, c, str):
+def findWordsUtil(words, boggle, visited, found, r, c, path):
     rows = len(boggle)
     cols = len(boggle[0])
 
     # set the position of character as traversed
     visited[r][c] = True
 
-    # add the character to string
-    str += boggle[r][c]
+    # add the character to path list
+    path.append(boggle[r][c])
 
-    # if the string is in dictionary add it to the set of found words
-    if str in words:
-        found.add(str)
+    # join path to form the current word for dictionary check
+    current_word = "".join(path)
+
+    # if the word is in dictionary add it to the set of found words
+    if current_word in words:
+        found.add(current_word)
 
     # traverse all the nearby 8 adjacent cells
-    for i in range(r-1, r+2):
-        for j in range(c-1, c+2):
-            if i >= rows or i < 0 or j >= cols or j < 0 or visited[i][j]:
+    for i in range(r - 1, r + 2):
+        if i < 0 or i >= rows:
+            continue
+        for j in range(c - 1, c + 2):
+            if j < 0 or j >= cols or visited[i][j]:
                 continue
-            findWordsUtil(words, boggle, visited, found, i, j, str)
+            findWordsUtil(words, boggle, visited, found, i, j, path)
 
-    # backtrack and set the status of current character as not traversed
+    # backtrack: remove the character and set the status as not traversed
+    path.pop()
     visited[r][c] = False
 
 
@@ -43,12 +49,11 @@ def findWords(words, boggle):
 
     # set to store the unique found words
     found = set({})
-    str = ""
 
     # traverse each character in the boggle and do DFS from there
     for r in range(rows):
         for c in range(cols):
-            findWordsUtil(words, boggle, visited, found, r, c, str)
+            findWordsUtil(words, boggle, visited, found, r, c, [])
 
     # return the set of found words
     return found
