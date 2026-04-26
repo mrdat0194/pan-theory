@@ -24,20 +24,15 @@ def get_unique(X_matrix, y_vector):
     :param y_vector:
     :return:
     '''
-    Xy = list(set(list(zip([tuple(x) for x in X_matrix], y_vector))))
-    X_matrix = [list(l[0]) for l in Xy]
-    y_vector = [l[1] for l in Xy]
-    return X_matrix, y_vector
-
-#
-# x, y = get_unique(x, y)
-# data_points_removed = initial_number_of_data_points - len(x)
-# print("Number of duplicates removed:", data_points_removed )
-def get_unique(X_matrix, y_vector):
-    Xy = list(set(list(zip([tuple(x) for x in X_matrix], y_vector))))
-    X_matrix = [list(l[0]) for l in Xy]
-    y_vector = [l[1] for l in Xy]
-    return X_matrix, y_vector
+    seen = set()
+    new_X, new_y = [], []
+    for x, y in zip(X_matrix, y_vector):
+        t = (tuple(x), y)
+        if t not in seen:
+            seen.add(t)
+            new_X.append(list(x))
+            new_y.append(y)
+    return new_X, new_y
 
 
 def feature_selection(X, Y, n_feature):
@@ -55,14 +50,7 @@ def get_data(link):
     data = data.drop_duplicates(subset=data.columns.difference(['label']))
     Y = data['label'].values
     data.drop(['id', 'label'], axis=1, inplace=True)
-    train_data = data.values
-    X = []
-    for i in range(len(train_data)):
-        X.append(train_data[i])
-    X = np.asarray(X)
-    Y = np.asarray(Y)
-    Y.reshape(-1, 1)
-
+    X = data.values
     return X, Y
 
 
@@ -71,13 +59,7 @@ def get_data_test(link):
     data = pd.read_csv(link)
     ID = data['id'].values
     data.drop(['id'], axis=1, inplace=True)
-
-    test_data = data.values
-    X = []
-    for i in range(len(test_data)):
-        X.append(test_data[i])
-    X = np.array(X)
-    ID = np.array(ID)
+    X = data.values
     return X, ID
 
 
@@ -86,35 +68,30 @@ def imbalance_solve_v2(X, Y, X_augment_1, Y_augment_1, X_augment_2, Y_augment_2)
     X_extend = np.concatenate((X, X_augment_1, X_augment_2))
     Y_extend = np.concatenate((Y, Y_augment_1, Y_augment_2))
 
-    X_label1 = []
-    len_label0 = 0
-
-    X_final = list(X_extend.copy())
-    Y_final = list(Y_extend.copy())
-
-    for i in range(len(Y_extend)):
-        if Y_extend[i] == 1:
-            X_label1.append(X_extend[i])
-        else:
-            len_label0 += 1
+    mask_1 = (Y_extend == 1)
+    X_label1 = X_extend[mask_1]
+    len_label0 = np.sum(~mask_1)
+    len_label1 = len(X_label1)
 
     X_augment = []
     Y_augment = []
 
-    for age in range(1, int(len_label0 / len(X_label1))):
-        for i in range(len(X_label1)):
-            X_row = X_label1[i].copy()
-            X_row[1] = X_row[1] + age
-            X_augment.append(X_row)
-            Y_augment.append(1)
+    if len_label1 > 0:
+        multiplier = int(len_label0 / len_label1)
+        for age in range(1, multiplier):
+            X_aug_batch = X_label1.copy()
+            X_aug_batch[:, 1] += age
+            X_augment.append(X_aug_batch)
+            Y_augment.append(np.ones(len_label1, dtype=Y_extend.dtype))
 
-    X_augment = np.array(X_augment)
-    Y_augment = np.array(Y_augment)
-    Y_augment.reshape(-1, 1)
-    X_final.extend(X_augment)
-    Y_final.extend(Y_augment)
-    X_final = np.array(X_final)
-    Y_final = np.array(Y_final)
+    if X_augment:
+        X_augment = np.vstack(X_augment)
+        Y_augment = np.concatenate(Y_augment)
+        X_final = np.concatenate((X_extend, X_augment))
+        Y_final = np.concatenate((Y_extend, Y_augment))
+    else:
+        X_final = X_extend
+        Y_final = Y_extend
 
     return X_final, Y_final
 
@@ -124,80 +101,72 @@ def imbalance_solve(X, Y, X_augment_1, Y_augment_1, X_augment_2, Y_augment_2, rm
     X_extend = np.concatenate((X, X_augment_1, X_augment_2))
     Y_extend = np.concatenate((Y, Y_augment_1, Y_augment_2))
 
-    X_final = []
-    Y_final = []
-    X_label1 = []
-    len_label0 = 0
-
-    for i in range(len(Y_extend)):
-        if Y_extend[i] == 1:
-            X_final.append(X_extend[i])
-            Y_final.append(Y_extend[i])
-            X_label1.append(X_extend[i])
-        else:
-            X_row = X_extend[i].copy()
-            X_row = list(X_row)
-            if X_row.count(rm_values) < rm_thres * len(X_row):
-                X_final.append(X_extend[i])
-                Y_final.append(Y_extend[i])
-                len_label0 += 1
-    # for i in range(len(Y_extend)):
-    #     X_row = X_extend[i].copy()
-    #     X_row = list(X_row)
-    #     if X_row.count(rm_values) < rm_thres * len(X_row):
-    #         X_final.append(X_extend[i])
-    #         Y_final.append(Y_extend[i])
-    #         if Y_extend[i] == 1:
-    #             X_label1.append(X_extend[i])
-    #         else:
-    #             len_label0 += 1
+    mask_1 = (Y_extend == 1)
+    
+    rm_counts = np.sum(X_extend == rm_values, axis=1)
+    keep_mask_0 = (~mask_1) & (rm_counts < (rm_thres * X_extend.shape[1]))
+    
+    keep_mask = mask_1 | keep_mask_0
+    
+    X_final = X_extend[keep_mask]
+    Y_final = Y_extend[keep_mask]
+    
+    X_label1 = X_extend[mask_1]
+    len_label0 = np.sum(keep_mask_0)
+    len_label1 = len(X_label1)
 
     X_augment = []
     Y_augment = []
 
-    for age in range(1, int(len_label0 / len(X_label1))):
-        for i in range(len(X_label1)):
-            X_row = X_label1[i].copy()
-            X_row[1] = X_row[1] + age
-            X_augment.append(X_row)
-            Y_augment.append(1)
+    if len_label1 > 0:
+        multiplier = int(len_label0 / len_label1)
+        for age in range(1, multiplier):
+            X_aug_batch = X_label1.copy()
+            X_aug_batch[:, 1] += age
+            X_augment.append(X_aug_batch)
+            Y_augment.append(np.ones(len_label1, dtype=Y_extend.dtype))
 
-    for i in range(len(X_label1)):
-        X_row = X_label1[i].copy()
-        if X_row[9] == 1:
-            X_row[9] = 0
-            X_augment.append(X_row)
-            Y_augment.append(1)
-        elif X_row[9] == 0:
-            X_row[9] = 1
-            X_augment.append(X_row)
-            Y_augment.append(1)
+        mask_9_1 = (X_label1[:, 9] == 1)
+        mask_9_0 = (X_label1[:, 9] == 0)
+        
+        if np.any(mask_9_1):
+            aug_batch = X_label1[mask_9_1].copy()
+            aug_batch[:, 9] = 0
+            X_augment.append(aug_batch)
+            Y_augment.append(np.ones(len(aug_batch), dtype=Y_extend.dtype))
+        if np.any(mask_9_0):
+            aug_batch = X_label1[mask_9_0].copy()
+            aug_batch[:, 9] = 1
+            X_augment.append(aug_batch)
+            Y_augment.append(np.ones(len(aug_batch), dtype=Y_extend.dtype))
 
-    for i in range(len(X_label1)):
-        X_row = X_label1[i].copy()
-        if X_row[0] == 0:
-            X_row[0] = 1
-            X_augment.append(X_row)
-            Y_augment.append(1)
-        elif X_row[0] == 1:
-            X_row[0] = 0
-            X_augment.append(X_row)
-            Y_augment.append(1)
-        elif X_row[0] == -1:
-            X_row[0] = 0
-            X_augment.append(X_row)
-            Y_augment.append(1)
+        mask_0_0 = (X_label1[:, 0] == 0)
+        mask_0_1 = (X_label1[:, 0] == 1)
+        mask_0_m1 = (X_label1[:, 0] == -1)
+        
+        if np.any(mask_0_0):
+            aug_batch = X_label1[mask_0_0].copy()
+            aug_batch[:, 0] = 1
+            X_augment.append(aug_batch)
+            Y_augment.append(np.ones(len(aug_batch), dtype=Y_extend.dtype))
+        if np.any(mask_0_1):
+            aug_batch = X_label1[mask_0_1].copy()
+            aug_batch[:, 0] = 0
+            X_augment.append(aug_batch)
+            Y_augment.append(np.ones(len(aug_batch), dtype=Y_extend.dtype))
+        if np.any(mask_0_m1):
+            aug_batch = X_label1[mask_0_m1].copy()
+            aug_batch[:, 0] = 0
+            X_augment.append(aug_batch)
+            Y_augment.append(np.ones(len(aug_batch), dtype=Y_extend.dtype))
 
-    X_augment = np.array(X_augment)
-    Y_augment = np.array(Y_augment)
+    if X_augment:
+        X_augment = np.vstack(X_augment)
+        Y_augment = np.concatenate(Y_augment)
+        X_final = np.concatenate((X_final, X_augment))
+        Y_final = np.concatenate((Y_final, Y_augment))
 
-    Y_augment.reshape(-1, 1)
-    X_final.extend(X_augment)
-    Y_final.extend(Y_augment)
-    X_final = np.array(X_final)
-    Y_final = np.array(Y_final)
-
-    print(len(Y_final[Y_final == 1]), len(Y_final[Y_final == 0]))
+    print(np.sum(Y_final == 1), np.sum(Y_final == 0))
 
     return X_final, Y_final
 
@@ -208,32 +177,26 @@ def remove_duplicate(X_final, Y_final):
     data = data.drop_duplicates(subset=data.columns.difference(['label']), keep='last')
 
     Y = data['label'].values
-    data.drop(['label'], axis=1, inplace=True)
-    train_data = data.values
-    X_0 = []
-    X_1 = []
-    Y_1 = []
-    Y_0 = []
-    for i in range(len(train_data)):
-        if Y[i] == 1:
-            X_1.append(train_data[i])
-            Y_1.append(1)
-        elif Y[i] == 0:
-            X_0.append(train_data[i])
+    X_matrix = data.drop(['label'], axis=1).values
+    
+    mask_1 = (Y == 1)
+    mask_0 = (Y == 0)
+    
+    X_1 = X_matrix[mask_1]
+    X_0 = X_matrix[mask_0]
+    
+    len_X_1 = len(X_1)
+    if len_X_1 > 0 and len(X_0) > 0:
+        X_0_resample = resample(X_0, n_samples=len_X_1)
+        X = np.concatenate((X_0_resample, X_1))
+        Y = np.concatenate((np.zeros(len_X_1, dtype=int), np.ones(len_X_1, dtype=int)))
+    else:
+        # Fallback if classes are heavily skewed or missing
+        X = X_matrix
+        Y = Y
 
-    X_0_resample = resample(np.array(X_0), n_samples=len(X_1))
-    for i in range(len(X_0_resample)):
-        Y_0.append(0)
-    # print(np.array(Y_0))
-
-    X = np.concatenate((np.array(X_0_resample), X_1))
     print(len(X))
-    Y = np.concatenate((Y_0, Y_1))
-    print(len(Y_0), len(Y_1))
-    # X = np.asarray(X)
-    # Y = np.asarray(Y)
-    #
-    # Y.reshape(-1, 1)
+    print(np.sum(Y == 0), np.sum(Y == 1))
 
     return X, Y
 
@@ -260,4 +223,3 @@ def data_pipeline_nn(X, Y):
     X_val = np.array(X_val)
 
     return X_train, X_test, X_val, Y_train, Y_test, Y_val
-
