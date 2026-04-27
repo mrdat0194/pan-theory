@@ -12,6 +12,7 @@
 
 # Image files
 *.png
+*.jpg
 
 # Python
 __pycache__/
