@@ -149,6 +149,80 @@ def model_jepa(train_loader, epochs=10, lr=1e-3, in_channels=1, steps=2):
             
     return model
 
+def apply_rankfeat(feat):
+    """
+    Applies RankFeat: removes the rank-1 component from the features.
+    feat shape: [Batch, Dim, Time]
+    """
+    B, D, T = feat.size()
+    u, s, v = torch.linalg.svd(feat, full_matrices=False)
+    
+    # rank-1 component
+    rank1_component = s[:, 0:1].unsqueeze(2) * u[:, :, 0:1].bmm(v[:, 0:1, :])
+    return feat - rank1_component
+
+def apply_rankweight(model):
+    """
+    Applies RankWeight by removing the rank-1 component from the weights of all Conv1d and Linear layers.
+    This modifies the model weights in-place.
+    """
+    for name, module in model.named_modules():
+        if isinstance(module, (torch.nn.Conv1d, torch.nn.Linear)):
+            weight = module.weight.data
+            original_shape = weight.shape
+            
+            # Flatten spatial dimensions for SVD if it's a Conv layer
+            if weight.dim() > 2:
+                out_channels = original_shape[0]
+                weight = weight.view(out_channels, -1)
+                
+            u, s, v = torch.linalg.svd(weight, full_matrices=False)
+            # Remove rank-1 component
+            rank1 = s[0:1].unsqueeze(1) * u[:, 0:1].mm(v[0:1, :])
+            weight = weight - rank1
+            
+            # Restore original shape
+            if len(original_shape) > 2:
+                weight = weight.view(*original_shape)
+                
+            module.weight.data = weight
+
+def compute_anomaly_score(model, data, steps=2, use_rankfeat=False):
+    """
+    Given a sequence `data` [1, C, T], predict future states and compute MSE against encoded targets.
+    """
+    model.eval()
+    if data.dim() == 2:
+        data = data.unsqueeze(1)
+        
+    with torch.no_grad():
+        # model.unroll predicts the state sequence
+        predicted_states, _ = model.unroll(
+            data,
+            actions=None,
+            nsteps=steps,
+            unroll_mode="parallel",
+            compute_loss=False,
+            return_all_steps=False
+        )
+        # target representations
+        target_z = model.encoder(data)
+        
+        # Align lengths (JEPA predicts the *next* states, so we shift target)
+        # e.g., if predicted_states is T-1 length, we compare to target_z from index 1 to end.
+        T_pred = predicted_states.shape[2]
+        target_z = target_z[:, :, -T_pred:]
+        
+        if use_rankfeat:
+            # Strip the dominant rank-1 feature from both sequences to highlight anomalies
+            target_z = apply_rankfeat(target_z)
+            predicted_states = apply_rankfeat(predicted_states)
+
+        mse = torch.nn.functional.mse_loss(predicted_states, target_z, reduction='none')
+        # mean across feature dims and sequence length
+        score = mse.mean().item()
+        return score
+
 def jepa_call(model, test_data):
     """
     Inference: Extract latent representations (backbone features) for downstream tasks.
@@ -169,28 +243,4 @@ def jepa_call(model, test_data):
             representations.append(state)
     return torch.cat(representations)
 
-def compute_anomaly_score(model, data, steps=1):
-    """
-    Computes an anomaly score based on JEPA's predictive error in the latent space.
-    Higher score indicates higher likelihood of anomaly (shock/transition).
-    """
-    model.eval()
-    if data.dim() == 2:
-        data = data.unsqueeze(1)
-        
-    with torch.no_grad():
-        state = model.encode(data)
-        
-        predicted_states = state
-        for _ in range(steps):
-            predicted_states = model.predictor(predicted_states, None)[:, :, :-1]
-            predicted_states = torch.cat((state[:, :, :model.predictor.context_length], predicted_states), dim=2)
-            
-        # Compare prediction with actual encoded state
-        # The prediction applies to state[:, :, steps:]
-        target = state[:, :, steps:]
-        pred = predicted_states[:, :, steps:]
-        
-        # Mean squared error in latent space across time
-        error = torch.mean((pred - target) ** 2, dim=1) # [B, T']
-        return error
+

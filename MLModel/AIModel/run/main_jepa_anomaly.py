@@ -114,6 +114,9 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=16, help="Training batch size")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     
+    parser.add_argument("--use_rankfeat", action="store_true", help="Apply RankFeat at inference time to remove rank-1 feature")
+    parser.add_argument("--use_rankweight", action="store_true", help="Apply RankWeight to strip rank-1 component from weights")
+    
     return parser.parse_args()
 
 def train_model(model, args, device):
@@ -195,6 +198,11 @@ def main():
     else:
         print("WARNING: No trained weights found. Using random initialized weights.")
         print("Run with '--train' to train the model first.")
+        
+    if args.use_rankweight:
+        from MLModel.AIModel.model.jepa_backbone import apply_rankweight
+        print("Applying RankWeight surgery to model weights...")
+        apply_rankweight(model)
 
     model.eval()
     print("Model ready.\n")
@@ -228,7 +236,10 @@ def main():
         tensor = tensor.to(device)
         
         # JEPA Anomaly Score based on multi-step predictive error in latent space
-        score = compute_anomaly_score(model, tensor, steps=5).mean().item()
+        # Now passing the use_rankfeat flag down to the score function!
+        score = compute_anomaly_score(model, tensor, steps=5, use_rankfeat=args.use_rankfeat)
+        if isinstance(score, torch.Tensor):
+            score = score.mean().item()
         results.append({"file": basename, "defect": dtype, "score": score})
 
         flag = ""
