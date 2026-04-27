@@ -6,6 +6,7 @@
 *.xlsx
 *.parquet
 *.bin
+*.mat
 *.sqlite3
 *.marker
 
