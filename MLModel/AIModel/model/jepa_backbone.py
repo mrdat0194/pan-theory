@@ -68,6 +68,46 @@ def build_jepa(in_channels=1, hidden_dim=64, latent_dim=128):
     jepa = JEPA(encoder, encoder, predictor, regularizer, ploss)
     return jepa
 
+class ActionConditionedPredictor1D(nn.Module):
+    def __init__(self, predictor, context_length=2):
+        super().__init__()
+        self.predictor = predictor
+        self.is_rnn = False
+        self.context_length = context_length
+
+    def forward(self, x, a=None):
+        # x: [B, D, T]
+        # a: [B, A, T-1] (actions applied to reach the next state)
+        prev_state = x[:, :, :-1]
+        next_state = x[:, :, 1:]
+        
+        if a is not None:
+            # We concatenate current latent state, next latent state, and action
+            # a: [B, A, T-1] 
+            combined_xa = torch.cat((prev_state, next_state, a), dim=1)
+        else:
+            # Fallback if no action is provided (shouldn't happen in action-conditioned setup)
+            combined_xa = torch.cat((prev_state, next_state), dim=1)
+            
+        return self.predictor(combined_xa)
+
+def build_action_jepa(in_channels=6, action_dim=1, hidden_dim=64, latent_dim=128):
+    encoder = Encoder1D(in_channels, hidden_dim, latent_dim)
+    # Predictor takes 2 concatenated states + action
+    predictor_model = Predictor1D(latent_dim * 2 + action_dim, hidden_dim, latent_dim)
+    predictor = ActionConditionedPredictor1D(predictor_model, context_length=2)
+    
+    # Using VC Loss for regularizing the representation (Variance-Covariance)
+    projector = Projector(f"{latent_dim}-{latent_dim*2}-{latent_dim*2}")
+    regularizer = VCLoss(std_coeff=25.0, cov_coeff=25.0, proj=projector)
+    
+    # Prediction loss (Mean Squared Error on the latent space)
+    ploss = SquareLossSeq(projector)
+    
+    aencoder = nn.Identity()
+    jepa = JEPA(encoder, aencoder, predictor, regularizer, ploss)
+    return jepa
+
 def model_jepa(train_loader, epochs=10, lr=1e-3, in_channels=1, steps=2):
     """
     Trains the JEPA backbone on time-series data.
