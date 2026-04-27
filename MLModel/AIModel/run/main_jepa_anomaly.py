@@ -107,7 +107,70 @@ def parse_args():
     parser.add_argument("--defect", type=str, default=None, help="Evaluate only this defect type")
     parser.add_argument("--threshold", type=float, default=None, help="Prediction error threshold for anomalies")
     parser.add_argument("--seed", type=int, default=0, help="Random seed")
+    
+    # Training arguments
+    parser.add_argument("--train", action="store_true", help="Run training mode before inference")
+    parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=16, help="Training batch size")
+    parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+    
     return parser.parse_args()
+
+def train_model(model, args, device):
+    print(f"\n--- Starting JEPA Training ---")
+    # Collect all available files for self-supervised training
+    # (JEPA learns normal dynamics from the available data)
+    files = collect_files(DATA_DIR, defect_filter=None, per_type=0, seed=args.seed)
+    if not files:
+        print("No data found for training.")
+        return
+
+    print(f"Loading {len(files)} files for training...")
+    all_tensors = []
+    for fp in files:
+        tensor = load_mat_file(fp)
+        if tensor is not None:
+            # Remove the batch dimension added by load_mat_file for stacking
+            all_tensors.append(tensor.squeeze(0))
+    
+    if not all_tensors:
+        print("No valid tensors extracted for training.")
+        return
+
+    # Stack into [N, Channels, Time]
+    X_train = torch.stack(all_tensors)
+    dataset = torch.utils.data.TensorDataset(X_train)
+    train_loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=True)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    model.train()
+    
+    for epoch in range(args.epochs):
+        total_loss = 0
+        for batch_idx, (data,) in enumerate(train_loader):
+            data = data.to(device)
+            optimizer.zero_grad()
+            
+            # Unroll JEPA to predict future states
+            _, losses = model.unroll(
+                data,
+                actions=None,
+                nsteps=2,
+                unroll_mode="parallel",
+                compute_loss=True,
+                return_all_steps=False
+            )
+            loss, regl, rloss_unweight, regldict, pl = losses
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            
+        print(f"Epoch {epoch+1:02d}/{args.epochs} | Loss: {total_loss / len(train_loader):.4f}")
+
+    os.makedirs(MODEL_DIR, exist_ok=True)
+    save_path = os.path.join(MODEL_DIR, "jepa_backbone.pth")
+    torch.save(model.state_dict(), save_path)
+    print(f"Training complete. Weights saved to:\n  {save_path}\n")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Main
@@ -122,9 +185,17 @@ def main():
     # Instantiate JEPA Backbone (in_channels=2 for acc+sev)
     model = build_jepa(in_channels=INPUT_SIZE, hidden_dim=64, latent_dim=128).to(device)
     
-    # In a real scenario, you would load the trained weights here:
-    # model.load_state_dict(torch.load('path_to_weights.pth'))
-    # For now, it will compute scores using initialized weights (random representations)
+    if args.train:
+        train_model(model, args, device)
+
+    weights_path = os.path.join(MODEL_DIR, "jepa_backbone.pth")
+    if os.path.exists(weights_path):
+        print(f"Loading weights from {weights_path}...")
+        model.load_state_dict(torch.load(weights_path, map_location=device))
+    else:
+        print("WARNING: No trained weights found. Using random initialized weights.")
+        print("Run with '--train' to train the model first.")
+
     model.eval()
     print("Model ready.\n")
 

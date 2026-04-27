@@ -9,6 +9,7 @@
 *.mat
 *.sqlite3
 *.marker
+*.pth
 
 # Image files
 *.png
