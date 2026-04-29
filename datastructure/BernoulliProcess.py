@@ -1,5 +1,5 @@
 # pip install stochastic
-from stochastic.processes.discrete import BernoulliProcess
+from stochastic.processes.discrete import BernoulliProcess  # noqa: E402
 
 bp = BernoulliProcess(p=0.5)
 
@@ -13,8 +13,8 @@ for i in range(n):
 
 print(count / n)
 
-import operator as op
-from functools import reduce
+import operator as op  # noqa: E402
+from functools import reduce  # noqa: E402
 
 
 def ncr(n, r):

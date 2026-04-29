@@ -5,7 +5,6 @@
 """Random Matrix Theory exercise"""
 
 import scipy, scipy.linalg, pylab
-import numpy as np
 
 def GOE(N):
     """
@@ -113,7 +112,7 @@ def CenterDiffHistogram(ensemble, bins=30, showPlot=True):
     meanDiff = scipy.sum(diffs) / len(diffs)
     diffsNormalized = diffs / meanDiff
     pylab.hist(diffsNormalized, bins=bins, density=1)
-    if showPlot == True:
+    if showPlot:
         pylab.show()
 
 

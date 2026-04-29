@@ -142,7 +142,7 @@ def prime_interval(x):
                 print(num)
 
 
-from math import floor, sqrt
+from math import floor, sqrt  # noqa: E402
 
 
 def simpleSieve(limit, primes):
@@ -501,9 +501,9 @@ def countPairs(arr1, arr2, m, n, x):
     # required count of pairs
     return count
 
-from collections import Counter
+from collections import Counter  # noqa: E402
 
-def countPairs(arr1, arr2, arr3):
+def countPairs3(arr1, arr2, arr3):
     """
     n = int(input())
     arr1 = list(map(int, input().split()))

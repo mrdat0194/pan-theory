@@ -1,5 +1,3 @@
-import sys
-import math
 
 GRAV = 3.711
 POD_RADIUS = 5

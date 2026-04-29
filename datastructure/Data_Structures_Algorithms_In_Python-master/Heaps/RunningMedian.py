@@ -32,7 +32,7 @@ Problem Link: https://www.hackerrank.com/challenges/ctci-find-the-running-median
 """A max heap is a complete binary tree [CBT] (implemented using array)
 in which each node has a value larger than its sub-trees"""
 
-from math import ceil
+from math import ceil  # noqa: E402
 
 
 class MaxHeap:

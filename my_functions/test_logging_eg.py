@@ -1,4 +1,3 @@
-import pytest
 from my_functions.logging_eg import add, subtract, multiply, divide
 
 def test_add():

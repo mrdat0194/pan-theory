@@ -1,4 +1,4 @@
-import queue 
+import queue  # noqa: E402
   
 # From class queue, Queue is 
 # created as an object Now L 
@@ -25,7 +25,7 @@ print(L.get())
 
 
 
-import queue 
+import queue  # noqa: E402
   
 L = queue.LifoQueue(maxsize=6) 
   

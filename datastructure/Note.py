@@ -227,7 +227,7 @@ And i1 = 1, j1 = 1, i2 = 3, j2 = 3, return 15 as there are 15 numbers in the mat
 
 ######
 # Pandas
-import pandas as pd
+import pandas as pd  # noqa: E402
 
 # Dict_to_frame
 # Dictionary with list object in values
@@ -357,7 +357,7 @@ na_values=['.', '??']  )     # Take any '.' or '??' values as NA
 # REGX
 #https://www.coursera.org/learn/python-network-data/supplement/2WnqH/python-regular-expression-quick-guide
 #https://docs.python.org/3/howto/regex.html
-import pandas as pd
+import pandas as pd  # noqa: E402
 data_file = pd.read_csv('2017-12-02-extract.csv', delimiter=',')
 
 # Reverse a string
@@ -369,13 +369,13 @@ print('The reverse of KDnuggets is {}'.format(s[::-1]))
 #
 
 # Find character
-import re
+import re  # noqa: E402
 x = 'From: Using the : character'
 y = re.findall('^F.+:', x)
 print(y)
 
 # Find all the number in text
-import re
+import re  # noqa: E402
 hand = open("datastructure/regex_sum.txt")
 x=list()
 for line in hand:
@@ -390,7 +390,7 @@ print(sum)
 
 # Using urllib which is easier than socket
 # socket is like a phonecall where you determine the connection
-import urllib.request
+import urllib.request  # noqa: E402
 
 fhand = urllib.request.urlopen('http://www.py4inf.com/code/romeo.txt')
 print(type(fhand))
@@ -408,7 +408,7 @@ for line in fhand:
 print(counts)
 
 # Date time
-import datetime
+import datetime  # noqa: E402
 a = datetime.datetime(2019, 5, 26, 0, 0)
 b =  datetime.datetime.today()
 
@@ -461,7 +461,7 @@ abc = [
 
 
 # Math function
-from math import *
+from math import *  # noqa: E402
 ceil(4.76)
 
 
@@ -473,8 +473,8 @@ df['freq'] = df.groupby('a')['a'].transform('count')
 
 ###
 
-import pandas as pd
-import dateutil
+import pandas as pd  # noqa: E402
+import dateutil  # noqa: E402
 # Load data from csv file
 data = pd.DataFrame.from_csv('/Users/petern/FirstPython/phone_data.csv')
 # Convert date from string to date times
@@ -490,7 +490,7 @@ data['date'] = data['date'].apply(dateutil.parser.parse, dayfirst=True)
 #${NEO4J_ROOT}/bin/neo4j-shell
 
 
-import re
+import re  # noqa: E402
 
 str = 'thanhtaivtt'
 match = re.match(r'[Tt]', str)
@@ -501,7 +501,7 @@ else:
 # Kết quả:
 # Khop!
     
-import re
+import re  # noqa: E402
 
 str = 'thanhtaivtt'
 match = re.match(r'[a-z0-9]', str)
@@ -515,7 +515,7 @@ else:
 #Ký tự dấu . này tương đương với việc so khớp một chuỗi phải chứa ít nhất một ký tự.
 
 
-import re
+import re  # noqa: E402
 
 str = 'thanhtaivtt'
 match = re.match(r'.', str)
@@ -530,7 +530,7 @@ else:
 #
 #VD: so khớp xem có phải đầu chuỗi là chữ h
 
-import re
+import re  # noqa: E402
 
 str = 'thanhtaivtt'
 match = re.search(r'^h', str)
@@ -545,7 +545,7 @@ else:
 #
 #VD: so khớp xem cuỗi chuỗi có phải chữ t
 
-import re
+import re  # noqa: E402
 
 str = 'thanhtaivtt'
 match = re.search(r't$', str)
@@ -561,7 +561,7 @@ else:
 #
 #VD: So khớp xem một chuỗi chỉ chứa chữ cái in thường.
 
-import re
+import re  # noqa: E402
 
 str = 'vuthanhtai'
 match = re.match(r'[a-z]+', str)
@@ -577,7 +577,7 @@ else:
 #
 #VD: Kiểm tra xem một chuỗi có được bắt đầu bằng a hoặc b hay không.
 
-import re
+import re  # noqa: E402
 
 str = 'vuthanhtai'
 match = re.match(r'ab?', str)
@@ -593,7 +593,7 @@ else:
 #
 #VD: Kiểm tra xem 3 chữ cái đầu của chuỗi có phải là v không.
 
-import re
+import re  # noqa: E402
 
 str = 'vuthanhtai'
 match = re.match(r'v{3}', str)
@@ -610,7 +610,7 @@ else:
 #
 #VD: Kiểm tra xem chuỗi chó chứa chũ 'thanh' không.
 
-import re
+import re  # noqa: E402
 
 str = 'vuthanhtai'
 match = re.match(r'(.*)(thanh)(.*)', str)
@@ -627,7 +627,7 @@ else:
 #
 #VD: Kiểm tra xem đầu chuỗi có phải là dấu . không.
 
-import re
+import re  # noqa: E402
 
 str = '.vuthanhtai'
 match = re.match(r'\.', str)
@@ -658,7 +658,7 @@ else:
 #.....
 #VD: So khớp một chuỗi bắt đầu bằng v hoặc V.
 
-import re
+import re  # noqa: E402
 
 str = 'vuthanhtai'
 match = re.match(r'V', str, re.IGNORECASE) # hoặc re.I
@@ -681,7 +681,7 @@ data = re.findall(r'<w+>\w*<\w+>', string )
 
 # generator
 
-from itertools import chain
+from itertools import chain  # noqa: E402
 
 list1 = ["a","b","c"]
 list2 = ["d","e","f"]

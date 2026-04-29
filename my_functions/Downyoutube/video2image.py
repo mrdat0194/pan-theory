@@ -1,6 +1,4 @@
-import sys
 import argparse
-import glob
 import cv2
 import os 
 print(cv2.__version__)
@@ -17,7 +15,7 @@ def extractImages(pathIn, pathOut, name):
         try:
             cv2.imwrite("{}/{}_frame{}.jpg".format(pathOut,name,count), image)     # save frame as JPEG file
             count = count + 1
-        except:
+        except Exception:
             print("=== {} --- {}".format(name,count))
             
 if __name__=="__main__":

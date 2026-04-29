@@ -1,7 +1,7 @@
-import unittest
-from unittest.mock import patch, MagicMock
-import sys
-import os
+import unittest  # noqa: E402
+from unittest.mock import patch, MagicMock  # noqa: E402
+import sys  # noqa: E402
+import os  # noqa: E402
 
 # Add the directory containing the module to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -13,7 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 mock_youtube_dl = MagicMock()
 sys.modules['youtube_dl'] = mock_youtube_dl
 
-from dowload_youtube import download_youtube
+from dowload_youtube import download_youtube  # noqa: E402
 
 class TestDownloadYoutube(unittest.TestCase):
 

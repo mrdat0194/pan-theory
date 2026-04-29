@@ -1,6 +1,4 @@
 import os
-from PIL import Image
-import pillow_heif as pyheif
 
 # Folder containing .heic files
 input_folder = r'C:\Users\mrdat\Desktop\archive\Iphone'

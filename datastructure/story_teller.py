@@ -1,13 +1,13 @@
 #!/bin/python3
-import os
-from math import factorial
-import itertools
-from collections import defaultdict, Counter, namedtuple
-from functools import cmp_to_key
-import heapq
-from typing import Set, List, TypeVar
+import os  # noqa: E402
+from math import factorial  # noqa: E402
+import itertools  # noqa: E402
+from collections import defaultdict, Counter, namedtuple  # noqa: E402
+from functools import cmp_to_key  # noqa: E402
+import heapq  # noqa: E402
+from typing import Set, List  # noqa: E402
 
-from my_functions.timer import print_param, timer
+from my_functions.timer import print_param, timer  # noqa: E402
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1244,7 +1244,7 @@ if __name__ == '__main__':
 # super maximum cost query
 # Complete the solve function below.
 
-from bisect import bisect_left,bisect_right
+from bisect import bisect_right  # noqa: E402
 parents = {}
 rep = {}
 def make_set(n):
@@ -1466,8 +1466,7 @@ def solve(tree, queries):
 #
 # Design a class to represent the board, and find a series of steps
 # to bring the board to the state [[1, 2, 3], [4, 5, 6], [7, 8, None]].
-import heapq
-from copy import copy
+from copy import copy  # noqa: E402
 
 class Board:
     def __init__(self, nums, goal='123456780'):

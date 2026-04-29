@@ -57,7 +57,7 @@ class current():
   def __str__(self):
     return str(self and self.data) + ',' + str(self and self.next)
 
-import unittest
+import unittest  # noqa: E402
 
 class Test(unittest.TestCase):
   def test_sort_stack(self):

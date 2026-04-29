@@ -5,9 +5,6 @@ Created on Tue May 28 08:42:24 2019
 
 @author: petern
 """
-import datetime
-import numpy as np
-import time
 import shutil
 import pandas as pd
 from main_def import MAIN_DIR

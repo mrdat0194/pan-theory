@@ -25,7 +25,7 @@ def Download():
 
     if form == "1":
         #CHECK URL VALIDATION
-        if check_url == True:
+        if check_url:
             yt = YouTube(vid_url)
             stream = yt.streams.first()
 
@@ -37,14 +37,14 @@ def Download():
                 stream = yt.streams.first()
                 stream.download("/Users/petern/Down/youtu/")
                 print(f"{bcolors.OKGREEN}[*] DOWNLOAD FINISHED !")
-            except:
+            except Exception:
                 print(f"{bcolors.FAIL}[!] ERROR ! TRY AGAIN")
                 return
         else:
             print("INVALID URL !")
             return form
     elif form == "2":
-        if check_url == True:
+        if check_url:
             yt = YouTube(vid_url)
             stream = yt.streams.first()
             try :
@@ -55,14 +55,14 @@ def Download():
                 stream = yt.streams.filter(only_audio=True)
                 stream[0].download()
                 print(f"{bcolors.OKGREEN}[*] DOWNLOAD FINISHED !")
-            except:
+            except Exception:
                 print(f"{bcolors.FAIL}[!] ERROR ! TRY AGAIN")
                 return
         else:
             print("INVALID URL !")
             return form
     elif form == "3":
-        if check_url == True:
+        if check_url:
             yt = YouTube(vid_url)
             stream = yt.streams.first()
             try :
@@ -73,7 +73,7 @@ def Download():
                 pl = Playlist(vid_url)
                 pl.download_all("/home/xxavianxx/Desktop/")
                 print(f"{bcolors.OKGREEN}[*] DOWNLOAD FINISHED !")
-            except:
+            except Exception:
                 print(f"{bcolors.FAIL}[!] ERROR ! TRY AGAIN")
                 return
         else:
