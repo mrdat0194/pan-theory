@@ -179,7 +179,7 @@ def infer(model, head, test_loader, device='cpu'):
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", type=int, default=40,
+    parser.add_argument("--epochs", type=int, default=80,
                         help="Backbone pre-training epochs")
     parser.add_argument("--seed",   type=int, default=21,
                         help="Random seed (seed=21 ties native w2v2 at 79.41%%)")
