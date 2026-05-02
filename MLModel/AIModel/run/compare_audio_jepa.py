@@ -42,7 +42,7 @@ DATA_DIR   = os.path.join(SCRIPT_DIR, "../../../VAE/FT-w2v2-ser/Dataset/IEMOCAP/
 LABEL_FILE = os.path.join(SCRIPT_DIR, "../../../VAE/FT-w2v2-ser/Output/labels/label_sparse.json")
 
 # Config
-EPOCHS = 200
+EPOCHS = 300
 SEED   = 21
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -54,7 +54,7 @@ class UniversalLabeledDataset(torch.utils.data.Dataset):
        backbone. The model learns general audio features from the raw signals 
        without seeing any labels.
     2. Linear Probe (Stage 2): Few-shot supervised. We freeze the backbone and 
-       train a simple linear head on 20 labeled samples (10 per class). 
+       train a simple linear head on 30 labeled samples (15 per class). 
     3. Inference (Stage 3): Evaluation. We test on 10 held-out samples that 
        were NOT used in Stage 2.
     """
@@ -169,12 +169,9 @@ def run_baseline():
     
     full_ds = UniversalLabeledDataset(extract_base, DATA_DIR, LABEL_FILE)
     
-    # 20 Train (Probe) / 10 Test Split
-    # Indices are derived from the order in UniversalLabeledDataset (Train -> Val -> Test)
-    # Train: 10 Angry + 10 Normal
-    train_idx = [0, 1, 6, 7, 5, 8, 9, 10, 11, 12] + [2, 3, 23, 24, 4, 25, 26, 27, 28, 29] 
-    # Test: Includes angry11, normal12, normal13, normal14
+    # 30 Train / 10 Test
     test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
     head = probe_base(model, DataLoader(train_ds, batch_size=4), 128, device=DEVICE)
@@ -195,9 +192,9 @@ def run_ajepa():
     
     full_ds = UniversalLabeledDataset(extract_ajepa_fn, DATA_DIR, LABEL_FILE, transform_fn=lambda x: x.unsqueeze(0))
     
-    # 20 Train / 10 Test
-    train_idx = [0, 1, 6, 7, 5, 8, 9, 10, 11, 12] + [2, 3, 23, 24, 4, 25, 26, 27, 28, 29] 
+    # 30 Train / 10 Test
     test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
     head = probe_ajepa(model, DataLoader(train_ds, batch_size=4), device=DEVICE)
@@ -219,9 +216,9 @@ def run_cjepa():
     
     full_ds = UniversalLabeledDataset(extract_cjepa_fn, DATA_DIR, LABEL_FILE)
     
-    # 20 Train / 10 Test
-    train_idx = [0, 1, 6, 7, 5, 8, 9, 10, 11, 12] + [2, 3, 23, 24, 4, 25, 26, 27, 28, 29] 
+    # 30 Train / 10 Test
     test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
     head = probe_cjepa(encoder, DataLoader(train_ds, batch_size=4), device=DEVICE)
