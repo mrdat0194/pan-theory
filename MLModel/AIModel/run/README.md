@@ -43,7 +43,7 @@ Despite the architectural sophistication of A-JEPA and C-JEPA, the **Baseline mo
 
 ## 🛠️ Other JEPA Implementations
 
-- **`main_jepa_anomaly.py`**: Anomaly detection for structural vibration data using RankFeat/RankWeight noise suppression.
+- **`main_jepa_anomaly.py`**: MTS-JEPA implementation for anomaly detection (replaces legacy VAE-LSTM). Built for structural vibration data, inspired by the multi-resolution architecture described in [MTS-JEPA (arxiv:2602.04643)](https://arxiv.org/html/2602.04643v1). Utilizes `eb_jepa` backbone with RankFeat/RankWeight noise suppression.
 - **`main_control_jepa.py`**: Training action-conditioned JEPA for Truck-and-Trailer dynamics.
 - **`main_optimal_jepa.py`**: Benchmarking `CEMPlanner` (Cross-Entropy Method) against standard SGD for optimal control.
 
