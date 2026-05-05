@@ -20,7 +20,7 @@ def string_reformat(string: str) -> str:
     """
     # Compile regex patterns once for better performance
     pat_redundant_chars = re.compile(r"[\s`~!@#$%^&*()\-_+={\}\[\]\\|:;<>,./?]+")
-    pat_quotations = re.compile(r'[\"«»''‚‛""„‟‹›❛❜❝❞❮❯〝〞〟＂⹂]+')
+    pat_quotations = re.compile(r'[\"«»''‚‛""„‟‹›❛❜❝❞❮❯〝〞〟＂⹂“”‘’]+')
 
     # Process string in steps
     str_remove_accent = unidecode.unidecode(string).lower()
