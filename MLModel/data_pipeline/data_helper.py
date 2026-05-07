@@ -1,5 +1,4 @@
 from sklearn.model_selection import train_test_split
-from keras.utils import to_categorical
 from sklearn.utils import resample
 import numpy as np
 import pandas as pd
@@ -214,9 +213,9 @@ def data_pipeline_nn(X, Y):
     X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.2)
 
 
-    Y_train = to_categorical(Y_train, num_classes=2)
-    Y_test = to_categorical(Y_test, num_classes=2)
-    Y_val = to_categorical(Y_val, num_classes=2)
+    Y_train = np.array(Y_train)
+    Y_test = np.array(Y_test)
+    Y_val = np.array(Y_val)
 
     X_train = np.array(X_train)
     X_test = np.array(X_test)
