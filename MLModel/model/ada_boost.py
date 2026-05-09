@@ -17,8 +17,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def model_ada(X_train, X_test, Y_train, Y_test):
     logReg = LogisticRegression(max_iter=100, tol=1e-4, C=1e5, penalty='l2', solver='liblinear')
-    ada = AdaBoostClassifier(base_estimator=logReg, n_estimators=100, learning_rate=1)
-    vote = VotingClassifier(estimators=[('lr', logReg), ('rf', ada)], voting='hard')
+    ada = AdaBoostClassifier(estimator=logReg, n_estimators=100, learning_rate=1)
+    vote = VotingClassifier(estimators=[('lr', logReg), ('rf', ada)], voting='soft')
     ndc = vote
     ndc.fit(X_train, Y_train)
     Y_pred = ndc.predict(X_test)

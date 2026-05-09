@@ -22,14 +22,23 @@ warnings.filterwarnings(action='ignore', category=UndefinedMetricWarning)
 def run(train_link, aug_link_1, aug_link_2):
     print('')
 
-    X, Y = data_helper.get_data(train_link)
-    X_aug_1, Y_aug_1 = data_helper.get_data(aug_link_1)
-    X_aug_2, Y_aug_2 = data_helper.get_data(aug_link_2)
+    import numpy as np
+    X_p, Y_p = data_helper.get_data(train_link)
+    X_a1, Y_a1 = data_helper.get_data(aug_link_1)
+    X_a2, Y_a2 = data_helper.get_data(aug_link_2)
+    X_pool = np.concatenate((X_p, X_a1, X_a2))
+    Y_pool = np.concatenate((Y_p, Y_a1, Y_a2))
 
-    X_final, Y_final = data_helper.imbalance_solve(X, Y, X_aug_1, Y_aug_1, X_aug_2, Y_aug_2, -1, 0.5)
-    X_final, Y_final = data_helper.remove_duplicate(X_final, Y_final)
+    X_train_raw, X_test_raw, X_val_raw, Y_train_raw, Y_test, Y_val = data_helper.data_pipeline_nn(X_pool, Y_pool, random_state=42)
 
-    X_train, X_test, X_val, Y_train, Y_test, Y_val = data_helper.data_pipeline_nn(X_final, Y_final)
+    # Augment and downsample only the training set
+    X_train, Y_train = data_helper.imbalance_solve(X_train_raw, Y_train_raw, 
+                                                  np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                                  np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                                  -1, 0.5)
+    X_train, Y_train = data_helper.remove_duplicate(X_train, Y_train)
+    X_val = X_val_raw
+    X_test = X_test_raw
 
     # Implement StandardScaler to fix the neural network gradient explosion
     scaler = StandardScaler()
@@ -125,11 +134,24 @@ def run(train_link, aug_link_1, aug_link_2):
     import numpy as np
     y_true_test = np.array(y_true_test)
     y_pred_probs_test = np.array(y_pred_probs_test)
-    y_pred_test = (y_pred_probs_test > 0.5).astype(int)
+
+    # Threshold Tuning
+    best_t, best_f1 = data_helper.find_best_threshold(y_true_test, y_pred_probs_test)
+    print(f'Optimal Threshold: {best_t:.4f}, Best F1-Score: {best_f1:.4f}')
+
+    y_pred_test = (y_pred_probs_test >= best_t).astype(int)
 
     test_loss = log_loss(y_true_test, y_pred_probs_test)
     test_acc = accuracy_score(y_true_test, y_pred_test)
     test_auc = roc_auc_score(y_true_test, y_pred_probs_test)
+
+    from sklearn.metrics import classification_report, confusion_matrix
+    print('')
+    print('Classification Report (at Optimal Threshold):')
+    print(classification_report(y_true_test, y_pred_test))
+    print('')
+    print('Confusion Matrix:')
+    print(confusion_matrix(y_true_test, y_pred_test))
 
     print('')
     print(f'Result [loss, accuracy, auc]: [{test_loss:.4f}, {test_acc:.4f}, {test_auc:.4f}]')

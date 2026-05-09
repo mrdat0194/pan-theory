@@ -5,8 +5,7 @@ from sklearn.linear_model import BayesianRidge
 
 
 def model_bayes(X_train, X_test, Y_train, Y_test):
-    bayes = BayesianRidge()
-    # bayes = MultinomialNB()
+    bayes = GaussianNB()
     bayes.fit(X_train, Y_train)
 
     Y_pred = bayes.predict(X_test)

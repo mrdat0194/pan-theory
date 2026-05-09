@@ -1,14 +1,9 @@
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.ensemble import RandomForestClassifier
-from tensorflow.python.util import deprecation
-import tensorflow as tf
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-deprecation._PRINT_DEPRECATION_WARNINGS = False
-
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
 
 def model_forest(X_train, X_test, Y_train, Y_test):

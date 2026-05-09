@@ -1,19 +1,14 @@
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
 from sklearn.svm import SVC
-from tensorflow.python.util import deprecation
-import tensorflow as tf
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-deprecation._PRINT_DEPRECATION_WARNINGS = False
-
-sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
 
 def model_svm(X_train, X_test, Y_train, Y_test):
 
-    svm = SVC(max_iter=1000, tol=1e-4, C=1e5)
+    svm = SVC(kernel='linear', probability=True)
     svm.fit(X_train, Y_train)
     Y_pred = svm.predict(X_test)
 

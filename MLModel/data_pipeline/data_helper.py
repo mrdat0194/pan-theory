@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_selection import SelectKBest, RFE, chi2
 from sklearn.linear_model import LogisticRegression, RidgeClassifier, LinearRegression
+from sklearn.preprocessing import StandardScaler
 
 def get_unique(X_matrix, y_vector):
     '''
@@ -200,17 +201,17 @@ def remove_duplicate(X_final, Y_final):
     return X, Y
 
 
-def data_pipeline(X, Y):
+def data_pipeline(X, Y, random_state=42):
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=random_state)
 
     return X_train, X_test, Y_train, Y_test
 
 
-def data_pipeline_nn(X, Y):
+def data_pipeline_nn(X, Y, random_state=42):
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
-    X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.2)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=random_state)
+    X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.2, random_state=random_state)
 
 
     Y_train = np.array(Y_train)
@@ -222,3 +223,47 @@ def data_pipeline_nn(X, Y):
     X_val = np.array(X_val)
 
     return X_train, X_test, X_val, Y_train, Y_test, Y_val
+
+def get_clean_data(train_link, aug_link_1, aug_link_2, use_scaling=True, use_downsampling=False):
+    # 1. Load data pools
+    X_p, Y_p = get_data(train_link)
+    X_a1, Y_a1 = get_data(aug_link_1)
+    X_a2, Y_a2 = get_data(aug_link_2)
+    X_pool = np.concatenate((X_p, X_a1, X_a2))
+    Y_pool = np.concatenate((Y_p, Y_a1, Y_a2))
+
+    # 2. Split FIRST to prevent data leakage from augmentation
+    X_train_raw, X_test, Y_train_raw, Y_test = train_test_split(X_pool, Y_pool, test_size=0.2, random_state=42)
+
+    # 3. Augment ONLY the training portion
+    # We pass empty arrays for the external augment files because they are already in the pool
+    X_train, Y_train = imbalance_solve(X_train_raw, Y_train_raw, 
+                                      np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                      np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                      -1, 0.5)
+
+    # 4. Apply downsampling if requested (usually for Random Forest)
+    if use_downsampling:
+        X_train, Y_train = remove_duplicate(X_train, Y_train)
+
+    # 5. Standard Scaling
+    scaler = None
+    if use_scaling:
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
+    return X_train, X_test, Y_train, Y_test, scaler
+
+def find_best_threshold(y_true, y_probs):
+    from sklearn.metrics import f1_score
+    thresholds = np.linspace(0, 1, 101)
+    best_f1 = 0
+    best_threshold = 0.5
+    for t in thresholds:
+        y_pred = (y_probs >= t).astype(int)
+        f1 = f1_score(y_true, y_pred)
+        if f1 > best_f1:
+            best_f1 = f1
+            best_threshold = t
+    return best_threshold, best_f1

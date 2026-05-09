@@ -11,9 +11,11 @@
 *.marker
 *.pth
 *.npy
+*.pkl
 # Image files
 *.png
 *.jpg
+*.json 
 
 # Python
 __pycache__/

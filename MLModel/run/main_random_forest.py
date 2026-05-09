@@ -11,26 +11,18 @@ warnings.filterwarnings(action='ignore', category=DataConversionWarning)
 
 def run(train_link, test_link, result_link, aug_link_1, aug_link_2, save_result=0):
 
-    X, Y = data_helper.get_data(train_link)
-
-    X_aug_1, Y_aug_1 = data_helper.get_data(aug_link_1)
-
-    X_aug_2, Y_aug_2 = data_helper.get_data(aug_link_2)
-
-    X_final, Y_final = data_helper.imbalance_solve(X, Y, X_aug_1, Y_aug_1, X_aug_2, Y_aug_2, -1, 0.5)
-
-    X_final, Y_final = data_helper.remove_duplicate(X_final, Y_final)
-
-    # fit = data_helper.feature_selection(X_final, Y_final, 51)
-    # X_final = fit.transform(X_final)
-
-    X_train, X_test, Y_train, Y_test = data_helper.data_pipeline(X_final, Y_final)
-
+    X_train, X_test, Y_train, Y_test, scaler = data_helper.get_clean_data(train_link, aug_link_1, aug_link_2, use_scaling=True, use_downsampling=True)
     logReg_model = random_forest.model_forest(X_train, X_test, Y_train, Y_test)
 
+    # Threshold Tuning
+    Y_probs = logReg_model.predict_proba(X_test)[:, 1]
+    best_t, best_f1 = data_helper.find_best_threshold(Y_test, Y_probs)
+    print(f'Optimal Threshold: {best_t:.4f}, Best F1-Score: {best_f1:.4f}')
+
     X_final_test, ID = data_helper.get_data_test(test_link)
-    # X_final_test = fit.transform(X_final_test)
-    Y_predicted = random_forest.forest_call(X_final_test, logReg_model)
+    X_final_test = scaler.transform(X_final_test)
+    Y_test_probs = logReg_model.predict_proba(X_final_test)[:, 1]
+    Y_predicted = (Y_test_probs >= best_t).astype(int)
     print(Y_predicted)
 
     if save_result == 1:

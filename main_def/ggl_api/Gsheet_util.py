@@ -5,9 +5,10 @@ import polars as pl
 from typing import Any
 
 
-gc = gspread.service_account('ga4-gtm-automation.json')
-
-
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+json_path = os.path.join(current_dir, 'kasa', 'ga4-gtm-automation.json')
+gc = gspread.service_account(json_path)
 """ from my_function.Gsheet_util import *"""
 def share_gsheet_anyone_with_link_viewer(spreadsheet_id: str):
     """
