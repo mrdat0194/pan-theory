@@ -1,9 +1,32 @@
+"""
+inventory_models.py
+====================
+Core inventory & logistics model library.
+
+Backend strategy (SOTA open-source):
+  - stockpyl   : EOQ, Newsvendor, loss functions   (academic OR, Snyder & Shen FoSCT)
+  - scipy.stats : distributions & quantiles not covered by stockpyl
+  - numpy       : Hadley-Whitin, pipeline, TL/LTL  (no dedicated lib — pure math)
+  - PuLP+HiGHS  : reserved for future network-LP extensions
+
+All PUBLIC function signatures are unchanged — example_problem.py requires zero edits.
+"""
+
 import numpy as np
 from scipy.stats import norm, poisson
-import math
+
+# ------------------------------------------------------------------
+# stockpyl — SOTA academic inventory optimization library
+# Docs: https://stockpyl.readthedocs.io
+# ------------------------------------------------------------------
+from stockpyl.eoq import economic_order_quantity, economic_order_quantity_with_backorders
+from stockpyl.newsvendor import newsvendor_normal, newsvendor_discrete
+from stockpyl.loss_functions import normal_loss   # normal_loss(x, mean, sd) -> (n, n_bar)
+
 
 # ==========================================
 # 1. Statistical Distributions & Probabilities
+#    (thin scipy wrappers — no stockpyl equivalent needed)
 # ==========================================
 
 def calc_normal_prob(mean: float, std: float, x: float, cdf: bool = True) -> float:
@@ -17,12 +40,14 @@ def calc_normal_prob(mean: float, std: float, x: float, cdf: bool = True) -> flo
     else:
         return 1 - norm.cdf(x, mean, std)
 
+
 def calc_normal_quantile(mean: float, std: float, target_prob: float) -> float:
     """
     Calculate the value x at a specific probability (e.g., to have 95% probability of not running out).
     x = norm.ppf(target_prob, mean, std)
     """
     return norm.ppf(target_prob, mean, std)
+
 
 def calc_poisson_prob(mean: float, x: int, cdf: bool = True) -> float:
     """
@@ -35,12 +60,14 @@ def calc_poisson_prob(mean: float, x: int, cdf: bool = True) -> float:
     else:
         return poisson.pmf(x, mean)
 
+
 def calc_discrete_expected_demand(demand_levels: list, probabilities: list) -> float:
     """
     Calculate expected demand from a discrete probability distribution.
     E[D] = sum(d_i * p_i)
     """
     return sum(d * p for d, p in zip(demand_levels, probabilities))
+
 
 def calc_discrete_expected_units_short(q: float, demand_levels: list, probabilities: list) -> float:
     """
@@ -49,8 +76,10 @@ def calc_discrete_expected_units_short(q: float, demand_levels: list, probabilit
     """
     return sum(max(d - q, 0) * p for d, p in zip(demand_levels, probabilities))
 
+
 # ==========================================
 # 2. Single-Period Inventory (Newsvendor Model)
+#    Core solver: stockpyl.newsvendor
 # ==========================================
 
 def calc_critical_ratio(price: float, cost: float, salvage: float, penalty: float = 0.0) -> float:
@@ -63,6 +92,7 @@ def calc_critical_ratio(price: float, cost: float, salvage: float, penalty: floa
     denominator = price - salvage + penalty
     return numerator / denominator
 
+
 def calc_critical_ratio_cs_ce(cs: float, ce: float) -> float:
     """
     Calculate Critical Ratio using cost of shortage and cost of excess.
@@ -73,13 +103,18 @@ def calc_critical_ratio_cs_ce(cs: float, ce: float) -> float:
     """
     return cs / (cs + ce)
 
+
 def calc_optimal_order_quantity(mean: float, std: float, cr: float) -> float:
     """
     Calculate Optimal Order Quantity Q* for Normal distribution.
-    Q* = mean + z * std, where z = norm.ppf(CR)
+    Q* = mean + z * std, where z = norm.ppf(CR).
+
+    Uses scipy.stats.norm.ppf — CR is already computed so we map
+    directly to z rather than round-tripping through stockpyl's ce/cs API.
     """
     z = norm.ppf(cr)
     return mean + z * std
+
 
 def calc_optimal_order_uniform(low: float, high: float, cr: float) -> float:
     """
@@ -88,14 +123,19 @@ def calc_optimal_order_uniform(low: float, high: float, cr: float) -> float:
     """
     return low + cr * (high - low)
 
+
 def calc_expected_units_short(std: float, z: float) -> float:
     """
-    Calculate Expected Units Short E[US] using the unit normal loss function G(z).
+    Calculate Expected Units Short E[US] using the unit normal loss function.
     E[US] = std * G(z)
-    G(z) = norm.pdf(z) - z * (1 - norm.cdf(z))
+
+    Backend: stockpyl.loss_functions.normal_loss(x, mean=0, sd=1)
+    Returns (n(x), n̄(x)) where n(x) = G(z) is the standard normal loss function.
+    G(z) = pdf(z) - z*(1 - cdf(z))
     """
-    g_z = norm.pdf(z) - z * (1 - norm.cdf(z))
+    g_z, _ = normal_loss(x=z, mean=0, sd=1)
     return std * g_z
+
 
 def calc_expected_profit(price: float, cost: float, salvage: float, mean: float,
                          q: float, expected_units_short: float, penalty: float = 0.0) -> float:
@@ -108,29 +148,60 @@ def calc_expected_profit(price: float, cost: float, salvage: float, mean: float,
     term3 = (price - salvage + penalty) * expected_units_short
     return term1 - term2 - term3
 
+
 def calc_newsvendor_with_penalty(price: float, cost: float, salvage: float, penalty: float,
                                   mean: float, std: float) -> dict:
     """
     Full Newsvendor model with optional stockout penalty.
     Returns: Q*, CR, z, E[US], E[Profit]
+
+    Backend: stockpyl.newsvendor.newsvendor_normal
+      stockpyl uses FoSCT cost notation:
+        holding_cost  = ce = cost - salvage  (cost of overstocking per unit)
+        stockout_cost = cs = price - cost + penalty  (cost of understocking per unit)
     """
-    cr = calc_critical_ratio(price, cost, salvage, penalty)
-    q = calc_optimal_order_quantity(mean, std, cr)
+    ce = cost - salvage             # cost of excess (overstocking)
+    cs = price - cost + penalty     # cost of shortage (understocking)
+
+    # stockpyl returns (optimal base-stock level S*, expected cost per period)
+    q_star, _ = newsvendor_normal(
+        holding_cost=ce,
+        stockout_cost=cs,
+        demand_mean=mean,
+        demand_sd=std
+    )
+
+    cr = cs / (cs + ce)
     z = norm.ppf(cr)
     eus = calc_expected_units_short(std, z)
-    profit = calc_expected_profit(price, cost, salvage, mean, q, eus, penalty)
-    return {"CR": cr, "Q": q, "z": z, "E_US": eus, "E_Profit": profit}
+    profit = calc_expected_profit(price, cost, salvage, mean, q_star, eus, penalty)
+
+    return {"CR": cr, "Q": q_star, "z": z, "E_US": eus, "E_Profit": profit}
+
 
 # ==========================================
 # 3. Continuous Review Policy (s, Q)
+#    EOQ backend: stockpyl.eoq
 # ==========================================
 
 def calc_eoq(demand: float, order_cost: float, holding_cost: float) -> float:
     """
     Calculate Economic Order Quantity (EOQ).
     EOQ = sqrt((2 * D * S) / H)
+
+    Backend: stockpyl.eoq.economic_order_quantity
+      fixed_cost   = S (order cost per replenishment)
+      holding_cost = H (holding cost per unit per year)
+      demand_rate  = D (annual demand)
+    Returns Q* (optimal order quantity); stockpyl also returns expected cost (discarded).
     """
-    return np.sqrt((2 * demand * order_cost) / holding_cost)
+    Q, _ = economic_order_quantity(
+        fixed_cost=order_cost,
+        holding_cost=holding_cost,
+        demand_rate=demand
+    )
+    return Q
+
 
 def calc_eoq_planned_backorders(q_pbo: float, cost_overstocking: float,
                                  cost_understocking: float) -> float:
@@ -138,11 +209,14 @@ def calc_eoq_planned_backorders(q_pbo: float, cost_overstocking: float,
     Convert EOQ with Planned Backorders (QPBO*) to EOQ without backorders (Q*).
     CR = cs / (cs + ce)
     Q* = QPBO* * sqrt(1 / CR) = QPBO* / sqrt(CR)
-    or equivalently:
-    Q* = QPBO* * sqrt((cs + ce) / cs)
+
+    Note: stockpyl.eoq.economic_order_quantity_with_backorders solves the full
+    problem from scratch given (K, h, p, D). This wrapper instead converts a
+    known QPBO* to the equivalent Q*, which requires a different interface.
     """
     cr = cost_understocking / (cost_understocking + cost_overstocking)
     return q_pbo * np.sqrt(1 / cr)
+
 
 def calc_safety_stock_continuous(std_dl: float, cr: float) -> float:
     """
@@ -152,6 +226,7 @@ def calc_safety_stock_continuous(std_dl: float, cr: float) -> float:
     z = norm.ppf(cr)
     return z * std_dl
 
+
 def calc_reorder_point(mean_dl: float, safety_stock: float) -> float:
     """
     Calculate Reorder Point s.
@@ -159,13 +234,18 @@ def calc_reorder_point(mean_dl: float, safety_stock: float) -> float:
     """
     return mean_dl + safety_stock
 
+
 def calc_item_fill_rate(std_dl: float, z: float, q: float) -> float:
     """
     Calculate Item Fill Rate (IFR) using the unit normal loss function.
     IFR = 1 - E[US] / Q = 1 - (sigma_DL * G(z)) / Q
+
+    Backend: stockpyl.loss_functions.normal_loss for G(z).
     """
-    eus = calc_expected_units_short(std_dl, z)
+    g_z, _ = normal_loss(x=z, mean=0, sd=1)
+    eus = std_dl * g_z
     return 1 - (eus / q)
+
 
 def calc_implied_stockout_cost_b1(csl: float, demand: float, holding_cost_per_unit: float,
                                    std_dl: float, q: float) -> float:
@@ -179,6 +259,7 @@ def calc_implied_stockout_cost_b1(csl: float, demand: float, holding_cost_per_un
     b1 = np.exp(k**2 / 2) * (holding_cost_per_unit * std_dl * q * np.sqrt(2 * np.pi)) / demand
     return b1
 
+
 def calc_implied_csl_from_safety_stock(safety_stock: float, std_dl: float) -> float:
     """
     Calculate implied CSL from a given safety stock level.
@@ -188,8 +269,10 @@ def calc_implied_csl_from_safety_stock(safety_stock: float, std_dl: float) -> fl
     z = safety_stock / std_dl
     return norm.cdf(z)
 
+
 # ==========================================
 # 4. Periodic Review Policy
+#    (No direct stockpyl equivalent — scipy kept)
 # ==========================================
 
 def calc_periodic_cycle_stock(demand: float, review_period: float) -> float:
@@ -199,6 +282,7 @@ def calc_periodic_cycle_stock(demand: float, review_period: float) -> float:
     """
     return (demand * review_period) / 2
 
+
 def calc_periodic_safety_stock(std: float, review_period: float, lead_time: float, cr: float) -> float:
     """
     Calculate Safety Stock for Periodic Review.
@@ -207,6 +291,7 @@ def calc_periodic_safety_stock(std: float, review_period: float, lead_time: floa
     z = norm.ppf(cr)
     return z * std * np.sqrt(review_period + lead_time)
 
+
 def calc_order_upto_level(demand: float, review_period: float, lead_time: float, safety_stock: float) -> float:
     """
     Calculate Order-Up-To Level.
@@ -214,8 +299,10 @@ def calc_order_upto_level(demand: float, review_period: float, lead_time: float,
     """
     return demand * (review_period + lead_time) + safety_stock
 
+
 # ==========================================
 # 5. Variable Lead Time (Hadley-Whitin Model)
+#    (No stockpyl equivalent — numpy kept)
 # ==========================================
 
 def calc_mean_demand_leadtime(mean_d: float, mean_l: float) -> float:
@@ -224,6 +311,7 @@ def calc_mean_demand_leadtime(mean_d: float, mean_l: float) -> float:
     mu_DL = mu_D * mu_L
     """
     return mean_d * mean_l
+
 
 def calc_std_demand_leadtime(mean_d: float, std_d: float, mean_l: float, std_l: float) -> float:
     """
@@ -234,6 +322,7 @@ def calc_std_demand_leadtime(mean_d: float, std_d: float, mean_l: float, std_l: 
     variance_dl = (mean_l * (std_d ** 2)) + ((mean_d ** 2) * (std_l ** 2))
     return np.sqrt(variance_dl)
 
+
 def calc_pipeline_inventory_cost(item_cost: float, holding_rate: float,
                                   mean_l: float, demand: float) -> float:
     """
@@ -243,8 +332,11 @@ def calc_pipeline_inventory_cost(item_cost: float, holding_rate: float,
     """
     return (item_cost * holding_rate) * mean_l * demand
 
+
 # ==========================================
 # 6. Transportation & Logistics
+#    Analytical closed-form — no LP needed at single-lane scope.
+#    For multi-lane network optimization: use PuLP + HiGHS solver.
 # ==========================================
 
 def calc_carrier_savings(value_per_load: float, holding_rate: float,
@@ -275,6 +367,7 @@ def calc_carrier_savings(value_per_load: float, holding_rate: float,
         "Savings": savings
     }
 
+
 def calc_breakeven_holding_charge(c1_cost_per_load: float, c1_days: float,
                                    c2_cost_per_load: float, c2_days: float,
                                    value_per_load: float,
@@ -283,14 +376,12 @@ def calc_breakeven_holding_charge(c1_cost_per_load: float, c1_days: float,
     """
     Find the holding charge h* where costs of two carriers are equal.
     C1_total = C2_total
-    (value * h * c1_days/365 * loads) + (c1_cost * loads) = (value * h * c2_days/365 * loads) + (c2_cost * loads)
-    Solving for h:
-    h * value * loads * (c1_days - c2_days)/365 = (c2_cost - c1_cost) * loads
     h = (c2_cost - c1_cost) * days_per_year / (value * (c1_days - c2_days))
     """
     numerator = (c2_cost_per_load - c1_cost_per_load) * days_per_year
     denominator = value_per_load * (c1_days - c2_days)
     return numerator / denominator
+
 
 def compare_tl_ltl_full(demand: float, item_cost: float, holding_rate: float,
                          order_cost: float,
@@ -302,6 +393,8 @@ def compare_tl_ltl_full(demand: float, item_cost: float, holding_rate: float,
     TL Option A: ship full truckloads (Q = truck capacity)
     TL Option B: ship EOQ (use item_cost only for EOQ calc, then add transport cost)
     LTL Option C: ship EOQ with LTL (item_cost + ltl_cost_per_item for holding)
+
+    EOQ calls use stockpyl.eoq.economic_order_quantity internally via calc_eoq().
     """
     # Option A: Full TL
     a_item_cost = item_cost + tl_cost / tl_capacity
@@ -322,7 +415,7 @@ def compare_tl_ltl_full(demand: float, item_cost: float, holding_rate: float,
 
     # Option C: LTL with EOQ (use base item_cost for EOQ)
     c_item_cost = item_cost + ltl_cost_per_item
-    c_eoq = calc_eoq(demand, order_cost, item_cost * holding_rate)  # EOQ uses base cost
+    c_eoq = calc_eoq(demand, order_cost, item_cost * holding_rate)
     c_cycle = c_item_cost * holding_rate * (c_eoq / 2)
     c_pipeline = (demand / days_per_year) * ltl_time * holding_rate * c_item_cost
     c_ordering = (demand / c_eoq) * order_cost
