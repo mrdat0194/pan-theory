@@ -419,11 +419,11 @@ if __name__ == "__main__":
     Segmentation = gonjoybot_chat[col1]
     Segmentation1 = Segmentation[~pd.isna(Segmentation["from_id"])].reset_index(drop=True)
     
-    Segmentation2 = Time_converse.Time_diff(Segmentation1, "from_id", "time")
+    Segmentation = Time_converse.Time_diff(Segmentation, "from_id", "time")
     
     print("Time Difference Segmentation:")
-    print(Segmentation2)
+    print(Segmentation)
     
-    Segmentation3 = Segmentation2.sort_values(by=['time'])
+    Segmentation = Segmentation.sort_values(by=['time'])
     print("\nSorted by time:")
-    print(Segmentation3)
+    print(Segmentation)
