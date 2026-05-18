@@ -25,7 +25,7 @@ So in total you have: a1: 1 option; a2: 2 options; a3: 3 options; a4: 2 options;
 1*2*3*2*5*1 = 60 possible 'nice' sequences
 '''
 
-from math import factorial
+# from math import factorial
 
 
 def prime_factors(n):
@@ -52,40 +52,35 @@ def primes(n):
 
 
 def number_nice(A):
+    N = len(A)
+    MOD = 10**9 + 7
+    
     if A[0] != 0 and A[0] != -1:
         return 0
-    # elif len(A)==2
-    else:
-        nice_seqs = 1
-        N = len(A)
-        # a[1] = 0 always
-        # a[2] = 0 or 1
-        for prime in primes(N + 1):
-            # print(prime)
-            positions = [i for i in range(N) if
-                         (i + 1) % prime == 0]  # all positions at multiples of prime in A, 0-indexed
-            test = [A[i] for i in positions]
-            # print(test)
-            fixed_mods = [x % prime for x in test if x != -1]
-
-            if len(set(fixed_mods)) > 1:
-                return 0  # given sequence contains contradiction, cannot be fixed
-
-            elif -1 not in test:
-                continue  # if nothing changeable and every element in sequence mod prime is equal, move to next prime
-
-            elif -1 in test and len(set(test)) == 1:  # all -1's
-                nice_seqs *= prime * factorial((positions[-1] + 1) / prime)
-
-            else:  # mixture of -1's and elements with equal mods wrt prime
-                the_remainder = fixed_mods[0]
-                minus_ones = [i + 1 for i in positions if A[i] == -1]  # 1-indexed positions of -1's in test
-                for position in minus_ones:
-                    nice_seqs *= position / prime
+    
+    nice_seqs = 1
+    for prime in primes(N + 1):
+        e = 1
+        while prime**e <= N:
+            q = prime**e
+            fixed_val = -1
+            # Check all multiples of this prime power q = p^e
+            for k in range(q, N + 1, q):
+                if A[k-1] != -1:
+                    val = A[k-1] % q
+                    if fixed_val != -1 and fixed_val != val:
+                        return 0  # Contradiction
+                    fixed_val = val
+            
+            if fixed_val == -1:
+                nice_seqs = (nice_seqs * prime) % MOD
+            e += 1
+            
     return nice_seqs
 
 
-n = int(input().strip())
-arr = [int(x) for x in input().strip().split(' ')]
+if __name__ == '__main__':
+    n = int(input().strip())
+    arr = [int(x) for x in input().strip().split(' ')]
 
-print(number_nice(arr) % (7 + 10 ** 9))
+    print(number_nice(arr))

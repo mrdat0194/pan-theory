@@ -3,6 +3,7 @@ import subprocess
 import zipfile
 import sys
 import io
+import shutil
 from pathlib import Path
 
 # Fix for Unicode encoding issues in Windows terminal
@@ -100,10 +101,25 @@ def convert_flac_to_mp3_recursive(src_dir, dest_dir):
         except Exception as e:
             print(f"Unexpected error converting {flac_file.name}: {e}", flush=True)
 
+def cleanup_empty_folders(directory):
+    """
+    Deletes all subdirectories in the given directory.
+    """
+    path = Path(directory)
+    print(f"Cleaning up folders in {directory}...", flush=True)
+    for item in path.iterdir():
+        if item.is_dir():
+            try:
+                shutil.rmtree(item)
+                print(f"Deleted folder: {item.name}", flush=True)
+            except Exception as e:
+                print(f"Could not delete folder {item.name}: {e}", flush=True)
+
 if __name__ == "__main__":
     src = r"C:\Users\mrdat\Desktop\flac"
     dest = r"C:\Users\mrdat\Desktop\Mp3"
     
     unzip_and_delete(src)
     convert_flac_to_mp3_recursive(src, dest)
+    cleanup_empty_folders(src)
     print("\nAll tasks completed successfully.", flush=True)
