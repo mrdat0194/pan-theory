@@ -32,12 +32,13 @@ def get_config():
     """
 
     path = os.path.join(MAIN_DIR, "ggl_api")
-    path_save = os.path.join(path, "users_config.pkl")
+    path_save = os.path.join(path, "users_config.json")
 
     try:
         # see if we have run  this before
-        with  open(path_save, 'rb') as users:
-            users_dict = pickle.load(users)
+        import json
+        with open(path_save, 'r') as users:
+            users_dict = json.load(users)
 
     except IOError:
         # if not set to default
@@ -47,12 +48,16 @@ def get_config():
     password = input("Enter your password: ")
     get_what = input("What you wanna get: ")
     password = bytes(password, 'utf-8')
+    
     hashed = users_dict.get(username)
-
-    if bcrypt.checkpw(password, hashed): # unless a password can be None we can use get
-        with open(path_save, 'rb') as users:
-            users_dict = pickle.load(users)
+    if hashed is not None:
+        if isinstance(hashed, str):
+            hashed = hashed.encode('utf-8')
+        
+        if bcrypt.checkpw(password, hashed): # unless a password can be None we can use get
             return users_dict.get(get_what)
+        else:
+            print("Please let it go!")
     else:
         print("Please let it go!")
 
@@ -232,255 +237,193 @@ def append_df_to_excel(filename, df, sheet_name='Sheet1', startrow=None,
     # save the workbook
     writer.save()
 
+def Extract_Diff_id(Event_Category, Var1, tota_FB_promotion, Question_user):
+    tota_FB_promotion = tota_FB_promotion.copy()
+    Question_user = Question_user.copy()
+    
+    col3 = [c for c in Question_user.columns if Var1 in c]
+    Question_user.rename(columns={col: "Event.Category" for col in col3}, inplace=True)
+    
+    col2 = [c for c in tota_FB_promotion.columns if Event_Category in c]
+    tota_FB_promotion.rename(columns={col: "Event.Category" for col in col2}, inplace=True)
+    
+    filter_vals = Question_user["Event.Category"].astype(str).unique()
+    tota_FB_promotion = tota_FB_promotion[~tota_FB_promotion["Event.Category"].astype(str).isin(filter_vals)]
+    
+    tota_FB_promotion.rename(columns={"Event.Category": Event_Category}, inplace=True)
+    return tota_FB_promotion
+
+def Same_extract_id(abc_b, abc_c, gonjoybot_chat, Chat_phone_usertx3):
+    gonjoybot_chat = gonjoybot_chat.copy()
+    Chat_phone_usertx3 = Chat_phone_usertx3.copy()
+    
+    col3 = [c for c in Chat_phone_usertx3.columns if abc_c in c]
+    Chat_phone_usertx3.rename(columns={col: "Event Category" for col in col3}, inplace=True)
+    
+    col2 = [c for c in gonjoybot_chat.columns if abc_b in c]
+    gonjoybot_chat.rename(columns={col: "Event Category" for col in col2}, inplace=True)
+    
+    keep_vals = Chat_phone_usertx3["Event Category"].astype(str).unique()
+    extracted = gonjoybot_chat[gonjoybot_chat["Event Category"].astype(str).isin(keep_vals)].copy()
+    
+    extracted.rename(columns={"Event Category": abc_b}, inplace=True)
+    return extracted
+
+def Get_id_GA_full(Joy_GA, No, DateUpdate):
+    import glob
+    
+    data_path = os.path.expanduser("~/Desktop/GonJoy/Right Time/OnData/Datarequire/")
+    files = glob.glob(os.path.join(data_path, "*.csv"))
+    
+    if not files:
+        print("No CSV files found in Datarequire path.")
+        return Joy_GA
+        
+    li = []
+    for f in files:
+        try:
+            li.append(pd.read_csv(f))
+        except Exception as e:
+            print(f"Error reading {f}: {e}")
+            
+    if not li:
+        return Joy_GA
+        
+    DatabaseRequire_AllIn = pd.concat(li, axis=0, ignore_index=True)
+    
+    if 'Date' in DatabaseRequire_AllIn.columns:
+        DatabaseRequire_AllIn['date'] = pd.to_datetime(DatabaseRequire_AllIn['Date'].astype(str).str[:8], format='%Y%m%d', errors='coerce')
+    else:
+        DatabaseRequire_AllIn['date'] = pd.to_datetime(DatabaseRequire_AllIn.iloc[:, 0].astype(str).str[:8], format='%Y%m%d', errors='coerce')
+        
+    DateUpdate = pd.to_datetime(DateUpdate)
+    DatabaseRequire_AllIn = DatabaseRequire_AllIn[DatabaseRequire_AllIn['date'] >= DateUpdate]
+    
+    def parse_event_cat(val):
+        if pd.isna(val):
+            return val
+        parts = str(val).split('-')
+        if len(parts) >= 3:
+            res = '-'.join(parts[2:]).strip()
+            sub_parts = res.split('-')
+            if len(sub_parts) > 1:
+                res = '-'.join(sub_parts[1:]).strip()
+            return res
+        return val
+
+    col_names = list(DatabaseRequire_AllIn.columns)
+    if len(col_names) >= 4:
+        col3_name = col_names[2]
+        col4_name = col_names[3]
+        DatabaseRequire_AllIn[col3_name] = DatabaseRequire_AllIn[col4_name].apply(parse_event_cat)
+
+    keep_cols = [c for c in DatabaseRequire_AllIn.columns if 'Event label' in c or 'Event Category' in c]
+    DatabaseRequire_AllIn1 = DatabaseRequire_AllIn[keep_cols].copy()
+    
+    if len(DatabaseRequire_AllIn1.columns) > 0:
+        DatabaseRequire_AllIn1.rename(columns={DatabaseRequire_AllIn1.columns[0]: "Var1"}, inplace=True)
+        
+    Joy_GA = Joy_GA.copy()
+    if No < len(Joy_GA.columns):
+        Joy_GA.rename(columns={Joy_GA.columns[No]: "Var1"}, inplace=True)
+        
+    Joy_GA1 = pd.merge(Joy_GA, DatabaseRequire_AllIn1, on="Var1", how="left")
+    return Joy_GA1.drop_duplicates()
+
+def Database_Loyalty(loyaltyCustomer, loyaltyProgram, Customer, Provider):
+    Customer = Customer.copy()
+    Provider = Provider.copy()
+    loyaltyProgram = loyaltyProgram.copy()
+    loyaltyCustomer = loyaltyCustomer.copy()
+
+    def find_cols(df, pattern):
+        return [c for c in df.columns if pattern in str(c)]
+
+    x_id_cus = find_cols(Customer, "X_id")
+    created_at_cus = find_cols(Customer, "createdAt")
+    if x_id_cus:
+        Customer.rename(columns={x_id_cus[0]: "customer"}, inplace=True)
+    if created_at_cus:
+        Customer.rename(columns={created_at_cus[0]: "createdAt_Cus"}, inplace=True)
+
+    x_id_pro = find_cols(Provider, "X_id")
+    created_at_pro = find_cols(Provider, "createdAt")
+    if x_id_pro:
+        Provider.rename(columns={x_id_pro[0]: "provider"}, inplace=True)
+    if created_at_pro:
+        Provider.rename(columns={created_at_pro[0]: "createdAt_Pro"}, inplace=True)
+
+    prov_cols = []
+    for pat in ["provider", "name", "synonyms", "gps_coordinates", "place"]:
+        found = find_cols(Provider, pat)
+        if found:
+            prov_cols.append(found[0])
+    Provider1 = Provider[prov_cols].copy()
+
+    cust_cols = []
+    for pat in ["fbId", "name", "createdAt", "lastActiveTime", "customer"]:
+        found = find_cols(Customer, pat)
+        if found:
+            cust_cols.append(found[0])
+    if "customer" in Customer.columns and "customer" not in cust_cols:
+        cust_cols.append("customer")
+    cust_cols = list(dict.fromkeys(cust_cols))
+    Customer1 = Customer[cust_cols].copy()
+
+    Loyalty_customer = pd.merge(loyaltyCustomer, Customer1, on="customer", how="left")
+    if "fbId" in Loyalty_customer.columns:
+        Loyalty_customer["fbId"] = Loyalty_customer["fbId"].astype(str)
+
+    Loyalty_Provider = pd.merge(Loyalty_customer, Provider1, on="provider", how="left")
+    
+    if "fbId" in Loyalty_Provider.columns:
+        Loyalty_Provider = Loyalty_Provider.drop_duplicates(subset=["fbId"])
+
+    prog_cols = []
+    for pat in ["X_id", "name", "provider", "description", "levels", "updatedAt"]:
+        found = find_cols(loyaltyProgram, pat)
+        if found:
+            prog_cols.append(found[0])
+    
+    loyaltyProgram1 = loyaltyProgram[prog_cols].copy()
+    up_at_prog = find_cols(loyaltyProgram1, "updatedAt")
+    if up_at_prog:
+        loyaltyProgram1.rename(columns={up_at_prog[0]: "updatedAt_program"}, inplace=True)
+
+    Loyalty_Provider_Customer_Program = pd.merge(Loyalty_Provider, loyaltyProgram1, on="provider", how="left")
+    return Loyalty_Provider_Customer_Program
+
 if __name__ == "__main__":
+    import warnings
+    warnings.filterwarnings('ignore')
     pd.set_option('float_format', '{:,.2f}'.format)
     pd.set_option("display.max_rows", None, "display.max_columns", 60, 'display.width', 1000)
 
-
-    # data_trial = os.path.join(MAIN_DIR, "data", "Gonj/")
-    #
-    # gonjoybot_list = sorted( os.listdir(data_trial), reverse = True )[0:2]
-    #
-    # li = []
-    #
-    # for filename in gonjoybot_list:
-    #     filename = data_trial + filename
-    #     df = pd.read_csv(filename, index_col=None, header=0)
-    #     li.append(df)
-    #
-    # gonjoybot_chat = pd.concat(li, axis=0, ignore_index=True)
-    #
-    #
-    # gonjoybot_chat['Date'] = pd.to_datetime(gonjoybot_chat['time']) +   pd.Timedelta(hours=7)
-    #
-    # gonjoybot_chat = gonjoybot_chat[gonjoybot_chat['Date'].dt.date == pd.to_datetime("2019-06-25")]
-    #
-    # #
-    #
-    # col1 = [c for c in gonjoybot_chat.columns if pd.Series(c).str.contains('^from|^time$').bool()]
-    #
-    # Segmentation = gonjoybot_chat[col1]
-    #
-    # Segmentation1 = Segmentation[~pd.isna(Segmentation["from_id"]) ].reset_index()
-    #
-    # Segmentation2 = Time_converse.Time_diff(Segmentation1, "from_id", "time")
-    #
-    # print(Segmentation2)
-    #
-    # Segmentation3 = Segmentation2.sort_values(by=['time'])
-    #
-    # print(Segmentation3)
-
-    # # Driver Code for 2 sum
-    # num_arr = [4, 5, 1, 8]
-    # pair_sum = 9
-    #
-    # # Calling function
-    # twoSumHashing(num_arr, pair_sum)
-
-
-    ## Not fixed yet
-    #Extract_Diff_id <- function(Event.Category, Var1, tota_FB_promotion,Question_user) {
-    #
-    #    col3 <- grep(Var1,colnames(Question_user))
-    #
-    #    names(Question_user)[col3] <- paste("Event.Category")
-    #
-    #    #
-    #
-    #    col2 <- grep(Event.Category,colnames(tota_FB_promotion))
-    #
-    #    names(tota_FB_promotion)[col2] <- paste("Event.Category")
-    #
-    #
-    #
-    #    col1 <- grep("Event.Category",colnames(Question_user))
-    #
-    #    for (i in 1:dim(Question_user)[1]) {
-    #      if (i==1) {
-    #        tota_FB_promotion <- tota_FB_promotion[which(as.character(tota_FB_promotion$Event.Category) != as.character(Question_user[i,col1])),]
-    #      } else {
-    #        tota_FB_promotion <- tota_FB_promotion[which(as.character(tota_FB_promotion$Event.Category) != as.character(Question_user[i,col1])),]
-    #      }
-    #    }
-    #
-    #    names(tota_FB_promotion)[col2] <- paste(Event.Category)
-    #
-    #    return  (tota_FB_promotion)
-    #
-    #
-    #}
-    #
-    #
-    ## Same extract
-    ### Trich ID:
-    #
-    #Same_extract_id <- function(abc_b, abc_c,gonjoybot_chat, Chat_phone_usertx3) {
-    #
-    #  col3 <- grep(abc_c,colnames(Chat_phone_usertx3))
-    #
-    #  names(Chat_phone_usertx3)[col3] <- paste("Event Category")
-    #
-    #  #
-    #
-    #  col2 <- grep(abc_b,colnames(gonjoybot_chat))
-    #
-    #  names(gonjoybot_chat)[col2] <- paste("Event Category")
-    #
-    #  #
-    #
-    #
-    #  for (i in 1:dim(Chat_phone_usertx3)[1]) {
-    #    if (i==1) {
-    #      Chat_phone_usert3_1 <- gonjoybot_chat[which(as.character(gonjoybot_chat$`Event Category`) == as.character(Chat_phone_usertx3$`Event Category`)[i]),]
-    #    } else {
-    #      Chat_phone_usert3_2 <- gonjoybot_chat[which(as.character(gonjoybot_chat$`Event Category`) == as.character(Chat_phone_usertx3$`Event Category`)[i]),]
-    #      Chat_phone_usert3_1 <- rbind(Chat_phone_usert3_1,Chat_phone_usert3_2)
-    #    }
-    #  }
-    #
-    #  names(Chat_phone_usert3_1)[col2] <- paste(abc_b)
-    #
-    #  return (Chat_phone_usert3_1)
-    #
-    #}
-    #def Get_id_GA_full(Joy_GA,No,DateUpdate):
-    #
-    #
-    #  setwd("~/Desktop/GonJoy/Right Time/")
-    #
-    #  DateUpdate <- DateUpdate
-    #
-    #  setwd("~/Desktop/GonJoy/Right Time/OnData/Datarequire/")
-    #
-    #  DatabaseRequire_AllIn <- do.call(rbind,lapply(list.files(path = "~/Desktop/GonJoy/Right Time/OnData/Datarequire/"), read_csv))
-    #
-    #  DatabaseRequire_AllIn$date <- DatabaseRequire_AllIn$Date
-    #
-    #  DatabaseRequire_AllIn$date <- substr(DatabaseRequire_AllIn$date,1,8)
-    #
-    #  DatabaseRequire_AllIn$date <- anydate(  DatabaseRequire_AllIn$date)
-    #
-    #  DatabaseRequire_AllIn$date <- anydate( DatabaseRequire_AllIn$date)
-    #
-    #  DatabaseRequire_AllIn <- DatabaseRequire_AllIn[which(as.Date(DatabaseRequire_AllIn$date) >= DateUpdate ), ]
-    #
-    #  for (i in 1:length(DatabaseRequire_AllIn$`Event Category`)) {
-    #
-    #    start_string <- str_locate_all(DatabaseRequire_AllIn[i,4],"-")
-    #
-    #    start_string <- data.frame(start_string)
-    #
-    #    DatabaseRequire_AllIn[i,3] <- substr(DatabaseRequire_AllIn[i,4], start_string[2,2]+2,
-    #                                         as.integer(nchar(as.character(DatabaseRequire_AllIn[i,4]))))
-    #
-    #    start_string <- str_locate_all(DatabaseRequire_AllIn[i,3],"-")
-    #
-    #    if (!isempty(start_string[[1]])) {
-    #
-    #      start_string <- data.frame(start_string)
-    #
-    #      DatabaseRequire_AllIn[i,3] <- substr(DatabaseRequire_AllIn[i,3], start_string[1,2]+2,
-    #                                           as.integer(nchar(as.character(DatabaseRequire_AllIn[i,3]))))
-    #    }
-    #
-    #  }
-    #
-    #  DatabaseRequire_AllIn1 <- DatabaseRequire_AllIn[,grep("Event label|Event Category", names(DatabaseRequire_AllIn))]
-    #
-    #  names(DatabaseRequire_AllIn1)[1] <- paste("Var1")
-    #
-    #  names(Joy_GA)[No] <- paste("Var1")
-    #
-    #  Joy_GA1 <- merge(Joy_GA,DatabaseRequire_AllIn1, by = "Var1", all.x = T )
-    #
-    #  Joy_GA2 <- unique(Joy_GA1)
-    #
-    #  return (Joy_GA2)
-    #
-    #}
-
-    #
-    ##class Database:
-    ##
-    ##    def Database_Loyalty(loyaltyCustomer, loyaltyProgram, Customer, Provider)
-    ##
-    ##    Database_Loyalty <- function (loyaltyCustomer, loyaltyProgram, Customer, Provider) {
-    ##
-    ##  # setwd("~/Desktop/GonJoy/Right Time/OnData/Datatest/Loyalty")
-    ##  #
-    ##  # loyaltyCustomer <- read.csv("~/Desktop/GonJoy/Right Time/OnData/Datatest/Loyalty/gonjoy34.loyaltyCustomers.csv")
-    ##  #
-    ##  # loyaltyProgram <- read.csv("~/Desktop/GonJoy/Right Time/OnData/Datatest/Loyalty/gonjoy34.loyaltyPrograms.csv")
-    ##  #
-    ##  # Customer <- read.csv("~/Desktop/GonJoy/Right Time/OnData/Datatest/Customers/gonjoy34.customer.csv")
-    ##  #
-    ##  # Provider <- read.csv("~/Desktop/GonJoy/Right Time/OnData/Datatest/Provider/gonjoy34.providers.csv")
-    ##  #
-    ##  col1 <- grep("X_id", names(Customer))
-    ##
-    ##  col2 <- grep("X_id", names(Provider))
-    ##
-    ##  col3 <- grep("createdAt", names(Customer))
-    ##
-    ##  col4 <- grep("createdAt", names(Provider))
-    ##
-    ##  names(Customer)[col1] <- paste("customer")
-    ##
-    ##  names(Provider)[col2] <- paste("provider")
-    ##
-    ##  names(Customer)[col3] <- paste("createdAt_Cus")
-    ##
-    ##  names(Provider)[col4] <- paste("createdAt_Pro")
-    ##
-    ##  #Col_Provider
-    ##
-    ##  cul_Customer1 <- grep("provider", colnames(Provider))
-    ##  cul_Customer2 <- grep("name", colnames(Provider))[1]
-    ##  cul_Customer3 <- grep("synonyms", colnames(Provider))
-    ##  cul_Customer4 <- grep("gps_coordinates", colnames(Provider))[1]
-    ##  cul_Customer6 <- grep("place", colnames(Provider))[1]
-    ##
-    ##  #Col_cust
-    ##
-    ##  col_Customer1 <- grep("fbId", colnames(Customer))
-    ##  col_Customer2 <- grep("name", colnames(Customer))[1]
-    ##  col_Customer3 <- grep("createdAt", colnames(Customer))
-    ##  col_Customer4 <- grep("lastActiveTime", colnames(Customer))
-    ##  col_Customer5 <- grep("customer", colnames(Customer))
-    ##  col_Customer6 <- grep("X_id", colnames(Customer))
-    ##
-    ##  Customer1 <- Customer[,c(col_Customer1,col_Customer2,col_Customer3, col_Customer4, col_Customer5, col_Customer6)]
-    ##
-    ##  Provider1 <- Provider[,c(cul_Customer1,cul_Customer2,cul_Customer3, cul_Customer4, cul_Customer6)]
-    ##
-    ##  Loyalty_customer <- merge(loyaltyCustomer, Customer1, by = "customer", all.x = T)
-    ##
-    ##  Loyalty_customer$fbId <- as.character(Loyalty_customer$fbId)
-    ##
-    ##  Loyalty_customer1 <- Loyalty_customer
-    ##
-    ##  # Loyalty program - customer - provider
-    ##
-    ##  Loyalty_Provider <- merge(Loyalty_customer1, Provider1, by = "provider", all.x = T)
-    ##
-    ##  Loyalty_Provider1 <- Loyalty_Provider[!duplicated(Loyalty_Provider$fbId),]
-    ##
-    ##  co_Customer0 <- grep("X_id", colnames(loyaltyProgram))[1]
-    ##  co_Customer1 <- grep("name", colnames(loyaltyProgram))[1]
-    ##  co_Customer2 <- grep("provider", colnames(loyaltyProgram))[1]
-    ##  co_Customer3 <- grep("description", colnames(loyaltyProgram))
-    ##  co_Customer4 <- grep("levels", colnames(loyaltyProgram))[1]
-    ##  co_Customer5 <- grep("updatedAt", colnames(loyaltyProgram))[1]
-    ##
-    ##  loyaltyProgram1 <- loyaltyProgram[,c(co_Customer0,co_Customer1,co_Customer2,co_Customer3,co_Customer4,co_Customer5)]
-    ##
-    ##  names(loyaltyProgram1)[6] <- paste("updatedAt_program")
-    ##
-    ##  #
-    ##
-    ##  Loyalty_Provider_Customer_Program <- merge(Loyalty_Provider, loyaltyProgram1, by = "provider", all.x = T)
-    ##
-    ##  return(Loyalty_Provider_Customer_Program)
-    ##
-    ##}
+    data_trial = os.path.join(MAIN_DIR, "data", "Gonj")
+    
+    gonjoybot_list = sorted(os.listdir(data_trial), reverse=True)[0:2]
+    
+    li = []
+    for filename in gonjoybot_list:
+        file_path = os.path.join(data_trial, filename)
+        df = pd.read_csv(file_path, index_col=None, header=0)
+        li.append(df)
+    
+    gonjoybot_chat = pd.concat(li, axis=0, ignore_index=True)
+    
+    gonjoybot_chat['Date'] = pd.to_datetime(gonjoybot_chat['time']) + pd.Timedelta(hours=7)
+    gonjoybot_chat = gonjoybot_chat[gonjoybot_chat['Date'].dt.date == pd.to_datetime("2019-06-25").date()]
+    
+    col1 = [c for c in gonjoybot_chat.columns if pd.Series(c).str.contains('^from|^time$').bool()]
+    
+    Segmentation = gonjoybot_chat[col1]
+    Segmentation1 = Segmentation[~pd.isna(Segmentation["from_id"])].reset_index(drop=True)
+    
+    Segmentation2 = Time_converse.Time_diff(Segmentation1, "from_id", "time")
+    
+    print("Time Difference Segmentation:")
+    print(Segmentation2)
+    
+    Segmentation3 = Segmentation2.sort_values(by=['time'])
+    print("\nSorted by time:")
+    print(Segmentation3)
