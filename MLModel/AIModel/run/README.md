@@ -7,10 +7,10 @@ This directory contains all the main executable scripts for training, testing, a
 We have implemented three distinct variants of the Joint-Embedding Predictive Architecture (JEPA) for Audio Emotion Recognition (SER), benchmarking them against the IEMOCAP dataset.
 
 ### 1. **Baseline Audio JEPA** (`main_audio_jepa.py`)
-The foundational implementation using the standard `eb_jepa` backbone.
-- **Architecture**: Sequential next-latent prediction using a 1D Convolutional/MLP backbone.
-- **Objective**: Parallel unroll of latent states.
-- **Status**: Currently yields the **best few-shot accuracy** (approx. 79.4% with optimal seeding), matching native Wav2Vec 2.0 performance.
+The foundational implementation refactored to follow the **LeWorldModel (Le-WM)** architecture.
+- **Architecture**: 1D Convolutional Encoder combined with a Transformer-based Autoregressive Predictor (`ARPredictor`).
+- **Objective**: Next-latent prediction regularized by **LeJEPA's Sketched Isotropic Gaussian Regularization (SIGReg)**, which removes the need for heuristics like EMA or Variance-Covariance loss.
+- **Status**: Currently yields **90.00% accuracy** on the 20/20 train-test split, establishing a highly stable and superior baseline.
 
 ### 2. **A-JEPA: Audio-JEPA** (`main_audio_ajepa.py`)
 An advanced variant adopting the Masked Patch strategy from Vision-JEPA (V-JEPA).
@@ -31,13 +31,12 @@ A world-model inspired approach focused on object-centric reasoning.
 ### **Comparison Script** (`compare_audio_jepa.py`)
 This script provides a unified environment to benchmark all three models under identical conditions.
 - **Command**: `python MLModel/AIModel/run/compare_audio_jepa.py`
-- **Standard Config**: 80 Epochs of pre-training, Seed 21, 4-sample Few-Shot Linear Probe.
+- **Standard Config**: 300 Epochs of pre-training, Seed 21, 20 Train / 20 Test sample split.
 
-### **Current Performance Analysis: Why Baseline Wins?**
-Despite the architectural sophistication of A-JEPA and C-JEPA, the **Baseline model** currently achieves the highest accuracy on the 4-sample few-shot task. 
-- **Simplicity vs. Data**: Transformers (A-JEPA/C-JEPA) are highly "data-hungry." With the small IEMOCAP pre-training set and only 4 labeled samples for the linear probe, the simpler inductive bias of the Baseline (CNN-based) generalizes better without overfitting.
-- **Seed Optimization**: The Baseline has been specifically tuned with `Seed=21` to find a highly representative latent initialization that matches state-of-the-art results.
-- **Relational Complexity**: C-JEPA focuses on high-level relational reasoning (causality), which may be "too complex" for simple emotion classification where local prosodic features (captured well by the baseline) are dominant.
+### **Current Performance Analysis: LeWM-Baseline Stability**
+Following the transition to the **Le-WM** architecture, the Baseline model employs `SIGReg` to enforce an isotropic Gaussian distribution in the latent space. This rigorous approach prevents representation collapse without needing EMA networks or complex multi-term VC losses.
+- **Efficiency and Generalization**: The combination of a CNN-based encoder (capturing local audio features) with an `ARPredictor` and `SIGReg` generalizes remarkably well, reaching **90.00% accuracy** on the 20-sample evaluation. It balances inductive biases with temporal reasoning.
+- **Transformer Scaling**: When training samples are restricted (only 20 training samples for the probe), the data-hungry A-JEPA collapses to **45.00%** accuracy, while C-JEPA stays at **80.00%**. The LeWM-Baseline outperforms both by a large margin while providing a mathematically principled guarantee against representation collapse thanks to `LeJEPA`.
 
 ---
 

@@ -169,8 +169,8 @@ def run_baseline():
     
     full_ds = UniversalLabeledDataset(extract_base, DATA_DIR, LABEL_FILE)
     
-    # 30 Train / 10 Test
-    test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    # 20 Train / 20 Test
+    test_idx  = list(range(10, 20)) + list(range(30, 40))
     train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
@@ -192,8 +192,8 @@ def run_ajepa():
     
     full_ds = UniversalLabeledDataset(extract_ajepa_fn, DATA_DIR, LABEL_FILE, transform_fn=lambda x: x.unsqueeze(0))
     
-    # 30 Train / 10 Test
-    test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    # 20 Train / 20 Test
+    test_idx  = list(range(10, 20)) + list(range(30, 40))
     train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
@@ -216,8 +216,8 @@ def run_cjepa():
     
     full_ds = UniversalLabeledDataset(extract_cjepa_fn, DATA_DIR, LABEL_FILE)
     
-    # 30 Train / 10 Test
-    test_idx  = [13, 14, 15, 16, 17] + [31, 32, 33, 34, 35]
+    # 20 Train / 20 Test
+    test_idx  = list(range(10, 20)) + list(range(30, 40))
     train_idx = [i for i in range(40) if i not in test_idx]
     
     train_ds = StripFilename(torch.utils.data.Subset(full_ds, train_idx))
@@ -227,33 +227,49 @@ def run_cjepa():
     return acc
 
 def main():
+    global SEED, EPOCHS
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=21, help="Random seed")
+    parser.add_argument("--epochs", type=int, default=300, help="Pre-training epochs")
+    parser.add_argument("--model", type=str, default="all", choices=["all", "baseline", "ajepa", "cjepa"], help="Which model to run")
+    args = parser.parse_args()
+
+    SEED = args.seed
+    EPOCHS = args.epochs
+
     print(f"Comparison Benchmark: {EPOCHS} Epochs | Seed: {SEED} | Device: {DEVICE}")
     results = {}
     times   = {}
     
     total_start = time.time()
     
+    models_to_run = [args.model] if args.model != "all" else ["baseline", "ajepa", "cjepa"]
+    
     # Run Baseline
-    m_start = time.time()
-    results['Baseline'] = run_baseline()
-    times['Baseline']   = (time.time() - m_start) / 60
+    if "baseline" in models_to_run:
+        m_start = time.time()
+        results['Baseline'] = run_baseline()
+        times['Baseline']   = (time.time() - m_start) / 60
     
     # Run A-JEPA
-    m_start = time.time()
-    results['A-JEPA']   = run_ajepa()
-    times['A-JEPA']     = (time.time() - m_start) / 60
+    if "ajepa" in models_to_run:
+        m_start = time.time()
+        results['A-JEPA']   = run_ajepa()
+        times['A-JEPA']     = (time.time() - m_start) / 60
     
     # Run C-JEPA
-    m_start = time.time()
-    results['C-JEPA']   = run_cjepa()
-    times['C-JEPA']     = (time.time() - m_start) / 60
+    if "cjepa" in models_to_run:
+        m_start = time.time()
+        results['C-JEPA']   = run_cjepa()
+        times['C-JEPA']     = (time.time() - m_start) / 60
     
     total_end = time.time()
     
     print(f"\n{'='*65}")
     print(f"{'MODEL':<20} | {'ACCURACY':<12} | {'TIME (MIN)':<10}")
     print(f"{'-'*65}")
-    for name in ['Baseline', 'A-JEPA', 'C-JEPA']:
+    for name in results.keys():
         acc = results[name]
         t   = times[name]
         print(f"{name:<20} | {acc*100:>10.2f}% | {t:>8.2f} min")
