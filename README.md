@@ -33,3 +33,7 @@ Read index.md instead, this is just teaching note.
 + https://github.com/eriklindernoren/ML-From-Scratch.git
 + https://github.com/ageron/handson-ml2.git
 
+
+Note: Do not duplicate story or lesson. Created.
+
+

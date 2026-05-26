@@ -3,9 +3,14 @@ import os  # noqa: E402
 from math import factorial  # noqa: E402
 import itertools  # noqa: E402
 from collections import defaultdict, Counter, namedtuple  # noqa: E402
-from functools import cmp_to_key  # noqa: E402
+from functools import cmp_to_key, reduce  # noqa: E402
 import heapq  # noqa: E402
 from typing import Set, List  # noqa: E402
+import re  # noqa: E402
+import operator  # noqa: E402
+import random  # noqa: E402
+import queue  # noqa: E402
+from queue import Queue  # noqa: E402
 
 from my_functions.timer import print_param, timer  # noqa: E402
 
@@ -135,7 +140,7 @@ class story_teller:
                     moves += 1
         return moves
 
-    @print_param("twoString.txt", BASE_DIR)
+    @print_param("output_twoString.txt", BASE_DIR)
     def twoStrings(s1, s2):
         '''
             String that intersect
@@ -156,7 +161,7 @@ class story_teller:
             print('YES')
             return 'YES'
 
-    @print_param("SherlockAna.txt", BASE_DIR)
+    @print_param("output_sherlockAndAnagrams.txt", BASE_DIR)
     def sherlockAndAnagrams(string):
         '''
         # 2
@@ -312,11 +317,6 @@ class story_teller:
             is_bst_ref[0] = 0
             return 0
 
-    def printArray(array):
-        element = None
-        for element in array:
-            print(element)
-        return element
 
     def twoSumHashing(num_arr, pair_sum):
         hashTable = {}
@@ -327,9 +327,6 @@ class story_teller:
             hashTable[num_arr[i]] = num_arr[i]
 
     @print_param("output_freqQuery.txt", BASE_DIR)
-
-
-
     def freqQuery(queries):
 
         """
@@ -376,7 +373,7 @@ class story_teller:
         print(freqs)
         return results
 
-    @print_param("valleycount.txt", BASE_DIR)
+    @print_param("output_valleycount.txt", BASE_DIR)
     def countingValleys(n, s):
         """
             countingValleys
@@ -447,7 +444,7 @@ class story_teller:
         return []
 
 
-    @print_param("repeatedstrings.txt", BASE_DIR)
+    @print_param("output_repeatedstrings.txt", BASE_DIR)
     def repeatedString(s, n):
         """
             repeatedstrings
@@ -635,31 +632,46 @@ class story_teller:
 
     def number_nice(A):
         """
-        Count the number of nice sequences.
+        Count the number of "nice" sequences consistent with A (mod 10^9+7).
         https://www.hackerrank.com/contests/w22/challenges/number-of-sequences/
 
-        :param A: list of int (-1 means wildcard)
-        :return: int
+        A sequence is "nice" if for every position k (1-indexed):
+          - 0 <= a[k] <= k-1
+          - For every divisor pair (k|m): a[m] % k == a[k]
+
+        Algorithm: sieve over prime powers p^e <= N.
+          For each p^e, check all multiples in A. If any known values
+          disagree mod p^e → contradiction (return 0). If all free (-1),
+          multiply answer by p (each prime-power level adds exactly p choices).
+
+        Time: O(N log N)  Space: O(N)
+
+        Example:
+            story_teller.number_nice([-1]*6)  # -> 60
+
+        :param A: list of int (-1 means wildcard/free)
+        :return: int (count mod 10^9+7)
         """
+        MOD = 10 ** 9 + 7
+        N = len(A)
         if A[0] != 0 and A[0] != -1:
             return 0
         nice_seqs = 1
-        N = len(A)
         for prime in story_teller.primes(N + 1):
-            positions = [i for i in range(N) if (i + 1) % prime == 0]
-            test = [A[i] for i in positions]
-            fixed_mods = [x % prime for x in test if x != -1]
-            if len(set(fixed_mods)) > 1:
-                return 0
-            elif -1 not in test:
-                continue
-            elif -1 in test and len(set(test)) == 1:
-                nice_seqs *= prime * factorial((positions[-1] + 1) / prime)
-            else:
-                minus_ones = [i + 1 for i in positions if A[i] == -1]
-                for position in minus_ones:
-                    nice_seqs *= position / prime
-        return nice_seqs % (7 + 10 ** 9)
+            e = 1
+            while prime ** e <= N:
+                q = prime ** e
+                fixed_val = -1
+                for k in range(q, N + 1, q):
+                    if A[k - 1] != -1:
+                        val = A[k - 1] % q
+                        if fixed_val != -1 and fixed_val != val:
+                            return 0   # contradiction
+                        fixed_val = val
+                if fixed_val == -1:
+                    nice_seqs = (nice_seqs * prime) % MOD
+                e += 1
+        return nice_seqs
 
     # ── from roadLibrary.py ───────────────────────────────────────────────────
     def _DFSrec(adj, s, visited, val):
@@ -928,7 +940,7 @@ class Player:
             print(i.name, i.score)
 
 
-    @print_param("compareTriplets.txt", BASE_DIR)
+    @print_param("output_compareTriplets.txt", BASE_DIR)
     def compareTriplets(a, b):
         """
             compare_award
@@ -1020,6 +1032,24 @@ class Solution(object):
         arr[i:] = arr[len(arr) - 1 : i - 1 : -1]
         print(arr)
         return True
+
+    def findJudge(self, N: int, trust: List[List[int]]) -> int:
+        """
+        Find the town judge.
+        A town judge has egress 0 and ingress N-1.
+
+        Example:
+            Solution().findJudge(2, [[1, 2]])  # -> 2
+        """
+        ingress = defaultdict(set)
+        egress = defaultdict(set)
+        for p, q in trust:
+            egress[p].add(q)
+            ingress[q].add(p)
+        for i in range(1, N+1):
+            if len(egress[i]) == 0 and len(ingress[i]) == N - 1:
+                return i
+        return -1
 
 class MySpecialQueue:
     """
@@ -1672,3 +1702,1666 @@ class PlayingDeck:
     def __setitem__(self, position, card):
         self.cards[position] = card
 
+
+# =============================================================================
+# ── CONSOLIDATED FROM vin.py ─────────────────────────────────────────────────
+# =============================================================================
+
+class ArrayProblems:
+    """
+    ArrayProblems
+    =============
+    Theory: A *sorted* array allows O(N) algorithms for statistics like mode,
+    because equal elements are always adjacent. An unsorted array requires an
+    O(N²) nested scan or an O(N) hash-map approach.
+
+    Problems covered:
+      1. mode_sorted   — Mode of a sorted array, O(N) time O(1) space
+      2. mode_unsorted — Mode via nested scan, O(N²), for comparison only
+    """
+
+    def mode_sorted(arr):
+        """
+        Find the mode (most frequent element) of a *sorted* array in O(N).
+
+        Example:
+            ArrayProblems.mode_sorted([1,2,3,3,3,4,4,5,5,6])  # -> 3
+
+        :param arr: sorted list of int
+        :return: modal value (int)
+        """
+        count, best_count = 1, 1
+        temp_mode, mode = arr[0], arr[0]
+        for i in range(1, len(arr)):
+            if temp_mode == arr[i]:
+                count += 1
+                if count > best_count:
+                    best_count = count
+                    mode = temp_mode
+            else:
+                temp_mode = arr[i]
+                count = 1
+        return mode
+
+    def mode_unsorted(arr):
+        """
+        Find the mode via nested scan — O(N²), for educational comparison only.
+        Prefer mode_sorted on sorted data, or Counter for unsorted data.
+
+        Example:
+            ArrayProblems.mode_unsorted([3,1,3,2,3])  # -> 3
+
+        :param arr: list of int (any order)
+        :return: modal value (int)
+        """
+        best_count, mode = 0, arr[0]
+        for i in range(len(arr)):
+            count = sum(1 for j in range(len(arr)) if arr[j] == arr[i])
+            if count > best_count:
+                best_count = count
+                mode = arr[i]
+        return mode
+
+    @staticmethod
+    def RightRotate(a, n, k):
+        """
+        Right rotate array elements by k positions and print.
+
+        Example:
+            ArrayProblems.RightRotate([1, 2, 3, 4, 5], 5, 2)
+        """
+        k = k % n
+        for i in range(0, n):
+            if i < k:
+                print(a[n + i - k], end=" ")
+            else:
+                print(a[i - k], end=" ")
+        print("\n")
+
+
+class Stock:
+    """
+    Stock
+    =====
+    Theory: Stock problems are a classic application of dynamic programming.
+      • 1 transaction: track running minimum → O(N) time O(1) space
+      • K transactions: DP table prev/curr over k rounds → O(kN) time O(N) space
+
+    Problems covered:
+      1. stock_gain              — Best single buy/sell, O(N)
+      2. max_profit_k_transactions — Best profit with at most k transactions, O(kN)
+    """
+
+    def stock_gain():
+        """
+        Find the maximum single-transaction gain from stdin.
+        Reads n then space-separated prices.
+
+        Example (stdin):
+            7
+            3 4 1 2 1 5 1
+        -> gain 4
+        """
+        n = int(input())
+        prices = map(int, input().split())
+        gain = 0
+        low = next(prices)
+        for p in prices:
+            low = min(low, p)
+            gain = max(gain, p - low)
+        print("gain", gain)
+
+    def max_profit_k_transactions(prices, k):
+        """
+        Maximum profit from at most k buy/sell transactions (must sell before
+        buying again).
+
+        Algorithm: DP — for each transaction t, iterate prices maintaining
+          max_diff = max(prev_trans[i-1] - prices[i-1])
+        Time: O(k*N)  Space: O(N)
+
+        Example:
+            Stock.max_profit_k_transactions([2,4,1,7], 2)  # -> 8
+
+        :param prices: list of int
+        :param k: int, max number of transactions
+        :return: int, maximum profit
+        """
+        prev = [0] * len(prices)
+        curr = []
+        for _ in range(k):
+            curr = [0]
+            max_diff = float('-inf')
+            for i in range(1, len(prices)):
+                max_diff = max(max_diff, prev[i - 1] - prices[i - 1])
+                curr.append(max(curr[i - 1], prices[i] + max_diff))
+            prev = curr[:]
+        return curr[-1] if curr else 0
+
+
+class FibonacciShowcase:
+    """
+    FibonacciShowcase
+    =================
+    Theory: F(N) = F(N-1) + F(N-2), with F(1) = F(2) = 1.
+
+    DECISION GUIDE — when to use which:
+    ┌─────────────────────────────────┬────────────┬──────────┬────────────────────────────────┐
+    │ Method                          │ Time       │ Space    │ Best Use Case                  │
+    ├─────────────────────────────────┼────────────┼──────────┼────────────────────────────────┤
+    │ fibo         (iterative)        │ O(N)       │ O(1)     │ DEFAULT: single query, N<10^7  │
+    │ bin_fibo     (fast doubling)    │ O(log N)   │ O(log N) │ Very large N (>10^6), mod ops  │
+    │ dyna_fibo    (top-down memo)    │ O(N)       │ O(N)     │ Many repeated queries          │
+    │ dyna_fibo2   (top-down array)   │ O(N)       │ O(N)     │ Alternative top-down           │
+    │ fibonacci_bu (bottom-up cache)  │ O(N)       │ O(N)     │ Incremental queries            │
+    │ simple_fibo  (tail recursion)   │ O(N)       │ O(N)     │ Teaching / elegant recursion   │
+    │ my_fib       (dict memoization) │ O(N)       │ O(N)     │ Teaching top-down memoization  │
+    └─────────────────────────────────┴────────────┴──────────┴────────────────────────────────┘
+
+    WHY NOT SIEVE FOR FIBONACCI?
+    The Sieve of Eratosthenes marks multiples of primes — it is for finding
+    *prime numbers*, not for computing sequences defined by recurrence.
+    Fibonacci is defined by F(n) = F(n-1) + F(n-2), not by divisibility.
+    Use the sieve when the problem involves primality or divisibility constraints
+    (e.g., story_teller.primes, story_teller.number_nice). Use fibo/bin_fibo
+    when you need the N-th term of the Fibonacci sequence.
+
+    All methods use F(1)=F(2)=1 (1-indexed, same base).
+    """
+
+    def fibo(N):
+        """
+        Iterative Fibonacci. O(N) time, O(1) space.
+        RECOMMENDED for single queries.
+
+        Example:
+            FibonacciShowcase.fibo(10)  # -> 55
+        """
+        a = b = 1
+        for _ in range(2, N):
+            a, b = b, a + b
+        return b
+
+    def simple_fibo(N, a=0, b=1):
+        """
+        Tail-recursive Fibonacci. O(N) time, O(N) stack space.
+        Elegant but hits Python's recursion limit for large N.
+
+        Example:
+            FibonacciShowcase.simple_fibo(10)  # -> 55
+        """
+        if N < 3:
+            return a + b
+        return FibonacciShowcase.simple_fibo(N - 1, b, a + b)
+
+    def dyna_fibo(N, memo=None):
+        """
+        Top-down memoized Fibonacci (dict). O(N) time, O(N) space.
+        Pass a fresh dict each call to avoid cross-call contamination.
+
+        Example:
+            FibonacciShowcase.dyna_fibo(10, {1:1, 2:1})  # -> 55
+        """
+        if memo is None:
+            memo = {1: 1, 2: 1}
+        if N not in memo:
+            memo[N] = FibonacciShowcase.dyna_fibo(N - 1, memo) + \
+                      FibonacciShowcase.dyna_fibo(N - 2, memo)
+        return memo[N]
+
+    def dyna_fibo2(N, memo=None):
+        """
+        Top-down memoized Fibonacci (list). O(N) time, O(N) space.
+        Uses a list instead of dict — marginally faster indexing.
+
+        Example:
+            FibonacciShowcase.dyna_fibo2(10)  # -> 55
+        """
+        if memo is None:
+            memo = [0, 1, 1] + [0] * N
+        if not memo[N]:
+            memo[N] = FibonacciShowcase.dyna_fibo2(N - 1, memo) + \
+                      FibonacciShowcase.dyna_fibo2(N - 2, memo)
+        return memo[N]
+
+    def fibonacci_bu(N):
+        """
+        Bottom-up (tabulation) Fibonacci. O(N) time, O(N) space.
+        Builds the full cache iteratively — good for incremental queries.
+        F(1)=1, F(2)=1, F(3)=2, ...
+
+        Example:
+            FibonacciShowcase.fibonacci_bu(10)  # -> 55
+        """
+        if N <= 2:
+            return 1
+        a, b = 1, 1
+        for _ in range(2, N):
+            a, b = b, a + b
+        return b
+
+    def bin_fibo(N):
+        """
+        Fast-doubling (binary) Fibonacci. O(log N) time, O(log N) space.
+        Best for very large N; uses matrix identity:
+          F(2k)   = F(k) * (2*F(k+1) - F(k))
+          F(2k+1) = F(k)^2 + F(k+1)^2
+
+        Example:
+            FibonacciShowcase.bin_fibo(10)  # -> 55
+        """
+        a, b = 0, 1
+        f0, f1 = 1, 1
+        r, s = (1, 1) if N & 1 else (0, 1)
+        N //= 2
+        while N > 0:
+            a, b = f0 * a + f1 * b, f0 * b + f1 * (a + b)
+            f0, f1 = b - a, a
+            if N & 1:
+                r, s = f0 * r + f1 * s, f0 * s + f1 * (r + s)
+            N //= 2
+        return r
+
+    def my_fib(N, memo=None):
+        """
+        Top-down memoized Fibonacci (dict, explicit None guard).
+        Teaching version — shows the memoization pattern clearly.
+
+        Example:
+            FibonacciShowcase.my_fib(10)  # -> 55
+        """
+        if memo is None:
+            memo = {}
+        if memo.get(N):
+            return memo[N]
+        if N == 1 or N == 2:
+            result = 1
+        else:
+            result = FibonacciShowcase.my_fib(N - 1, memo) + \
+                     FibonacciShowcase.my_fib(N - 2, memo)
+        memo[N] = result
+        return result
+
+    @staticmethod
+    def fib_dn(N, memo=None):
+        """
+        Alternative top-down Fibonacci with default dict initialization.
+
+        Example:
+            FibonacciShowcase.fib_dn(10, {0:1, 1:1})  # -> 89
+        """
+        if memo is None:
+            memo = {0: 1, 1: 1}
+        if N not in memo:
+            memo[N] = FibonacciShowcase.fib_dn(N-1, memo) + FibonacciShowcase.fib_dn(N-2, memo)
+        return memo[N]
+
+    def compare(N=990, count=100):
+        """
+        Benchmark all Fibonacci methods for F(N), repeated `count` times.
+        Prints a ranked table of wall-clock times.
+
+        Example:
+            FibonacciShowcase.compare(N=990, count=100)
+        """
+        from timeit import timeit
+        import sys
+
+        methods = [
+            ("fibo (iterative O(N) O(1))",
+             lambda: FibonacciShowcase.fibo(N)),
+            ("bin_fibo (fast-doubling O(logN))",
+             lambda: FibonacciShowcase.bin_fibo(N)),
+            ("dyna_fibo (top-down dict O(N))",
+             lambda: FibonacciShowcase.dyna_fibo(N, {1: 1, 2: 1})),
+            ("dyna_fibo2 (top-down list O(N))",
+             lambda: FibonacciShowcase.dyna_fibo2(N)),
+            ("fibonacci_bu (bottom-up O(N))",
+             lambda: FibonacciShowcase.fibonacci_bu(N)),
+            ("my_fib (dict memo O(N))",
+             lambda: FibonacciShowcase.my_fib(N, {})),
+            ("simple_fibo (tail-recursion O(N))",
+             None),  # may hit recursion limit
+        ]
+
+        print(f"\n{'='*64}")
+        print(f"  Fibonacci Benchmark: F({N}), {count} repetitions each")
+        print(f"{'='*64}")
+        print(f"  {'Method':<38} {'Time (s)':>10}  {'Rank':>5}")
+        print(f"  {'-'*55}")
+
+        results = []
+        old_limit = sys.getrecursionlimit()
+        sys.setrecursionlimit(max(old_limit, N * 3))
+        for name, fn in methods:
+            if fn is None:
+                try:
+                    t = timeit(lambda: FibonacciShowcase.simple_fibo(N),
+                               number=count)
+                    results.append((name, t))
+                except RecursionError:
+                    results.append((name, float('inf')))
+            else:
+                t = timeit(fn, number=count)
+                results.append((name, t))
+        sys.setrecursionlimit(old_limit)
+
+        results.sort(key=lambda x: x[1])
+        for rank, (name, t) in enumerate(results, 1):
+            time_str = f"{t:.6f}" if t != float('inf') else "RecursionError"
+            print(f"  {name:<38} {time_str:>10}  #{rank}")
+        print(f"{'='*64}\n")
+
+
+class DynamicProgramming:
+    """
+    DynamicProgramming
+    ==================
+    Theory: Dynamic programming (DP) solves problems by breaking them into
+    overlapping sub-problems and storing results to avoid recomputation.
+
+    Two styles:
+      • Top-down (memoization):  recursion + cache, natural problem decomposition
+      • Bottom-up (tabulation):  fill a table iteratively, no stack overhead
+
+    Problems covered:
+      1. divide_numbers — Partition array into two subsets, minimise difference
+                          (greedy recursive, exponential worst-case)
+      2. lis_recursive  — Longest Increasing Subsequence via recursion, O(2^N)
+                          [for comparison / teaching only]
+      3. lis            — LIS via patience-sort / binary search, O(N log N)
+                          [canonical best solution]
+    """
+
+    # ── Subset Partition ─────────────────────────────────────────────────────
+
+    def _get_diff(s1, s1_sum, s2, s2_sum, score):
+        """Recursive helper: greedily move the element that most reduces diff."""
+        min_diff, min_cand = score, None
+        for i, num in enumerate(s1):
+            new_s1_sum = s1_sum - num
+            new_s2_sum = s2_sum + num
+            new_score = abs(new_s1_sum - new_s2_sum)
+            if new_score < min_diff:
+                min_diff = new_score
+                min_cand = (s1[:i] + s1[i + 1:], new_s1_sum,
+                            s2 + [num], new_s2_sum)
+        if not min_cand:
+            return set(s1), set(s2)
+        return DynamicProgramming._get_diff(
+            min_cand[0], min_cand[1], min_cand[2], min_cand[3], min_diff)
+
+    def divide_numbers(nums):
+        """
+        Divide nums into two subsets with minimal absolute difference of sums.
+
+        Example:
+            DynamicProgramming.divide_numbers([5, 10, 15, 20, 25])
+            # -> ({5, 15, 20}, {10, 25})  difference = 5
+
+        :param nums: list of positive int
+        :return: tuple of two sets
+        """
+        total = sum(nums)
+        return DynamicProgramming._get_diff(nums[:], total, [], 0, total)
+
+    # ── Longest Increasing Subsequence ────────────────────────────────────────
+
+    def _lis_recursive_helper(arr, n):
+        """Internal recursive LIS — O(2^N), teaching use only."""
+        if n == 1:
+            return 1
+        max_here = 1
+        for i in range(1, n):
+            res = DynamicProgramming._lis_recursive_helper(arr, i)
+            if arr[i - 1] < arr[n - 1] and res + 1 > max_here:
+                max_here = res + 1
+        return max_here
+
+    def lis_recursive(arr):
+        """
+        Longest Increasing Subsequence length via naive recursion.
+        Time: O(2^N) — teaching/comparison only.
+
+        Example:
+            DynamicProgramming.lis_recursive([1, 2, 5, 4, 6, 2])  # -> 4
+        """
+        return max(
+            DynamicProgramming._lis_recursive_helper(arr, i)
+            for i in range(1, len(arr) + 1)
+        )
+
+    def lis(nums):
+        """
+        Longest Increasing Subsequence via patience sort (binary search).
+        Time: O(N log N)  Space: O(N)  ← canonical best solution
+
+        Algorithm: maintain a virtual pile list where each pile's top is the
+        smallest tail of all increasing subsequences of that length. Use binary
+        search to find the correct pile for each element.
+
+        Example:
+            DynamicProgramming.lis([1, 2, 5, 4, 6, 2])  # -> 4
+            DynamicProgramming.lis([10, 9, 2, 5, 3, 7, 101, 18])  # -> 4
+
+        :param nums: list of int
+        :return: int, length of LIS
+        """
+        tails = []
+
+        def insert(target):
+            lo, hi = 0, len(tails) - 1
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                if tails[mid] >= target:
+                    hi = mid - 1
+                else:
+                    lo = mid + 1
+            if lo == len(tails):
+                tails.append(target)
+            else:
+                tails[lo] = target
+
+        for num in nums:
+            insert(num)
+        return len(tails)
+
+
+class SearchAndCount:
+    """
+    SearchAndCount
+    ==============
+    Theory:
+      • Binary search reduces search on sorted data from O(N) to O(log N).
+      • Counter (hash map) reduces frequency queries to O(1) lookup after O(N) build.
+      • Combining binary search + hash map allows O(M log N) pair-counting.
+
+    Problems covered:
+      1. binary_search  — Classic O(log N) search in sorted array
+      2. count_pairs    — Count pairs summing to X across two sorted arrays, O(M log N)
+      3. count_pairs3   — Count triplets (a+b==c) across three arrays, O(N²) with Counter
+    """
+
+    def binary_search(arr, value, low=None, high=None):
+        """
+        Search for value in sorted arr. Returns True if found.
+
+        Example:
+            SearchAndCount.binary_search([1,3,5,7,9], 5)  # -> True
+            SearchAndCount.binary_search([1,3,5,7,9], 4)  # -> False
+        """
+        if low is None:
+            low = 0
+        if high is None:
+            high = len(arr) - 1
+        while low <= high:
+            mid = (low + high) // 2
+            if arr[mid] == value:
+                return True
+            elif arr[mid] > value:
+                high = mid - 1
+            else:
+                low = mid + 1
+        return False
+
+    def count_pairs(arr1, arr2, x):
+        """
+        Count pairs (a, b) where a ∈ arr1, b ∈ arr2 and a+b == x.
+        Both arrays must be sorted. Time: O(M log N).
+
+        Example:
+            SearchAndCount.count_pairs([1,3,5], [2,4,6], 7)  # -> 2
+
+        :param arr1: sorted list of int
+        :param arr2: sorted list of int
+        :param x: target sum
+        :return: int
+        """
+        count = 0
+        n = len(arr2)
+        for a in arr1:
+            if SearchAndCount.binary_search(arr2, x - a, 0, n - 1):
+                count += 1
+        return count
+
+    def count_pairs3(arr1, arr2, arr3):
+        """
+        Count triplets (a, b, c) where a ∈ arr1, b ∈ arr2, c ∈ arr3
+        and a + b == c. Time: O(N²) using Counter for O(1) lookup.
+
+        Example:
+            SearchAndCount.count_pairs3([1,2], [3,4], [4,5,6])  # -> 2
+
+        :param arr1: list of int
+        :param arr2: list of int
+        :param arr3: list of int (target sums)
+        :return: int
+        """
+        count = 0
+        c3 = Counter(arr3)
+        c2 = Counter(arr2)
+        c1 = Counter(arr1)
+        for c_val, c_cnt in c3.items():
+            for b_val, b_cnt in c2.items():
+                complement = c_val - b_val
+                if complement in c1:
+                    count += c1[complement] * c_cnt * b_cnt
+        return count
+
+
+class GeometryProblems:
+    """
+    GeometryProblems
+    ================
+    Theory: Rectangle intersection can be solved in O(1) by projecting onto
+    each axis independently. The x-overlap is [max(left1, left2), min(right1, right2)]
+    and similarly for y. If either overlap is negative, there is no intersection.
+
+    Problems covered:
+      1. rectangle_intersection — Area of intersection of two axis-aligned rectangles
+    """
+
+    def rectangle_intersection(rec1, rec2):
+        """
+        Return the area of intersection of two axis-aligned rectangles.
+        Each rectangle is a dict with keys 'top_left' (x,y) and
+        'dimensions' (width, height). Returns 0 if they do not intersect.
+
+        Example:
+            r1 = {"top_left": (1, 4), "dimensions": (3, 3)}
+            r2 = {"top_left": (0, 5), "dimensions": (4, 3)}
+            GeometryProblems.rectangle_intersection(r1, r2)  # -> 6
+
+        :param rec1: dict
+        :param rec2: dict
+        :return: int, area of intersection
+        """
+        left_x  = max(rec1["top_left"][0], rec2["top_left"][0])
+        right_x = min(rec1["top_left"][0] + rec1["dimensions"][0],
+                      rec2["top_left"][0] + rec2["dimensions"][0])
+        top_y    = min(rec1["top_left"][1], rec2["top_left"][1])
+        bottom_y = max(rec1["top_left"][1] - rec1["dimensions"][1],
+                       rec2["top_left"][1] - rec2["dimensions"][1])
+        if left_x > right_x or bottom_y > top_y:
+            return 0
+        return (right_x - left_x) * (top_y - bottom_y)
+
+
+# =============================================================================
+# ── CONSOLIDATED FROM Note.py ────────────────────────────────────────────────
+# =============================================================================
+
+class ClassicPuzzles:
+    """
+    ClassicPuzzles
+    ==============
+    Documented solutions for common interview puzzles.
+    Each method includes the problem statement and an explanation.
+    Uncomment the __main__ calls below each class to run examples.
+
+    Puzzles:
+      1. find_ith_digit        — Infinite sequence {1,2,2,3,3,3,...}: find i-th element
+      2. last_unique_character — Last character that appears exactly once in a string
+      3. highest_sum_pyramid   — Max path sum traversing a number pyramid top-to-bottom
+      4. count_matrix_range    — Count elements in a sorted matrix smaller than M[i1,j1]
+                                 and greater than M[i2,j2]
+    """
+
+    def find_ith_digit(i):
+        """
+        In the infinite sequence {1,2,2,3,3,3,4,4,4,4,...} (number k appears k times),
+        return the i-th element (1-indexed).
+
+        Algorithm: binary search for the group g such that g*(g-1)//2 < i <= g*(g+1)//2.
+        Time: O(sqrt(i))  Space: O(1)
+
+        Example:
+            ClassicPuzzles.find_ith_digit(1)   # -> 1
+            ClassicPuzzles.find_ith_digit(6)   # -> 3
+            ClassicPuzzles.find_ith_digit(10)  # -> 4
+        """
+        group = 1
+        while i > group * (group + 1) // 2:
+            group += 1
+        return group
+
+    def last_unique_character(s):
+        """
+        Return the last character in s that appears exactly once,
+        or 'none' if no such character exists.
+
+        Algorithm: build frequency map, then scan string in reverse.
+        Time: O(N)  Space: O(1) (bounded alphabet)
+
+        Example:
+            ClassicPuzzles.last_unique_character("slideeducation")  # -> 'u'
+            ClassicPuzzles.last_unique_character("aabb")            # -> 'none'
+        """
+        freq = {}
+        for ch in s:
+            freq[ch] = freq.get(ch, 0) + 1
+        for ch in reversed(s):
+            if freq[ch] == 1:
+                return ch
+        return "none"
+
+    def highest_sum_pyramid(pyramid):
+        """
+        Find the maximum sum path from top to bottom of a number pyramid,
+        where each step moves to an adjacent element in the next row.
+
+        Algorithm: bottom-up DP — each cell stores the best sum reachable
+        from that position downward.
+        Time: O(N²)  Space: O(N²)
+
+        Example:
+            ClassicPuzzles.highest_sum_pyramid([
+                [3],
+                [7, 4],
+                [2, 4, 6],
+                [8, 5, 9, 3]
+            ])  # -> 23  (3->7->4->9)
+        """
+        rows = len(pyramid)
+        memo = [row[:] for row in pyramid]
+        for row in range(rows - 2, -1, -1):
+            for col in range(row + 1):
+                memo[row][col] = (pyramid[row][col] +
+                                  max(memo[row + 1][col], memo[row + 1][col + 1]))
+        return memo[0][0]
+
+    def count_matrix_range(mat, i1, j1, i2, j2):
+        """
+        Given a matrix where every row and column is sorted, count elements
+        that are strictly less than mat[i1][j1] OR strictly greater than mat[i2][j2].
+
+        Time: O(N²)  Space: O(1)
+
+        Example:
+            mat = [
+                [1,  3,  7, 10, 15, 20],
+                [2,  6,  9, 14, 22, 25],
+                [3,  8, 10, 15, 25, 30],
+                [10, 11, 12, 23, 30, 35],
+                [20, 25, 30, 35, 40, 45],
+            ]
+            ClassicPuzzles.count_matrix_range(mat, 1, 1, 3, 3)  # -> 15
+        """
+        lo, hi = mat[i1][j1], mat[i2][j2]
+        return sum(1 for row in mat for x in row if x < lo or x > hi)
+
+
+class PythonPatterns:
+    """
+    PythonPatterns
+    ==============
+    Reference examples for Python built-ins and idioms.
+    All code is executable — uncomment the print/assert lines to run.
+
+    Topics:
+      1. Regex patterns — re.match, re.search, re.findall with cheat-sheet
+      2. itertools.chain — Flatten iterables and use generator-based chaining
+
+    Regex Quick-Guide (from Note.py):
+      .        Any character except newline
+      ^        Start of string (or line in MULTILINE)
+      $        End of string (or line in MULTILINE)
+      *        0 or more of preceding
+      +        1 or more of preceding
+      ?        0 or 1 of preceding
+      {m,n}    Between m and n repetitions
+      [abc]    Character class
+      [^abc]   Negated character class
+      (...)    Group
+      \\.       Literal dot
+      \\d        Digit [0-9]
+      \\w        Word char [a-zA-Z0-9_]
+      \\s        Whitespace
+      \\b        Word boundary
+      Flags: re.I (ignore case), re.M (multiline), re.S (dot matches newline)
+    """
+
+    def regex_examples():
+        """
+        Demonstrate key regex patterns.
+        Each example is self-contained and prints its result.
+        """
+        import re
+
+        s = 'vuthanhtai'
+
+        # Match lowercase-only string
+        m = re.match(r'[a-z]+', s)
+        assert m is not None, "Expected match for all-lowercase string"
+
+        # Search for substring 'thanh'
+        m = re.match(r'(.*)(thanh)(.*)', s)
+        assert m is not None
+
+        # Case-insensitive match for leading 'V'
+        m = re.match(r'V', s, re.IGNORECASE)
+        assert m is not None
+
+        # findall: extract integers from text
+        text = "The answer is 42, not 0 or 100"
+        nums = re.findall(r'[0-9]+', text)
+        assert nums == ['42', '0', '100']
+
+        # findall: extract tagged content (@ is NOT a word char, so <\w+> won't match <@tag>)
+        # Use [@\w]+ to include @ in tag names
+        html = "<red>AB CD<@red><yellow>EFGH<@yellow>"
+        tags = re.findall(r'<[@\w]+>[\w ]*<[@\w]+>', html)
+        assert tags == ['<red>AB CD<@red>', '<yellow>EFGH<@yellow>'], f"got {tags}"
+
+        print("PythonPatterns.regex_examples: all assertions passed")
+
+    def chain_examples():
+        """
+        Demonstrate itertools.chain for flattening iterables.
+
+        chain(a, b, c)               — concatenate separate iterables
+        chain.from_iterable(nested)  — flatten a list-of-lists (lazy)
+        chain.from_iterable(gen)     — works with any generator
+        """
+        from itertools import chain
+
+        list1, list2, list3 = ["a", "b", "c"], ["d", "e", "f"], ["g", "h", "i"]
+
+        # Direct chaining
+        result = list(chain(list1, list2, list3))
+        assert result == list("abcdefghi")
+
+        # From iterable of iterables
+        iterables = [list1, list2, list3]
+        result2 = list(chain.from_iterable(iterables))
+        assert result2 == result
+
+        # Generator-based: produces [0], [0,1], [0,1,2], ... ranges
+        def gen_iterables():
+            for i in range(10):
+                yield range(i)
+
+        flat = list(chain.from_iterable(gen_iterables()))
+        assert flat == [0, 0, 1, 0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 4,
+                        0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6,
+                        0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+        print("PythonPatterns.chain_examples: all assertions passed")
+
+
+# =============================================================================
+# ── CONSOLIDATED FROM vin.py (ADDITIONAL & COMMENTED PROBLEMS) ───────────────
+# =============================================================================
+
+class PrimeSieveShowcase:
+    """
+    PrimeSieveShowcase
+    ==================
+    Theory and implementations of primality testing and sieve methods.
+    """
+
+    @staticmethod
+    def is_prime(x):
+        """
+        Check if a number x is prime.
+        Note: Prints value x if a factor is not found on the first check.
+
+        Example:
+            PrimeSieveShowcase.is_prime(991)  # -> True
+        """
+        for i in range(2, int(x**0.5) + 1):
+            if x % i == 0:
+                return False
+            else:
+                print(x)
+                return True
+        return x > 1
+
+    @staticmethod
+    def prime_interval(lower=900, upper=1000):
+        """
+        Print all prime numbers within the interval [lower, upper].
+
+        Example:
+            PrimeSieveShowcase.prime_interval(900, 1000)
+        """
+        print("Prime numbers between", lower, "and", upper, "are:")
+        primes_found = []
+        for num in range(lower, upper + 1):
+            if num > 1:
+                for i in range(2, num):
+                    if (num % i) == 0:
+                        break
+                else:
+                    print(num)
+                    primes_found.append(num)
+        return primes_found
+
+    @staticmethod
+    def simpleSieve(limit, primes_list):
+        """
+        Find all primes smaller than or equal to limit using Sieve of Eratosthenes.
+        """
+        mark = [False] * (limit + 1)
+        for i in range(2, limit + 1):
+            if not mark[i]:
+                primes_list.append(i)
+                for j in range(i, limit + 1, i):
+                    mark[j] = True
+
+    @staticmethod
+    def primesInRange(low, high):
+        """
+        Print all prime numbers in the range [low, high] using Segmented Sieve.
+
+        Example:
+            PrimeSieveShowcase.primesInRange(10, 100)
+        """
+        from math import floor, sqrt
+        limit = floor(sqrt(high)) + 1
+        primes_list = list()
+        PrimeSieveShowcase.simpleSieve(limit, primes_list)
+
+        n = high - low + 1
+        mark = [False] * (n + 1)
+
+        for i in range(len(primes_list)):
+            loLim = floor(low / primes_list[i]) * primes_list[i]
+            if loLim < low:
+                loLim += primes_list[i]
+            if loLim == primes_list[i]:
+                loLim += primes_list[i]
+
+            for j in range(loLim, high + 1, primes_list[i]):
+                mark[j - low] = True
+
+        primes_found = []
+        for i in range(low, high + 1):
+            if not mark[i - low]:
+                print(i, end=" ")
+                primes_found.append(i)
+        print()
+        return primes_found
+
+
+class NelderMeadShowcase:
+    """
+    NelderMeadShowcase
+    ==================
+    Multimodal function optimization using scipy.optimize.minimize (Nelder-Mead).
+    """
+
+    @staticmethod
+    def objective(v):
+        from numpy import exp, sqrt, cos, e, pi
+        x, y = v
+        return -20.0 * exp(-0.2 * sqrt(0.5 * (x ** 2 + y ** 2))) - exp(0.5 * (cos(2 * pi * x) + cos(2 * pi * y))) + e + 20
+
+    @staticmethod
+    def optimize():
+        from scipy.optimize import minimize
+        from numpy.random import rand
+        r_min, r_max = -5.0, 5.0
+        pt = r_min + rand(2) * (r_max - r_min)
+        result = minimize(NelderMeadShowcase.objective, pt, method='nelder-mead')
+        print('Status :', result['message'])
+        print('Total Evaluations:', result['nfev'])
+        print('Solution: f(%s) = %.5f' % (result['x'], NelderMeadShowcase.objective(result['x'])))
+        return result
+
+
+class PowerSumNTT:
+    """
+    PowerSumNTT
+    ===========
+    Implementation of the Power Sum Problem using Number Theoretic Transform (NTT).
+    """
+    mod = 998244353
+
+    @staticmethod
+    def power(n, k):
+        mod = PowerSumNTT.mod
+        if k == 0:
+            return 1
+        x = 1
+        while k > 1:
+            if k % 2 == 0:
+                n = n * n % mod
+            else:
+                x = n * x % mod
+                n = n * n % mod
+            k //= 2
+        return n * x % mod
+
+    @staticmethod
+    def get_pow2(k):
+        pow2 = 1
+        logpow2 = 0
+        while pow2 <= k:
+            pow2 *= 2
+            logpow2 += 1
+        invpow2 = PowerSumNTT.power(pow2, PowerSumNTT.mod - 2)
+        return pow2, logpow2, invpow2
+
+    @staticmethod
+    def NTT(p, r, pow2, logpow2, invpow2, forward):
+        mod = PowerSumNTT.mod
+        j = pow2 // 2
+        for i in range(1, pow2 - 1):
+            if i >= j:
+                p[i], p[j] = p[j], p[i]
+            k = pow2 // 2
+            while True:
+                if k > j:
+                    break
+                j -= k
+                k //= 2
+            j += k
+        l = 2
+        m = len(r) * forward
+        for _ in range(logpow2):
+            for j in range(l // 2):
+                for k in range(j, pow2, l):
+                    a = p[k]
+                    b = r[j * m // l] * p[k + l // 2]
+                    b %= mod
+                    p[k] = (a + b) % mod
+                    p[k + l // 2] = (a - b) % mod
+            l *= 2
+        if forward == -1:
+            for i in range(pow2):
+                p[i] *= invpow2
+                p[i] %= mod
+
+    @staticmethod
+    def get_answer(c, v, n, s, k):
+        mod = PowerSumNTT.mod
+        pow2, logpow2, invpow2 = PowerSumNTT.get_pow2(2 * k)
+        prim_root = PowerSumNTT.power(3, (mod - 1) // pow2)
+        r = [1] * pow2
+        for i in range(1, pow2):
+            r[i] = r[i - 1] * prim_root
+            r[i] %= mod
+        factorial = [1] * pow2
+        factorial_inv = [1] * pow2
+        for i in range(1, pow2):
+            factorial[i] = factorial[i - 1] * i
+            factorial[i] %= mod
+            factorial_inv[i] = PowerSumNTT.power(factorial[i], mod - 2)
+        vpowers = [[1] * pow2 for _ in range(n + 1)]
+        for i in range(1, n + 1):
+            for l in range(1, pow2):
+                vpowers[i][l] = vpowers[i][l - 1] * v[i]
+                vpowers[i][l] %= mod
+        dp = [[0] * (k + 1) for _ in range(s + 1)]
+        dp[0][0] = 1
+        p1 = [0] * pow2
+        p2 = [0] * pow2
+        for i in range(1, n + 1):
+            for j in range(s, c[i] - 1, -1):
+                for l in range(pow2):
+                    if l <= k:
+                        p1[l] = dp[j - c[i]][l] * factorial_inv[l] % mod
+                        p2[l] = factorial_inv[l] * vpowers[i][l] % mod
+                    else:
+                        p1[l] = 0
+                        p2[l] = 0
+                PowerSumNTT.NTT(p1, r, pow2, logpow2, invpow2, 1)
+                PowerSumNTT.NTT(p2, r, pow2, logpow2, invpow2, 1)
+                for l in range(pow2):
+                    p1[l] *= p2[l]
+                    p1[l] %= mod
+                PowerSumNTT.NTT(p1, r, pow2, logpow2, invpow2, -1)
+                for l in range(k + 1):
+                    dp[j][l] += p1[l] * factorial[l]
+                    dp[j][l] %= mod
+        answer = 0
+        for j in range(s + 1):
+            answer += dp[j][k]
+            answer %= mod
+        return answer
+
+    @staticmethod
+    def solve_from_stdin():
+        import sys
+        n, s, k = list(map(int, sys.stdin.readline().strip().split()))
+        c = [0] * (n + 1)
+        v = [0] * (n + 1)
+        for i in range(n):
+            c[i + 1], v[i + 1] = list(map(int, sys.stdin.readline().strip().split()))
+        ans = PowerSumNTT.get_answer(c, v, n, s, k)
+        print(ans)
+        return ans
+
+
+
+
+
+# =============================================================================
+# ── CONSOLIDATED FROM temp.py (ADDITIONAL & COMMENTED PROBLEMS) ──────────────
+# =============================================================================
+
+
+class SnippetExamples:
+    """Small one-off snippet demonstrations (Problems 0-6 from temp.py)."""
+
+    def left_rotate(arr, d):
+        """Left-rotate array by d steps. Example: left_rotate([1,2,3,4,5], 4) -> [5,1,2,3,4]"""
+        arr = list(arr)
+        d %= len(arr)
+        return arr[d:] + arr[:d]
+
+    def invert_dict(my_dict):
+        """Group dict keys by value. Example: invert_dict({"a":"x","b":"x"}) -> {"x":["a","b"]}"""
+        inv = {}
+        for key, val in my_dict.items():
+            inv.setdefault(val, []).append(key)
+        return inv
+
+    def reduce_product(lst):
+        """Product of all elements. Example: reduce_product([1,2,3,4]) -> 24"""
+        from functools import reduce
+        return reduce(lambda x, y: x * y, lst)
+
+    def diagonal_difference(a):
+        """Absolute difference of matrix diagonals."""
+        n = len(a)
+        return abs(sum(a[i][i] - a[i][n-i-1] for i in range(n)))
+
+    def palindrome(word):
+        """Check palindrome. Example: palindrome("abcba") -> True"""
+        return all(word[i] == word[-i-1] for i in range(len(word)//2))
+
+    def array_manipulation(n, queries):
+        """
+        HackerRank array manipulation (prefix sum trick).
+        Example: array_manipulation(5, [[1,2,100],[2,5,100],[3,4,100]]) -> 200
+        """
+        arr = [0] * (n + 2)
+        for a, b, k in queries:
+            arr[a] += k
+            arr[b+1] -= k
+        result = acc = 0
+        for x in arr:
+            acc += x
+            result = max(result, acc)
+        return result
+
+
+class SubsetProblems:
+    """Subset sum and k-partition problems."""
+
+    def isSubsetSum_recursive(s, n, total):
+        """
+        (naive) Recursive. Time O(2^n).
+        Example: SubsetProblems.isSubsetSum_recursive([3,34,4,12,5,2], 6, 9) -> True
+        """
+        if total == 0:
+            return True
+        if n == 0:
+            return False
+        if s[n-1] > total:
+            return SubsetProblems.isSubsetSum_recursive(s, n-1, total)
+        return (SubsetProblems.isSubsetSum_recursive(s, n-1, total) or
+                SubsetProblems.isSubsetSum_recursive(s, n-1, total - s[n-1]))
+
+    def isSubsetSum_dp(s, n, total):
+        """
+        (best) DP table. Time O(n*total).
+        Example: SubsetProblems.isSubsetSum_dp([3,34,4,12,5,2], 6, 9) -> True
+        """
+        dp = [[False] * (total + 1) for _ in range(n + 1)]
+        for i in range(n + 1):
+            dp[i][0] = True
+        for i in range(1, n + 1):
+            for j in range(1, total + 1):
+                dp[i][j] = dp[i-1][j] or (j >= s[i-1] and dp[i-1][j - s[i-1]])
+        return dp[n][total]
+
+    def subset(array, num):
+        """Find all subsets summing to num. Example: SubsetProblems.subset([3,4,2,1], 5) -> [(4,1),(3,2)]"""
+        result = []
+        def find(arr, rem, path=()):
+            if not arr:
+                return
+            if arr[0] == rem:
+                result.append(path + (arr[0],))
+            else:
+                find(arr[1:], rem - arr[0], path + (arr[0],))
+                find(arr[1:], rem, path)
+        find(array, num)
+        return result
+
+    def k_partition(S, k):
+        """
+        Partition S into k subsets with equal sum (backtracking).
+        Example: SubsetProblems.k_partition([7,3,5,12,2,1,5,3,8,4,6,4], 5) -> list of 5 partitions
+        """
+        n, total = len(S), sum(S)
+        if n < k or total % k:
+            return None
+        A = [None] * n
+        sl = [total // k] * k
+
+        def bt(idx):
+            if all(x == 0 for x in sl):
+                return True
+            if idx < 0:
+                return False
+            for i in range(k):
+                if sl[i] >= S[idx]:
+                    A[idx] = i + 1
+                    sl[i] -= S[idx]
+                    if bt(idx - 1):
+                        return True
+                    sl[i] += S[idx]
+            return False
+
+        if bt(n - 1):
+            return [[S[j] for j in range(n) if A[j] == i+1] for i in range(k)]
+        return None
+
+
+class DifferenceArray:
+    """Range update via difference arrays."""
+
+    def initialize(A):
+        """Create diff array D from A. Example: DifferenceArray.initialize([10,5,20,40])"""
+        n = len(A)
+        D = [0] * (n + 1)
+        D[0] = A[0]
+        for i in range(1, n):
+            D[i] = A[i] - A[i-1]
+        return D
+
+    def update(D, l, r, x):
+        """Add x to all elements in [l, r]. Example: DifferenceArray.update(D, 0, 1, 10)"""
+        D[l] += x
+        D[r+1] -= x
+
+    def reconstruct(A, D):
+        """Reconstruct updated array. Example: DifferenceArray.reconstruct(A, D)"""
+        res = list(A)
+        for i in range(len(A)):
+            res[i] = D[i] if i == 0 else D[i] + res[i-1]
+        return res
+
+
+class StockProfit:
+    """Max profit with k stock transactions."""
+
+    def max_profit_kn(prices, k):
+        """
+        (naive) O(nk) time and space.
+        Example: StockProfit.max_profit_kn([50,25,12,4,3,10,1,100], 2) -> 97
+        """
+        if not prices:
+            return 0
+        profit = [[0] * len(prices) for _ in range(k + 1)]
+        for t in range(1, k + 1):
+            mtf = float("-inf")
+            for d in range(1, len(prices)):
+                mtf = max(mtf, profit[t-1][d-1] - prices[d-1])
+                profit[t][d] = max(profit[t][d-1], mtf + prices[d])
+        return profit[k][-1]
+
+    def max_profit_kn_optimized(prices, k):
+        """
+        (best) O(n) space via two rolling arrays.
+        Example: StockProfit.max_profit_kn_optimized([50,25,12,4,3,10,1,100], 2) -> 97
+        """
+        if not prices:
+            return 0
+        even, odd = [0] * len(prices), [0] * len(prices)
+        for t in range(1, k + 1):
+            mtf = float("-inf")
+            cur, prev = (odd, even) if t % 2 else (even, odd)
+            for d in range(1, len(prices)):
+                mtf = max(mtf, prev[d-1] - prices[d-1])
+                cur[d] = max(cur[d-1], mtf + prices[d])
+        return even[-1] if k % 2 == 0 else odd[-1]
+
+
+class RiverSizes:
+    """Connected river (1-cell) sizes in a binary matrix."""
+
+    def river_sizes(matrix):
+        """
+        Return list of river sizes.
+        Example: RiverSizes.river_sizes([[1,0,0],[1,1,0],[0,0,1]]) -> [3, 1]
+        """
+        sizes, visited = [], [[False]*len(r) for r in matrix]
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                if not visited[i][j]:
+                    RiverSizes._traverse(i, j, matrix, visited, sizes)
+        return sizes
+
+    def _traverse(i, j, matrix, visited, sizes):
+        size, stack = 0, [[i, j]]
+        while stack:
+            r, c = stack.pop()
+            if visited[r][c]:
+                continue
+            visited[r][c] = True
+            if matrix[r][c] == 0:
+                continue
+            size += 1
+            for nr, nc in RiverSizes._neighbors(r, c, matrix, visited):
+                stack.append([nr, nc])
+        if size > 0:
+            sizes.append(size)
+
+    def _neighbors(i, j, matrix, visited):
+        res = []
+        if i > 0 and not visited[i-1][j]: res.append([i-1, j])
+        if i < len(matrix)-1 and not visited[i+1][j]: res.append([i+1, j])
+        if j > 0 and not visited[i][j-1]: res.append([i, j-1])
+        if j < len(matrix[0])-1 and not visited[i][j+1]: res.append([i, j+1])
+        return res
+
+
+class ArrayUtils:
+    """Miscellaneous array, string, and numeric utilities."""
+
+    def largest_range(array):
+        """
+        Longest consecutive integer range.
+        Example: ArrayUtils.largest_range([1,11,3,0,15,5,2,4,10,7,12,6]) -> [0, 7]
+        """
+        best, longest, nums = [], 0, {n: True for n in array}
+        for num in array:
+            if not nums[num]:
+                continue
+            nums[num] = False
+            length, left, right = 1, num-1, num+1
+            while left in nums: nums[left] = False; length += 1; left -= 1
+            while right in nums: nums[right] = False; length += 1; right += 1
+            if length > longest:
+                longest, best = length, [left+1, right-1]
+        return best
+
+    def birthday(s, d, m):
+        """
+        Count subarrays of length m summing to d.
+        Example: ArrayUtils.birthday([1,2,1,3,2], 3, 2) -> 2
+        """
+        return sum(1 for x in range(len(s)) if sum(s[x:x+m]) == d)
+
+    def bisection(f, a, b, N):
+        """
+        Bisection root-finding. Example: ArrayUtils.bisection(lambda x: x**2-x-1, 1, 2, 25) -> ~1.618
+        """
+        if f(a) * f(b) >= 0:
+            return None
+        a_n, b_n = a, b
+        for _ in range(N):
+            m = (a_n + b_n) / 2
+            fm = f(m)
+            if fm == 0:
+                return m
+            elif f(a_n) * fm < 0:
+                b_n = m
+            elif f(b_n) * fm < 0:
+                a_n = m
+            else:
+                return None
+        return (a_n + b_n) / 2
+
+    def h_index(lst):
+        """Academic h-index. Example: ArrayUtils.h_index([4,1,0,2,3]) -> 2"""
+        result = 0
+        for i, c in enumerate(sorted(lst, reverse=True)):
+            if c > i:
+                result = i + 1
+            else:
+                break
+        return result
+
+    def sliding_window_median(lst, k):
+        """
+        Sliding window median.
+        Example: ArrayUtils.sliding_window_median([-1,5,13,8,2,3,3,1], 5) -> list of medians
+        """
+        from bisect import insort
+        window = sorted(lst[:k])
+        results = [(window[k//2] + window[~(k//2)]) / 2.0]
+        for remove, add in zip(lst, lst[k:]):
+            window.remove(remove)
+            insort(window, add)
+            results.append((window[k//2] + window[~(k//2)]) / 2.0)
+        return results
+
+    def xor_decipher(s):
+        """
+        Brute-force XOR decipher from hex.
+        Example: ArrayUtils.xor_decipher("7a575e5e5d12455d405e56...") -> list of (key, text) candidates
+        """
+        b = bytearray.fromhex(s)
+        results = []
+        for char in range(256):
+            try:
+                results.append((char, bytes([byte ^ char for byte in b]).decode()))
+            except Exception:
+                pass
+        return results
+
+    def find_missing_nums(lst):
+        """
+        Find missing numbers from 1..1,000,000.
+        Example: ArrayUtils.find_missing_nums(range(1, 999001)) -> [999001..1000000]
+        """
+        s = set(lst)
+        return [i for i in range(1, 1_000_001) if i not in s]
+
+    def longest_contiguous_history(user1, user2):
+        """
+        Longest common subarray of page visits.
+        Example: ArrayUtils.longest_contiguous_history(["/a","/b","/c"],["/x","/b","/c"]) -> ["/b","/c"]
+        """
+        longest = []
+        for i in range(len(user1)):
+            for j in range(i+1, len(user1)+1):
+                sub = user1[i:j]
+                for k in range(len(user2) - len(sub) + 1):
+                    if sub == user2[k:k+len(sub)] and len(sub) > len(longest):
+                        longest = sub
+        return longest
+
+    def island_perimeter(board):
+        """
+        Island perimeter in 0/1 matrix.
+        Example: ArrayUtils.island_perimeter([[0,1,1,0],[1,1,1,0],[0,1,1,0],[0,0,1,0]]) -> 14
+        """
+        def nb(r, c):
+            n = 0
+            if r > 0: n += board[r-1][c] == 1
+            if r < len(board)-1: n += board[r+1][c] == 1
+            if c > 0: n += board[r][c-1] == 1
+            if c < len(board[0])-1: n += board[r][c+1] == 1
+            return n
+        return sum(4 - nb(r, c) for r, row in enumerate(board)
+                   for c, val in enumerate(row) if val == 1)
+
+    def group_anagrams(words):
+        """
+        Group words by anagram signature.
+        Example: ArrayUtils.group_anagrams(["eat","ate","apt","pat","tea","now"])
+        """
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for w in words:
+            groups["".join(sorted(w))].append(w)
+        return list(groups.values())
+
+    def compress_array_continuous(arr):
+        """
+        (naive) Compress consecutive runs only.
+        Example: ArrayUtils.compress_array_continuous([1,1,1,4,4,3]) -> [1,3,4,2,3,1]
+        """
+        if not arr:
+            return []
+        out, count, ch = [], 1, arr[0]
+        for i in range(1, len(arr)):
+            if arr[i] == ch:
+                count += 1
+            else:
+                out.extend([ch, count])
+                ch, count = arr[i], 1
+        out.extend([ch, count])
+        return out
+
+    def compress_array_any(arr):
+        """
+        (best) Compress any elements preserving first-seen order.
+        Example: ArrayUtils.compress_array_any([1,1,1,4,4,3,1,3]) -> [1,4,4,2,3,2]
+        """
+        from collections import OrderedDict
+        d = OrderedDict.fromkeys(arr, 0)
+        for x in arr:
+            d[x] += 1
+        out = []
+        for k, v in d.items():
+            out.extend([k, v])
+        return out
+
+
+class GraphProblems:
+    """Graph connectivity and scheduling."""
+
+    def _find(parents, i):
+        if parents[i] != i:
+            parents[i] = GraphProblems._find(parents, parents[i])
+        return parents[i]
+
+    def components_in_graph(gb):
+        """
+        (min, max) component sizes in edge list.
+        Example: GraphProblems.components_in_graph([[1,2],[3,4],[1,4]]) -> (2, 4)
+        """
+        parents = list(range(len(gb) * 2 + 1))
+        for a, b in gb:
+            p1, p2 = GraphProblems._find(parents, a), GraphProblems._find(parents, b)
+            parents[p1] = parents[p2] = parents[a] = parents[b] = min(p1, p2)
+        from collections import Counter
+        cnt = Counter(GraphProblems._find(parents, p) for p in parents)
+        counts = [c for c in cnt.values() if c > 1]
+        return min(counts), max(counts)
+
+    def minimum_average(cust):
+        """
+        Min average wait time (heap scheduling).
+        Example: GraphProblems.minimum_average([[0,3],[1,9],[2,5]]) -> 5
+        """
+        from heapq import heapify, heappop, heappush
+        cust = list(cust)
+        n = len(cust)
+        if not n:
+            return 0
+        heapify(cust)
+        tl, done, orders = 0, 0, []
+        while orders or cust:
+            while ((not cust) or done < cust[0][0]) and orders:
+                dw, dt = heappop(orders)
+                done = dw + max(done, dt)
+                tl += done - dt
+            if cust:
+                heappush(orders, heappop(cust)[::-1])
+        return tl // n
+
+
+class UnionFind:
+    """Disjoint Set Forest with rank and path compression."""
+
+    class UFNode:
+        def __init__(self, data):
+            self.data = data
+            self.parent = self
+            self.rank = 0
+            self.size = 1
+
+    def make_set(data):
+        """Example: node = UnionFind.make_set(1)"""
+        return UnionFind.UFNode(data)
+
+    def find(node):
+        """Find with path compression."""
+        if node != node.parent:
+            node.parent = UnionFind.find(node.parent)
+        return node.parent
+
+    def union(node_a, node_b):
+        """Union by rank. Example: UnionFind.union(a, b)"""
+        ra, rb = UnionFind.find(node_a), UnionFind.find(node_b)
+        if ra == rb:
+            return
+        if ra.rank > rb.rank:
+            rb.parent = ra; ra.size += rb.size
+        else:
+            ra.parent = rb; rb.size += ra.size
+            if ra.rank == rb.rank:
+                rb.rank += 1
+
+
+class BSTShowcase:
+    """BST construction, validation, and largest-BST-subtree problems."""
+
+    class BSTNode:
+        def __init__(self, data):
+            self.data = data
+            self.left_child = None
+            self.right_child = None
+
+    class BST:
+        """
+        Full BST. Example:
+            t = BSTShowcase.BST()
+            for v in [10,15,6,4,9]: t.insert(v)
+            t.inorder()
+        """
+        def __init__(self): self.root = None
+
+        def insert(self, data):
+            if not self.root:
+                self.root = BSTShowcase.BSTNode(data)
+            else:
+                self._ins(self.root, data)
+
+        def _ins(self, n, d):
+            if d < n.data:
+                if n.left_child: self._ins(n.left_child, d)
+                else: n.left_child = BSTShowcase.BSTNode(d)
+            elif d > n.data:
+                if n.right_child: self._ins(n.right_child, d)
+                else: n.right_child = BSTShowcase.BSTNode(d)
+
+        def search(self, data): return self._srch(self.root, data)
+
+        def _srch(self, n, d):
+            if not n: return False
+            if n.data == d: return True
+            return self._srch(n.right_child if d > n.data else n.left_child, d)
+
+        def inorder(self): self._io(self.root); print("End")
+
+        def _io(self, n):
+            if not n: return
+            self._io(n.left_child); print(n.data, "->", end=" "); self._io(n.right_child)
+
+    def is_bst(root):
+        """Check BST validity. Example: BSTShowcase.is_bst(root) -> True/False"""
+        def _chk(n, lo, hi):
+            if not n: return True
+            if n.data <= lo or n.data >= hi: return False
+            return _chk(n.left_child, lo, n.data) and _chk(n.right_child, n.data, hi)
+        return _chk(root, float("-inf"), float("inf"))
+
+    def size(root):
+        """Count nodes. Example: BSTShowcase.size(root) -> int"""
+        if not root: return 0
+        return 1 + BSTShowcase.size(root.left_child) + BSTShowcase.size(root.right_child)
+
+    def largest_bst_subtree_naive(root):
+        """
+        (naive) Checks is_bst on every node. O(n^2).
+        Example: BSTShowcase.largest_bst_subtree_naive(root)
+        """
+        if not root: return None
+        if BSTShowcase.is_bst(root): return root
+        return max(
+            BSTShowcase.largest_bst_subtree_naive(root.left_child),
+            BSTShowcase.largest_bst_subtree_naive(root.right_child),
+            key=lambda r: BSTShowcase.size(r) if r else 0
+        )
+
+    def largest_bst_subtree_optimized(root):
+        """
+        (best) Single-pass O(n).
+        Example: BSTShowcase.largest_bst_subtree_optimized(root)
+        """
+        best = [0, None]
+        def _h(n):
+            if not n: return (0, float("inf"), float("-inf"))
+            l, r = _h(n.left_child), _h(n.right_child)
+            if n.data > l[2] and n.data < r[1]:
+                sz = l[0] + r[0] + 1
+                if sz > best[0]: best[0] = sz; best[1] = n
+                return (sz, min(n.data, l[1]), max(n.data, r[2]))
+            return (0, float("-inf"), float("inf"))
+        _h(root)
+        return best[1]
+
+
+class CameraCoverSolution:
+    """
+    Minimum cameras to cover all binary tree nodes (LeetCode #968).
+    Example:
+        root = CameraCoverSolution(0)
+        root.left = CameraCoverSolution(0)
+        root.left.left = CameraCoverSolution(0)
+        print(root.min_camera_cover())  # -> 1
+    """
+    def __init__(self, k):
+        self.key = k; self.left = None; self.right = None; self.ans = 0
+
+    def min_camera_cover(self):
+        def dfs(n):
+            if not n: return 0
+            v = dfs(n.left) + dfs(n.right)
+            if v == 0: return 3
+            if v < 3: return 0
+            self.ans += 1; return 1
+        return self.ans + 1 if dfs(self) > 2 else self.ans
+
+
+class SynonymQueries:
+    """Sentence equivalence via synonym lookup."""
+
+    def solve_naive(synonym_words, queries):
+        """
+        (naive) defaultdict — no transitive synonyms.
+        Example: SynonymQueries.solve_naive([("big","large")],[("He is big.","He is large.")]) -> [True]
+        """
+        from collections import defaultdict
+        syn = defaultdict(set)
+        for w1, w2 in synonym_words:
+            syn[w1].add(w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(
+                w1 == w2 or (w1 in syn and w2 in syn[w1]) or (w2 in syn and w1 in syn[w2])
+                for w1, w2 in zip(q1, q2)
+            ))
+        return out
+
+    def solve_disjoint_set(synonym_words, queries):
+        """
+        (best) DisjointSet path compression — handles transitivity.
+        Example: SynonymQueries.solve_disjoint_set([("big","large"),("large","huge")],[("big","huge")]) -> [True]
+        """
+        class _DS:
+            def __init__(self): self.p = {}
+            def root(self, w):
+                if w not in self.p: self.p[w] = w
+                path = []
+                while self.p[w] != w: path.append(w); w = self.p[w]
+                for x in path: self.p[x] = w
+                return w
+            def add(self, a, b):
+                ra, rb = self.root(a), self.root(b)
+                if ra > rb: ra, rb = rb, ra
+                self.p[rb] = ra
+            def same(self, a, b): return self.root(a) == self.root(b)
+
+        ds = _DS()
+        for w1, w2 in synonym_words:
+            ds.add(w1, w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(w1 == w2 or ds.same(w1, w2) for w1, w2 in zip(q1, q2)))
+        return out
