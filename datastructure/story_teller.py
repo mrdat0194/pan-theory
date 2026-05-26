@@ -266,56 +266,6 @@ class story_teller:
 
 
 
-    class newNode:
-        def __init__(self, data):
-            self.data = data
-            self.left = None
-            self.right = None
-
-    def largestBST(node):
-        # Set the initial values for calling largestBSTUtil()
-        Min = [float('inf')]
-        Max = [float('-inf')]
-        max_size = [0]
-        is_bst = [0]
-        story_teller.largestBSTUtil(node, Min, Max, max_size, is_bst)
-        return max_size[0]
-
-    def largestBSTUtil(node, min_ref, max_ref, max_size_ref, is_bst_ref):
-        if node == None:
-            is_bst_ref[0] = 1 # An empty tree is BST
-            return 0 # Size of the BST is 0
-
-        Min = float('inf')
-        left_flag = False
-        right_flag = False
-        ls, rs = 0, 0
-
-        max_ref[0] = float('-inf')
-        ls = story_teller.largestBSTUtil(node.left, min_ref, max_ref, max_size_ref, is_bst_ref)
-        if is_bst_ref[0] == 1 and node.data > max_ref[0]:
-            left_flag = True
-
-        Min = min_ref[0]
-        min_ref[0] = float('inf')
-        rs = story_teller.largestBSTUtil(node.right, min_ref, max_ref, max_size_ref, is_bst_ref)
-        if is_bst_ref[0] == 1 and node.data < min_ref[0]:
-            right_flag = True
-
-        if Min < min_ref[0]:
-            min_ref[0] = Min
-        if node.data < min_ref[0]:
-            min_ref[0] = node.data
-        if node.data > max_ref[0]:
-            max_ref[0] = node.data
-
-        if left_flag and right_flag:
-            if ls + rs + 1 > max_size_ref[0]:
-                max_size_ref[0] = ls + rs + 1
-            return ls + rs + 1
-        else:
-            is_bst_ref[0] = 0
-            return 0
 
 
     def twoSumHashing(num_arr, pair_sum):
@@ -517,70 +467,6 @@ class story_teller:
         return min(sum(abs(x - y) for x, y in zip(gl, s)) for gl in gen)
 
 
-    # ── from Biggest_BST2.py ──────────────────────────────────────────────────
-    def largestBSTBT(root):
-        """
-        Alternative approach to find largest BST in a Binary Tree.
-        Returns tuple (size, max_val, min_val, bst_size, is_bst).
-
-        Example:
-            root = story_teller.newNode(60)
-            root.left = story_teller.newNode(65)
-            root.right = story_teller.newNode(70)
-            root.left.left = story_teller.newNode(50)
-            print(story_teller.largestBSTBT(root)[3])
-
-        :param root: binary tree root (story_teller.newNode)
-        :return: list [size, max, min, bst_size, is_bst]
-        """
-        INT_MIN = -2147483648
-        INT_MAX = 2147483647
-        if root is None:
-            return [0, INT_MIN, INT_MAX, 0, True]
-        if root.left is None and root.right is None:
-            return [1, root.data, root.data, 1, True]
-        l = story_teller.largestBSTBT(root.left)
-        r = story_teller.largestBSTBT(root.right)
-        ret = [0, 0, 0, 0, False]
-        ret[0] = 1 + l[0] + r[0]
-        if l[4] and r[4] and l[1] < root.data and r[2] > root.data:
-            ret[2] = min(l[2], min(r[2], root.data))
-            ret[1] = max(r[1], max(l[1], root.data))
-            ret[3] = ret[0]
-            ret[4] = True
-        else:
-            ret[3] = max(l[3], r[3])
-            ret[4] = False
-        return ret
-
-    # ── from Contruct_BST.py ──────────────────────────────────────────────────
-    def printPaths(root):
-        """
-        Print all root-to-leaf paths in a binary tree.
-
-        Example:
-            root = story_teller.newNode(10)
-            root.left = story_teller.newNode(8)
-            root.right = story_teller.newNode(2)
-            story_teller.printPaths(root)
-
-        :param root: binary tree root (story_teller.newNode)
-        """
-        story_teller._printPathsRec(root, [], 0)
-
-    def _printPathsRec(root, path, pathLen):
-        if root is None:
-            return
-        if len(path) > pathLen:
-            path[pathLen] = root.data
-        else:
-            path.append(root.data)
-        pathLen += 1
-        if root.left is None and root.right is None:
-            print(' '.join(str(x) for x in path[:pathLen]))
-        else:
-            story_teller._printPathsRec(root.left, path, pathLen)
-            story_teller._printPathsRec(root.right, path, pathLen)
 
     # ── from goodness.py ──────────────────────────────────────────────────────
     def goodness(s):
@@ -1702,10 +1588,6 @@ class PlayingDeck:
     def __setitem__(self, position, card):
         self.cards[position] = card
 
-
-# =============================================================================
-# ── CONSOLIDATED FROM vin.py ─────────────────────────────────────────────────
-# =============================================================================
 
 class ArrayProblems:
     """
@@ -2987,9 +2869,9 @@ class ArrayUtils:
         """
         return sum(1 for x in range(len(s)) if sum(s[x:x+m]) == d)
 
-    def bisection(f, a, b, N):
+    def find_root_bisection(f, a, b, N):
         """
-        Bisection root-finding. Example: ArrayUtils.bisection(lambda x: x**2-x-1, 1, 2, 25) -> ~1.618
+        Bisection root-finding. Example: ArrayUtils.find_root_bisection(lambda x: x**2-x-1, 1, 2, 25) -> ~1.618
         """
         if f(a) * f(b) >= 0:
             return None
@@ -3211,41 +3093,6 @@ class BSTShowcase:
             self.left_child = None
             self.right_child = None
 
-    class BST:
-        """
-        Full BST. Example:
-            t = BSTShowcase.BST()
-            for v in [10,15,6,4,9]: t.insert(v)
-            t.inorder()
-        """
-        def __init__(self): self.root = None
-
-        def insert(self, data):
-            if not self.root:
-                self.root = BSTShowcase.BSTNode(data)
-            else:
-                self._ins(self.root, data)
-
-        def _ins(self, n, d):
-            if d < n.data:
-                if n.left_child: self._ins(n.left_child, d)
-                else: n.left_child = BSTShowcase.BSTNode(d)
-            elif d > n.data:
-                if n.right_child: self._ins(n.right_child, d)
-                else: n.right_child = BSTShowcase.BSTNode(d)
-
-        def search(self, data): return self._srch(self.root, data)
-
-        def _srch(self, n, d):
-            if not n: return False
-            if n.data == d: return True
-            return self._srch(n.right_child if d > n.data else n.left_child, d)
-
-        def inorder(self): self._io(self.root); print("End")
-
-        def _io(self, n):
-            if not n: return
-            self._io(n.left_child); print(n.data, "->", end=" "); self._io(n.right_child)
 
     def is_bst(root):
         """Check BST validity. Example: BSTShowcase.is_bst(root) -> True/False"""
@@ -3273,27 +3120,91 @@ class BSTShowcase:
             key=lambda r: BSTShowcase.size(r) if r else 0
         )
 
+    @staticmethod
+    def _largestBSTHelper(root):
+        """
+        Helper that performs bottom-up validation.
+        Returns list [size, max_val, min_val, bst_size, is_bst, bst_root].
+        """
+        INT_MIN = -2147483648
+        INT_MAX = 2147483647
+        if root is None:
+            return [0, INT_MIN, INT_MAX, 0, True, None]
+        if root.left_child is None and root.right_child is None:
+            return [1, root.data, root.data, 1, True, root]
+
+        l = BSTShowcase._largestBSTHelper(root.left_child)
+        r = BSTShowcase._largestBSTHelper(root.right_child)
+
+        ret = [0, 0, 0, 0, False, None]
+        ret[0] = 1 + l[0] + r[0]
+
+        if l[4] and r[4] and l[1] < root.data and r[2] > root.data:
+            ret[2] = min(l[2], min(r[2], root.data))
+            ret[1] = max(r[1], max(l[1], root.data))
+            ret[3] = ret[0]
+            ret[4] = True
+            ret[5] = root
+        else:
+            ret[3] = max(l[3], r[3])
+            ret[4] = False
+            ret[5] = l[5] if l[3] > r[3] else r[5]
+
+        return ret
+
+    @staticmethod
     def largest_bst_subtree_optimized(root):
         """
         (best) Single-pass O(n).
         Example: BSTShowcase.largest_bst_subtree_optimized(root)
         """
-        best = [0, None]
-        def _h(n):
-            if not n: return (0, float("inf"), float("-inf"))
-            l, r = _h(n.left_child), _h(n.right_child)
-            if n.data > l[2] and n.data < r[1]:
-                sz = l[0] + r[0] + 1
-                if sz > best[0]: best[0] = sz; best[1] = n
-                return (sz, min(n.data, l[1]), max(n.data, r[2]))
-            return (0, float("-inf"), float("inf"))
-        _h(root)
-        return best[1]
+        return BSTShowcase._largestBSTHelper(root)[5]
+
+    @staticmethod
+    def largestBSTBT(root):
+        """
+        Finds the size of the largest BST in a Binary Tree.
+        Returns list [size, max_val, min_val, bst_size, is_bst].
+
+        :param root: BSTShowcase.BSTNode
+        :return: list [size, max, min, bst_size, is_bst]
+        """
+        return BSTShowcase._largestBSTHelper(root)[:5]
+
+    @staticmethod
+    def printPaths(root):
+        """
+        Print all root-to-leaf paths in a binary tree.
+
+        :param root: BSTShowcase.BSTNode
+        """
+        BSTShowcase._printPathsRec(root, [], 0)
+
+    @staticmethod
+    def _printPathsRec(root, path, pathLen):
+        if root is None:
+            return
+        if len(path) > pathLen:
+            path[pathLen] = root.data
+        else:
+            path.append(root.data)
+        pathLen += 1
+        if root.left_child is None and root.right_child is None:
+            print(' '.join(str(x) for x in path[:pathLen]))
+        else:
+            BSTShowcase._printPathsRec(root.left_child, path, pathLen)
+            BSTShowcase._printPathsRec(root.right_child, path, pathLen)
 
 
 class CameraCoverSolution:
     """
-    Minimum cameras to cover all binary tree nodes (LeetCode #968).
+    LeetCode #968: Binary Tree Cameras
+    
+    Problem Description:
+        You are given the root of a binary tree. We install cameras on the tree nodes 
+        where each camera at a node can monitor its parent, itself, and its immediate children.
+        Return the minimum number of cameras needed to monitor all nodes of the tree.
+
     Example:
         root = CameraCoverSolution(0)
         root.left = CameraCoverSolution(0)

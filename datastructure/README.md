@@ -9,7 +9,9 @@ This directory contains implementations of various data structures, classic puzz
 ### 1. [story_teller.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/story_teller.py)
 This is the single entry point for all algorithmic solutions, organized logically into modular classes:
 
-*   **`story_teller`**: Standard problems (e.g., `minimumSwaps`, `minimumBribes`, `freqQuery`, `largestBST`).
+*   **`story_teller`**: Standard problems (e.g., `minimumSwaps`, `minimumBribes`, `freqQuery`).
+*   **`BSTShowcase`**: BST construction, validation, path printing, and largest-BST-subtree algorithms (Naive, Single-Pass Optimized, and `largestBSTBT`).
+    *   *Design Note:* The `BSTNode` structure here uses `left_child` and `right_child` without parent pointers, prioritizing lightweight operations for recursive validation puzzles. For advanced BST implementations that support parent tracking, deletion logic, and rich node queries, refer to the self-contained package in [BinarySearchTree](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Data_Structures_Algorithms_In_Python-master/Tree/BinarySearchTree).
 *   **`ArrayProblems`**: Array manipulation methods including `mode_sorted`, `mode_unsorted`, and `RightRotate`.
 *   **`Stock`**: Financial algorithm problems like `max_profit_k_transactions` and `stock_gain`.
 *   **`FibonacciShowcase`**: Comparisons of Fibonacci calculation algorithms (Tabulation, Sieve equivalent recurrence, Tail Recursion, Memoization, Fast Doubling) including `fib_dn`.
@@ -38,4 +40,4 @@ To run the full test suite and verify that all implementations work as expected,
 python -m unittest datastructure/test/story_teller_test.py
 ```
 
-All 80 test cases must print `OK` showing successful execution.
+All 120+ test cases must print `OK` showing successful execution.

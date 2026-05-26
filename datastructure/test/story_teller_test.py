@@ -44,31 +44,6 @@ class TestStory(unittest.TestCase):
         res = story_teller.freqQuery(arr)
         self.assertEqual(res, [0, 1])
 
-    def test_biggest_bst(self):
-        newNode = story_teller.newNode
-        largestBST = story_teller.largestBST
-
-        self.assertEqual(largestBST(None), 0)
-
-        root = newNode(10)
-        self.assertEqual(largestBST(root), 1)
-
-        root = newNode(20)
-        root.left = newNode(10)
-        root.right = newNode(30)
-        self.assertEqual(largestBST(root), 3)
-
-        root = newNode(50)
-        root.left = newNode(10)
-        root.right = newNode(60)
-        root.left.left = newNode(5)
-        root.left.right = newNode(20)
-        root.right.left = newNode(55)
-        root.right.left.left = newNode(45)
-        root.right.right = newNode(70)
-        root.right.right.left = newNode(65)
-        root.right.right.right = newNode(80)
-        self.assertEqual(largestBST(root), 6)
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_two_sum_hashing(self, mock_stdout):
@@ -119,19 +94,41 @@ class TestStory(unittest.TestCase):
         self.assertEqual(story_teller.formingMagicSquare([4, 9, 2, 3, 5, 7, 8, 1, 5]), 1)
 
     def test_largest_bst_bt(self):
-        root = story_teller.newNode(60)
-        root.left = story_teller.newNode(65)
-        root.right = story_teller.newNode(70)
-        root.left.left = story_teller.newNode(50)
-        res = story_teller.largestBSTBT(root)
-        self.assertEqual(res[3], 2)
+        BSTNode = BSTShowcase.BSTNode
+        
+        # Test empty tree
+        self.assertEqual(BSTShowcase.largestBSTBT(None)[3], 0)
+
+        # Test single node
+        root = BSTNode(10)
+        self.assertEqual(BSTShowcase.largestBSTBT(root)[3], 1)
+
+        # Test valid BST
+        root = BSTNode(20)
+        root.left_child = BSTNode(10)
+        root.right_child = BSTNode(30)
+        self.assertEqual(BSTShowcase.largestBSTBT(root)[3], 3)
+
+        # Test complex binary tree
+        root = BSTNode(50)
+        root.left_child = BSTNode(10)
+        root.right_child = BSTNode(60)
+        root.left_child.left_child = BSTNode(5)
+        root.left_child.right_child = BSTNode(20)
+        root.right_child.left_child = BSTNode(55)
+        root.right_child.left_child.left_child = BSTNode(45)
+        root.right_child.right_child = BSTNode(70)
+        root.right_child.right_child.left_child = BSTNode(65)
+        root.right_child.right_child.right_child = BSTNode(80)
+        self.assertEqual(BSTShowcase.largestBSTBT(root)[3], 6)
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_print_paths(self, mock_stdout):
-        root = story_teller.newNode(10)
-        root.left = story_teller.newNode(8)
-        root.right = story_teller.newNode(2)
-        story_teller.printPaths(root)
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(8)
+        root.right_child = BSTNode(2)
+        BSTShowcase.printPaths(root)
         output = mock_stdout.getvalue().strip().split('\n')
         self.assertEqual(output, ["10 8", "10 2"])
 
@@ -612,8 +609,8 @@ class TestArrayUtils(unittest.TestCase):
     def test_birthday(self):
         self.assertEqual(ArrayUtils.birthday([1,2,1,3,2], 3, 2), 2)
 
-    def test_bisection(self):
-        result = ArrayUtils.bisection(lambda x: x**2 - x - 1, 1, 2, 25)
+    def test_find_root_bisection(self):
+        result = ArrayUtils.find_root_bisection(lambda x: x**2 - x - 1, 1, 2, 25)
         self.assertAlmostEqual(result, (1 + 5**0.5)/2, places=5)
 
     def test_h_index(self):
@@ -681,39 +678,51 @@ class TestUnionFind(unittest.TestCase):
 
 class TestBSTShowcase(unittest.TestCase):
 
-    def _build_bst(self, values):
-        t = BSTShowcase.BST()
-        for v in values:
-            t.insert(v)
-        return t
-
-    def test_insert_and_search(self):
-        t = self._build_bst([10,15,6,4,9,12,24])
-        self.assertTrue(t.search(12))
-        self.assertFalse(t.search(99))
-
     def test_is_bst_valid(self):
-        t = self._build_bst([10,6,15,4,9])
-        self.assertTrue(BSTShowcase.is_bst(t.root))
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(6)
+        root.right_child = BSTNode(15)
+        root.left_child.left_child = BSTNode(4)
+        root.left_child.right_child = BSTNode(9)
+        self.assertTrue(BSTShowcase.is_bst(root))
 
     def test_is_bst_invalid(self):
-        root = BSTShowcase.BSTNode(10)
-        root.left_child = BSTShowcase.BSTNode(20)  # violates BST
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(20)  # violates BST
         self.assertFalse(BSTShowcase.is_bst(root))
 
     def test_size(self):
-        t = self._build_bst([10,6,15])
-        self.assertEqual(BSTShowcase.size(t.root), 3)
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(6)
+        root.right_child = BSTNode(15)
+        self.assertEqual(BSTShowcase.size(root), 3)
 
     def test_largest_bst_subtree_naive_pure_bst(self):
-        t = self._build_bst([10,6,15,4,9,12,24])
-        result = BSTShowcase.largest_bst_subtree_naive(t.root)
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(6)
+        root.right_child = BSTNode(15)
+        root.left_child.left_child = BSTNode(4)
+        root.left_child.right_child = BSTNode(9)
+        root.right_child.left_child = BSTNode(12)
+        root.right_child.right_child = BSTNode(24)
+        result = BSTShowcase.largest_bst_subtree_naive(root)
         self.assertIsNotNone(result)
         self.assertEqual(result.data, 10)
 
     def test_largest_bst_subtree_optimized_pure_bst(self):
-        t = self._build_bst([10,6,15,4,9,12,24])
-        result = BSTShowcase.largest_bst_subtree_optimized(t.root)
+        BSTNode = BSTShowcase.BSTNode
+        root = BSTNode(10)
+        root.left_child = BSTNode(6)
+        root.right_child = BSTNode(15)
+        root.left_child.left_child = BSTNode(4)
+        root.left_child.right_child = BSTNode(9)
+        root.right_child.left_child = BSTNode(12)
+        root.right_child.right_child = BSTNode(24)
+        result = BSTShowcase.largest_bst_subtree_optimized(root)
         self.assertIsNotNone(result)
         self.assertEqual(result.data, 10)
 
