@@ -1,7 +1,8 @@
+import os
 import requests
 import datetime
 
-api_key = "xx6nnEoT0ziwKoydsNbLVrYISR1WpfmG"
+api_key = os.environ.get("EXCHANGE_API_KEY")
 
 # Extract base_currency and symbols from request parameters (if provided)
 # base_currency = requests.args.get("base_currency", "USD")
