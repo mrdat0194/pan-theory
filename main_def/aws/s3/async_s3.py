@@ -1,6 +1,7 @@
 from typing import List
 import asyncio
 import logging
+import aiofiles
 
 from app.biz.aws.aws_config import AWSConfig
 from app.biz.aws.auto_async_client import auto_s3_async_client
@@ -12,7 +13,7 @@ from app.biz.aws.s3.aws_s3 import existing_on_s3
 @auto_s3_async_client
 async def upload_to_s3_async(client, s3_key: str, file_path: str, bucket: str = AWSConfig.S3_DEFAULT_BUCKET) -> bool:
     try:
-        with open(file_path, "rb") as f:
+        async with aiofiles.open(file_path, "rb") as f:
             await client.put_object(Bucket=bucket, Key=s3_key, Body=f)
         return True
 
@@ -28,8 +29,8 @@ async def download_from_s3_async(
     try:
         response = await client.get_object(Bucket=bucket, Key=s3_key)
         async with response["Body"] as stream:
-            with open(downloaded_file_path, "wb") as f:
-                f.write(await stream.read())
+            async with aiofiles.open(downloaded_file_path, "wb") as f:
+                await f.write(await stream.read())
         return True
 
     except Exception as ex:
