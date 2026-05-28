@@ -1,6 +1,7 @@
 import os
 import polars as pl
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from GA4_CoreEngine import BuildReport, OrderBy
 
@@ -83,12 +84,9 @@ def main():
                 first_metric = config["metrics"][0]
                 print(f"  Report: {tag}")
                 
-                all_batches_data = []
-
-                for start, end in march_batches:
-                    print(f"    Fetching batch: {start} to {end}...", end=" ", flush=True)
-                    
-                    # Initialize using GA4_CoreEngine
+                # Prepare a function to fetch one batch so it can be mapped
+                def fetch_batch(batch_idx, start, end):
+                    print(f"    Fetching batch: {start} to {end}...", flush=True)
                     builder = BuildReport(
                         property_id=p_id,
                         ga_dimensions=config["dimensions"],
@@ -97,23 +95,30 @@ def main():
                         end_date=end,
                         creds_path=CREDS_PATH
                     )
-                    
-                    # Sort Descending by first metric
                     sort_order = [OrderBy(metric=OrderBy.MetricOrderBy(metric_name=first_metric), desc=True)]
-                    
-                    # FETCH ALL DATA (up to 250k rows per batch)
                     try:
                         df_batch = builder.run_report(limit=250000, order_bys=sort_order)
-                        all_batches_data.append(df_batch)
-                        print(f"Done ({len(df_batch)} rows)")
-                        
-                        # Wait between batches (requested by user)
-                        if (start, end) != march_batches[-1]: 
-                            print(f"    Waiting 10 seconds before next batch...")
-                            time.sleep(10)
+                        print(f"    Done {start} to {end} ({len(df_batch)} rows)", flush=True)
+                        return batch_idx, df_batch
                     except Exception as batch_error:
-                        print(f"FAILED: {batch_error}")
+                        print(f"    FAILED {start} to {end}: {batch_error}", flush=True)
+                        return batch_idx, None
+
+                # Fetch all batches in parallel
+                batch_results = [None] * len(march_batches)
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    futures = []
+                    for idx, (start, end) in enumerate(march_batches):
+                        futures.append(executor.submit(fetch_batch, idx, start, end))
+
+                    for future in as_completed(futures):
+                        idx, df_batch = future.result()
+                        if df_batch is not None:
+                            batch_results[idx] = df_batch
                 
+                # Filter out failures
+                all_batches_data = [df for df in batch_results if df is not None]
+
                 # Combine batches
                 if all_batches_data:
                     final_df = pl.concat(all_batches_data, how='vertical', rechunk=True)
