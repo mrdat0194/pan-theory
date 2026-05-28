@@ -1,6 +1,6 @@
 import cv2
 import time
-from my_functions import timer
+from my_functions.timer import timer
 
 @timer
 def decode_fourcc(v: int):
