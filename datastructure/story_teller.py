@@ -1160,221 +1160,71 @@ if __name__ == '__main__':
 # super maximum cost query
 # Complete the solve function below.
 
-from bisect import bisect_right  # noqa: E402
-parents = {}
-rep = {}
-def make_set(n):
-    global parents,rep
-    parents=dict(zip(range(1,n+1),range(1,n+1)))
-    rep=dict(zip(range(1,n+1),({i} for i in range(1,n+1))))
-
-def add_edge(x, y,paths,w):
-    xroot = find(x)
-    yroot = find(y)
-    paths[w]+=len(rep[xroot])*len(rep[yroot])
-    if xroot == yroot:
-        return
-    else:
-        if len(rep[yroot])<len(rep[xroot]):
-            parents[yroot] = xroot
-            rep[xroot].update(rep[yroot])
-            del rep[yroot]
-        else:
-            parents[xroot] = yroot
-            rep[yroot].update(rep[xroot])
-            del rep[xroot]
-
-def find(x):
-    if parents[x] != x:
-        parent = find(parents[x])
-        parents[x] = parent
-    return parents[x]
+from bisect import bisect_right, bisect_left  # noqa: E402
 
 @print_param("output_graph_supersum.txt", BASE_DIR)
 def solve(tree, queries):
     """
-        5 5
-        1 2 3
-        1 4 2
-        2 5 6
-        3 4 1
-        1 1
-        1 2
-        2 3
-        2 5
-        1 6
-
-    nq = input().split()
-
-    n = int(nq[0])
-
-    q = int(nq[1])
-
-    tree = []
-
-    for _ in range(n-1):
-        tree.append(list(map(int, input().rstrip().split())))
-
-    queries = []
-
-    for _ in range(q):
-        queries.append(list(map(int, input().rstrip().split())))
-
-    result = solve(tree, queries)
-
-
-#
-# #Another solution to super
-#
-# # Complete the solve function below.
-#
-# #!/bin/python3
-#
-#
-# class disjoint_set:
-#     class Node:
-#         def __init__(self, data = 0):
-#             self.data = data
-#             self.parent = self
-#             self.rank = 0
-#             self.size = 1
-#
-#     def __init__(self):
-#         self.items = dict()
-#         self.ans = 0
-#
-#     def make_set(self, data):
-#         if not data in self.items:
-#             self.items[data] = self.Node(data)
-#         return self.items
-#
-#     def find_set(self, data):
-#         if data in self.items:
-#             node = self.items[data]
-#         else:
-#             return False
-#
-#         if node.parent == node:
-#             return node
-#         node.parent = self.find_set(node.parent.data)
-#
-#         return node.parent
-#
-#     def union(self, rep1, rep2):
-#         node1 = self.find_set(rep1)
-#         node2 = self.find_set(rep2)
-#
-#         #print("union: node1 = {} node2 = {}".format(node1.data, node2.data))
-#
-#         if node1 and node2 and node1 != node2:
-#             if node1.rank >= node2.rank:
-#                 if node1.rank == node2.rank:
-#                     node1.rank += 1
-#                 self.ans -= (node1.size*(node1.size - 1))//2 + (node2.size*(node2.size - 1))//2
-#                 node2.parent = node1
-#                 node1.size += node2.size
-#                 self.ans += (node1.size*(node1.size - 1))//2
-#             else:
-#                 self.ans -= (node1.size*(node1.size - 1))//2 + (node2.size*(node2.size - 1))//2
-#                 node1.parent = node2
-#                 node2.size += node1.size
-#                 self.ans += (node2.size*(node2.size - 1))//2
-#         return True
-#
-#     def get_size(self, rep):
-#         return self.find_set(rep).size
-#
-#     def get_ans(self):
-#         return self.ans
-#
-# # Complete the solve function below.
-# def solve(tree, queries):
-#     dset = disjoint_set()
-#     tree = sorted(tree, key=lambda x: x[2])
-#     weights = list(map(lambda x: x[2], tree))
-#     anses = []
-#
-#     for el in tree:
-#         dset.make_set(el[0])
-#         dset.make_set(el[1])
-#         dset.union(el[0], el[1])
-#
-#         anses.append(dset.get_ans())
-#         print("adding {} ans = {}".format(el, dset.get_ans()))
-#
-#     print("weights: {} anses: {}".format(weights, anses))
-#     # do queries
-#     output = []
-#     for q in queries:
-#         qleft, qright = q[0], q[1]
-#
-#         if qright < weights[0]:
-#             output.append(0)
-#         else:
-#             right = bisect_right(weights, qright) - 1
-#             print("query: {} RIGHT weights[{}] = {}".format(q, right, weights[right]))
-#
-#             if qleft <= weights[0]:
-#                 output.append(anses[right])
-#             else:
-#                 left = bisect_left(weights, qleft) - 1
-#                 print("query: {} LEFT weights[{}] = {}".format(q, left, weights[left]))
-#                 output.append(anses[right] - anses[left])
-#
-#
-#     return output
-# #
-# # if __name__ == '__main__':
-# #     os.environ['HOME'] = '/Users/petern/Desktop/Python/DataStructure/graph_supersum.txt'
-# #
-# #     fptr = open(os.environ['HOME'], 'w')
-# #
-# #     nq = input().split()
-# #
-# #     n = int(nq[0])
-# #
-# #     q = int(nq[1])
-# #
-# #     tree = []
-# #
-# #     for _ in range(n-1):
-# #         tree.append(list(map(int, input().rstrip().split())))
-# #
-# #     queries = []
-# #
-# #     for _ in range(q):
-# #         queries.append(list(map(int, input().rstrip().split())))
-# #
-# #     result = solve(tree, queries)
-# #
-# #     fptr.write(str(result))
-# #
-# #     fptr.close()
-# #
-# #     myfile = open(os.environ['HOME'],'r')
-# #
-# #     print((myfile.readlines()))
-#
-    :param tree:
-    :param queries:
-    :return:
+    Solve super maximum cost query.
+    
+    :param tree: List of [u, v, w] edges
+    :param queries: List of [L, R] queries
+    :return: generator yielding results
     """
-    n = len(tree)+1
-    tree.sort(key=lambda e:e[2])
-    paths = {0:0}
-    weights = [0]
-    prev = 0
-    make_set(len(tree)+1)
-    for a,b,w in tree:
-        if w != prev:
-            weights.append(w)
-            paths[w] = paths[prev]
-        add_edge(a,b,paths,w)
-        prev=w
-    for l,r in queries:
-        wr = weights[bisect_right(weights,r)-1]
-        wl = weights[bisect_right(weights,l-1)-1]
-        yield paths[wr]-paths[wl]
+    tree = sorted(tree, key=lambda x: x[2])
+    weights_raw = [x[2] for x in tree]
+    if not weights_raw:
+        for _ in queries:
+            yield 0
+        return
+        
+    # DSU data structures using flat lists.
+    # parent[i] points to parent node. size[i] tracks component sizes.
+    n = len(tree) + 1
+    parent = list(range(n + 1))
+    size = [1] * (n + 1)
+    
+    def find(i):
+        # Iterative path compression to prevent RecursionError on skewed trees.
+        path = []
+        while parent[i] != i:
+            path.append(i)
+            i = parent[i]
+        for node in path:
+            parent[node] = i
+        return i
+
+    anses = []
+    current_ans = 0
+
+    def union(u, v):
+        nonlocal current_ans
+        root_u = find(u)
+        root_v = find(v)
+        if root_u != root_v:
+            # New paths formed = size of component U * size of component V.
+            current_ans += size[root_u] * size[root_v]
+            # Union by Size: merge smaller tree into the larger tree.
+            # size is preferred over rank because component size is needed for path counts.
+            if size[root_u] < size[root_v]:
+                root_u, root_v = root_v, root_u
+            parent[root_v] = root_u
+            size[root_u] += size[root_v]
+
+    for u, v, w in tree:
+        union(u, v)
+        anses.append(current_ans)
+        
+    for qleft, qright in queries:
+        if qright < weights_raw[0]:
+            yield 0
+        else:
+            right = bisect_right(weights_raw, qright) - 1
+            if qleft <= weights_raw[0]:
+                yield anses[right]
+            else:
+                left = bisect_left(weights_raw, qleft) - 1
+                yield anses[right] - anses[left]
 
 # An 8-puzzle is a game played on a 3 x 3 board of tiles, with the ninth tile missing.
 # The remaining tiles are labeled 1 through 8 but shuffled randomly.
