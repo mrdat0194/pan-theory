@@ -22,7 +22,7 @@ from datastructure.story_teller import (
     RiverSizes,
     ArrayUtils,
     GraphProblems,
-    UnionFind,
+    DisjointSet,
     BSTShowcase,
     CameraCoverSolution,
     SynonymQueries,
@@ -658,22 +658,24 @@ class TestGraphProblems(unittest.TestCase):
 class TestUnionFind(unittest.TestCase):
 
     def test_make_set_and_find(self):
-        a = UnionFind.make_set(1)
-        self.assertEqual(UnionFind.find(a), a)
+        ds = DisjointSet()
+        ds.make_set(1)
+        self.assertEqual(ds.find(1), 1)
 
     def test_union(self):
-        a = UnionFind.make_set(1)
-        b = UnionFind.make_set(2)
-        UnionFind.union(a, b)
-        self.assertEqual(UnionFind.find(a), UnionFind.find(b))
+        ds = DisjointSet()
+        ds.make_set(1)
+        ds.make_set(2)
+        ds.union(1, 2)
+        self.assertEqual(ds.find(1), ds.find(2))
 
     def test_size_after_union(self):
-        a = UnionFind.make_set(1)
-        b = UnionFind.make_set(2)
-        c = UnionFind.make_set(3)
-        UnionFind.union(a, b)
-        UnionFind.union(b, c)
-        self.assertEqual(UnionFind.find(a).size, 3)
+        ds = DisjointSet()
+        for x in [1, 2, 3]:
+            ds.make_set(x)
+        ds.union(1, 2)
+        ds.union(2, 3)
+        self.assertEqual(ds.get_size(1), 3)
 
 
 class TestBSTShowcase(unittest.TestCase):

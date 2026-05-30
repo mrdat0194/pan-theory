@@ -1121,28 +1121,110 @@ class greedy:
 
 
 class DisjointSet:
+    """
+    Unified Disjoint Set Union (DSU) with:
+    - Iterative path compression (safe from RecursionError)
+    - Union by size  — union():         balances by component size, O(α(N))
+    - Union by rank  — union_by_rank(): balances by tree height,   O(α(N))
+
+    When to use which:
+    - union()         — when you need component sizes (e.g., path counting)
+    - union_by_rank() — when you only care about connectivity, not sizes
+    Both achieve the same amortized complexity with path compression.
+
+    Supports two modes:
+    - Integer mode: DisjointSet(N) — nodes are 0..N-1, uses flat lists
+    - Dict mode:    DisjointSet()  — nodes are any hashable, uses dicts
+
+    Used by:
+    - Kundu and Tree (counting red-edge triplets)
+    - Super Maximum Cost Query (counting paths by weight range)
+    - SynonymQueries (transitive word equivalence)
+    """
+
+    def __init__(self, n=None):
+        if n is not None:
+            # Integer mode: flat lists for O(1) access
+            self.parent = list(range(n))
+            self.size = [1] * n
+            self.rank = [0] * n
+            self._dict_mode = False
+        else:
+            # Dict mode: supports arbitrary hashable keys
+            self.parent = {}
+            self.size = {}
+            self.rank = {}
+            self._dict_mode = True
+
+    def make_set(self, x):
+        """Register a new element (dict mode only, no-op if exists)."""
+        if self._dict_mode and x not in self.parent:
+            self.parent[x] = x
+            self.size[x] = 1
+            self.rank[x] = 0
+
+    def find(self, x):
+        """Iterative path compression to find root representative."""
+        if self._dict_mode and x not in self.parent:
+            self.make_set(x)
+        path = []
+        i = x
+        while self.parent[i] != i:
+            path.append(i)
+            i = self.parent[i]
+        for node in path:
+            self.parent[node] = i
+        return i
+
+    def union(self, a, b):
+        """
+        Union by size. Returns (size_a, size_b) if merged, None if already same set.
+        Callers can use the returned sizes for problem-specific logic
+        (e.g., current_ans += size_a * size_b for path counting).
+        """
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return None
+        sa, sb = self.size[ra], self.size[rb]
+        # Merge smaller tree under larger tree
+        if sa < sb:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        self.size[ra] += self.size[rb]
+        return (sa, sb)
+
+    def union_by_rank(self, a, b):
+        """
+        Union by rank (tree height). Returns True if merged, False if already same set.
+        Use when you only need connectivity, not component sizes.
+        """
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        # Attach shorter tree under taller tree
+        if self.rank[ra] > self.rank[rb]:
+            self.parent[rb] = ra
+            self.size[ra] += self.size[rb]
+        elif self.rank[ra] < self.rank[rb]:
+            self.parent[ra] = rb
+            self.size[rb] += self.size[ra]
+        else:
+            self.parent[rb] = ra
+            self.size[ra] += self.size[rb]
+            self.rank[ra] += 1
+        return True
+
+    def get_size(self, a):
+        """Return the size of the component containing element a."""
+        return self.size[self.find(a)]
+
+    def connected(self, a, b):
+        """Check if a and b are in the same component."""
+        return self.find(a) == self.find(b)
+
 # Kunno And Tree
 # https://math.stackexchange.com/questions/838792/counting-triplets-with-red-edges-in-each-pair?newreg=60eee35f0b3844de852bda39f6dfec88
 # https://www.hackerrank.com/contests/w5/challenges/kundu-and-tree
-    def __init__(self, N):
-        self.parent = [i for i in range(N)]
-        self.total = [1] * N
-
-    def union(self, a, b):
-        a_parent = self.find(a)
-        b_parent = self.find(b)
-        if a_parent != b_parent:
-            self.parent[b_parent] = a_parent
-            self.total[a_parent] += self.total[b_parent]
-
-    def find(self, a):
-        if self.parent[a] != a:
-            self.parent[a] = self.find(self.parent[a])
-        return self.parent[a]
-
-    def get_total(self, a):
-        return self.total[self.find(a)]
-
 if __name__ == '__main__':
     N = int(input())
     ds = DisjointSet(N)
@@ -1150,7 +1232,7 @@ if __name__ == '__main__':
         x, y, color = input().split()
         if color == 'b':
             ds.union(int(x) - 1, int(y) - 1)
-    set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
+    set_size = {ds.find(i): ds.get_size(i) for i in range(N)}
     complement = sum(x * (x - 1) * (N - x) // 2 +              #1
                      x * (x - 1) * (x - 2) // 6                #2
                      for x in set_size.values())
@@ -1178,41 +1260,16 @@ def solve(tree, queries):
             yield 0
         return
         
-    # DSU data structures using flat lists.
-    # parent[i] points to parent node. size[i] tracks component sizes.
-    n = len(tree) + 1
-    parent = list(range(n + 1))
-    size = [1] * (n + 1)
-    
-    def find(i):
-        # Iterative path compression to prevent RecursionError on skewed trees.
-        path = []
-        while parent[i] != i:
-            path.append(i)
-            i = parent[i]
-        for node in path:
-            parent[node] = i
-        return i
-
+    # Uses DisjointSet in integer mode. Nodes are 1-indexed, so allocate n+1.
+    dsu = DisjointSet(len(tree) + 2)
     anses = []
     current_ans = 0
 
-    def union(u, v):
-        nonlocal current_ans
-        root_u = find(u)
-        root_v = find(v)
-        if root_u != root_v:
-            # New paths formed = size of component U * size of component V.
-            current_ans += size[root_u] * size[root_v]
-            # Union by Size: merge smaller tree into the larger tree.
-            # size is preferred over rank because component size is needed for path counts.
-            if size[root_u] < size[root_v]:
-                root_u, root_v = root_v, root_u
-            parent[root_v] = root_u
-            size[root_u] += size[root_v]
-
     for u, v, w in tree:
-        union(u, v)
+        result = dsu.union(u, v)
+        if result:
+            # New paths formed = size of component U * size of component V.
+            current_ans += result[0] * result[1]
         anses.append(current_ans)
         
     for qleft, qright in queries:
@@ -1225,6 +1282,46 @@ def solve(tree, queries):
             else:
                 left = bisect_left(weights_raw, qleft) - 1
                 yield anses[right] - anses[left]
+
+
+class SynonymQueries:
+    """Sentence equivalence via synonym lookup."""
+
+    def solve_naive(synonym_words, queries):
+        """
+        (naive) defaultdict — no transitive synonyms.
+        Example: SynonymQueries.solve_naive([("big","large")],[("He is big.","He is large.")]) -> [True]
+        """
+        from collections import defaultdict
+        syn = defaultdict(set)
+        for w1, w2 in synonym_words:
+            syn[w1].add(w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(
+                w1 == w2 or (w1 in syn and w2 in syn[w1]) or (w2 in syn and w1 in syn[w2])
+                for w1, w2 in zip(q1, q2)
+            ))
+        return out
+
+    def solve_disjoint_set(synonym_words, queries):
+        """
+        (best) DisjointSet path compression — handles transitivity.
+        Example: SynonymQueries.solve_disjoint_set([("big","large"),("large","huge")],[("big","huge")]) -> [True]
+        """
+        ds = DisjointSet()  # dict mode for arbitrary string keys
+        for w1, w2 in synonym_words:
+            ds.union_by_rank(w1, w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(w1 == w2 or ds.connected(w1, w2) for w1, w2 in zip(q1, q2)))
+        return out
 
 # An 8-puzzle is a game played on a 3 x 3 board of tiles, with the ninth tile missing.
 # The remaining tiles are labeled 1 through 8 but shuffled randomly.
@@ -2901,39 +2998,6 @@ class GraphProblems:
         return tl // n
 
 
-class UnionFind:
-    """Disjoint Set Forest with rank and path compression."""
-
-    class UFNode:
-        def __init__(self, data):
-            self.data = data
-            self.parent = self
-            self.rank = 0
-            self.size = 1
-
-    def make_set(data):
-        """Example: node = UnionFind.make_set(1)"""
-        return UnionFind.UFNode(data)
-
-    def find(node):
-        """Find with path compression."""
-        if node != node.parent:
-            node.parent = UnionFind.find(node.parent)
-        return node.parent
-
-    def union(node_a, node_b):
-        """Union by rank. Example: UnionFind.union(a, b)"""
-        ra, rb = UnionFind.find(node_a), UnionFind.find(node_b)
-        if ra == rb:
-            return
-        if ra.rank > rb.rank:
-            rb.parent = ra; ra.size += rb.size
-        else:
-            ra.parent = rb; rb.size += ra.size
-            if ra.rank == rb.rank:
-                rb.rank += 1
-
-
 class BSTShowcase:
     """BST construction, validation, and largest-BST-subtree problems."""
 
@@ -3072,57 +3136,3 @@ class CameraCoverSolution:
             if v < 3: return 0
             self.ans += 1; return 1
         return self.ans + 1 if dfs(self) > 2 else self.ans
-
-
-class SynonymQueries:
-    """Sentence equivalence via synonym lookup."""
-
-    def solve_naive(synonym_words, queries):
-        """
-        (naive) defaultdict — no transitive synonyms.
-        Example: SynonymQueries.solve_naive([("big","large")],[("He is big.","He is large.")]) -> [True]
-        """
-        from collections import defaultdict
-        syn = defaultdict(set)
-        for w1, w2 in synonym_words:
-            syn[w1].add(w2)
-        out = []
-        for q1, q2 in queries:
-            q1, q2 = q1.split(), q2.split()
-            if len(q1) != len(q2):
-                out.append(False); continue
-            out.append(all(
-                w1 == w2 or (w1 in syn and w2 in syn[w1]) or (w2 in syn and w1 in syn[w2])
-                for w1, w2 in zip(q1, q2)
-            ))
-        return out
-
-    def solve_disjoint_set(synonym_words, queries):
-        """
-        (best) DisjointSet path compression — handles transitivity.
-        Example: SynonymQueries.solve_disjoint_set([("big","large"),("large","huge")],[("big","huge")]) -> [True]
-        """
-        class _DS:
-            def __init__(self): self.p = {}
-            def root(self, w):
-                if w not in self.p: self.p[w] = w
-                path = []
-                while self.p[w] != w: path.append(w); w = self.p[w]
-                for x in path: self.p[x] = w
-                return w
-            def add(self, a, b):
-                ra, rb = self.root(a), self.root(b)
-                if ra > rb: ra, rb = rb, ra
-                self.p[rb] = ra
-            def same(self, a, b): return self.root(a) == self.root(b)
-
-        ds = _DS()
-        for w1, w2 in synonym_words:
-            ds.add(w1, w2)
-        out = []
-        for q1, q2 in queries:
-            q1, q2 = q1.split(), q2.split()
-            if len(q1) != len(q2):
-                out.append(False); continue
-            out.append(all(w1 == w2 or ds.same(w1, w2) for w1, w2 in zip(q1, q2)))
-        return out
