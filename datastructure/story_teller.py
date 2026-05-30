@@ -1222,21 +1222,28 @@ class DisjointSet:
         """Check if a and b are in the same component."""
         return self.find(a) == self.find(b)
 
-# Kunno And Tree
+# Kundu And Tree
 # https://math.stackexchange.com/questions/838792/counting-triplets-with-red-edges-in-each-pair?newreg=60eee35f0b3844de852bda39f6dfec88
 # https://www.hackerrank.com/contests/w5/challenges/kundu-and-tree
-if __name__ == '__main__':
-    N = int(input())
-    ds = DisjointSet(N)
-    for i in range(N - 1):
-        x, y, color = input().split()
-        if color == 'b':
-            ds.union(int(x) - 1, int(y) - 1)
-    set_size = {ds.find(i): ds.get_size(i) for i in range(N)}
-    complement = sum(x * (x - 1) * (N - x) // 2 +              #1
-                     x * (x - 1) * (x - 2) // 6                #2
-                     for x in set_size.values())
-    print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
+class KunduAndTree:
+    """Solve Kundu and Tree problem (counting triplets with red edges)."""
+
+    @staticmethod
+    def solve(n, edges):
+        """
+        n: int
+        edges: list of tuples (u, v, color)
+        """
+        ds = DisjointSet(n)
+        for x, y, color in edges:
+            if color == 'b':
+                ds.union(int(x) - 1, int(y) - 1)
+        set_size = {ds.find(i): ds.get_size(i) for i in range(n)}
+        complement = sum(x * (x - 1) * (n - x) // 2 +              #1
+                         x * (x - 1) * (x - 2) // 6                #2
+                         for x in set_size.values())
+        return (n * (n - 1) * (n - 2) // 6 - complement) % (10 ** 9 + 7)
+
 
 
 # super maximum cost query
@@ -1244,44 +1251,51 @@ if __name__ == '__main__':
 
 from bisect import bisect_right, bisect_left  # noqa: E402
 
-@print_param("output_graph_supersum.txt", BASE_DIR)
-def solve(tree, queries):
-    """
-    Solve super maximum cost query.
-    
-    :param tree: List of [u, v, w] edges
-    :param queries: List of [L, R] queries
-    :return: generator yielding results
-    """
-    tree = sorted(tree, key=lambda x: x[2])
-    weights_raw = [x[2] for x in tree]
-    if not weights_raw:
-        for _ in queries:
-            yield 0
-        return
-        
-    # Uses DisjointSet in integer mode. Nodes are 1-indexed, so allocate n+1.
-    dsu = DisjointSet(len(tree) + 2)
-    anses = []
-    current_ans = 0
+class SuperMaximumCostQuery:
+    """Solve Super Maximum Cost Query problem."""
 
-    for u, v, w in tree:
-        result = dsu.union(u, v)
-        if result:
-            # New paths formed = size of component U * size of component V.
-            current_ans += result[0] * result[1]
-        anses.append(current_ans)
+    @staticmethod
+    @print_param("output_graph_supersum.txt", BASE_DIR)
+    def solve(tree, queries):
+        """
+        Solve super maximum cost query.
         
-    for qleft, qright in queries:
-        if qright < weights_raw[0]:
-            yield 0
-        else:
-            right = bisect_right(weights_raw, qright) - 1
-            if qleft <= weights_raw[0]:
-                yield anses[right]
+        :param tree: List of [u, v, w] edges
+        :param queries: List of [L, R] queries
+        :return: generator yielding results
+        """
+        tree = sorted(tree, key=lambda x: x[2])
+        weights_raw = [x[2] for x in tree]
+        if not weights_raw:
+            for _ in queries:
+                yield 0
+            return
+            
+        # Uses DisjointSet in integer mode. Nodes are 1-indexed, so allocate n+1.
+        dsu = DisjointSet(len(tree) + 2)
+        anses = []
+        current_ans = 0
+
+        for u, v, w in tree:
+            result = dsu.union(u, v)
+            if result:
+                # New paths formed = size of component U * size of component V.
+                current_ans += result[0] * result[1]
+            anses.append(current_ans)
+            
+        for qleft, qright in queries:
+            if qright < weights_raw[0]:
+                yield 0
             else:
-                left = bisect_left(weights_raw, qleft) - 1
-                yield anses[right] - anses[left]
+                right = bisect_right(weights_raw, qright) - 1
+                if qleft <= weights_raw[0]:
+                    yield anses[right]
+                else:
+                    left = bisect_left(weights_raw, qleft) - 1
+                    yield anses[right] - anses[left]
+
+
+solve = SuperMaximumCostQuery.solve
 
 
 class SynonymQueries:
@@ -1322,6 +1336,50 @@ class SynonymQueries:
                 out.append(False); continue
             out.append(all(w1 == w2 or ds.connected(w1, w2) for w1, w2 in zip(q1, q2)))
         return out
+
+
+class GraphProblems:
+    """Graph connectivity and scheduling."""
+
+    def components_in_graph(gb):
+        """
+        (min, max) component sizes in edge list.
+        Example: GraphProblems.components_in_graph([[1,2],[3,4],[1,4]]) -> (2, 4)
+        """
+        ds = DisjointSet(len(gb) * 2 + 1)
+        active_nodes = set()
+        for a, b in gb:
+            ds.union(a, b)
+            active_nodes.add(a)
+            active_nodes.add(b)
+        roots = {ds.find(node) for node in active_nodes}
+        counts = [ds.get_size(r) for r in roots]
+        valid_counts = [c for c in counts if c > 1]
+        if not valid_counts:
+            return 0, 0
+        return min(valid_counts), max(valid_counts)
+
+    def minimum_average(cust):
+        """
+        Min average wait time (heap scheduling).
+        Example: GraphProblems.minimum_average([[0,3],[1,9],[2,5]]) -> 5
+        """
+        from heapq import heapify, heappop, heappush
+        cust = list(cust)
+        n = len(cust)
+        if not n:
+            return 0
+        heapify(cust)
+        tl, done, orders = 0, 0, []
+        while orders or cust:
+            while ((not cust) or done < cust[0][0]) and orders:
+                dw, dt = heappop(orders)
+                done = dw + max(done, dt)
+                tl += done - dt
+            if cust:
+                heappush(orders, heappop(cust)[::-1])
+        return tl // n
+
 
 # An 8-puzzle is a game played on a 3 x 3 board of tiles, with the ninth tile missing.
 # The remaining tiles are labeled 1 through 8 but shuffled randomly.
@@ -2952,52 +3010,6 @@ class ArrayUtils:
         for k, v in d.items():
             out.extend([k, v])
         return out
-
-
-class GraphProblems:
-    """Graph connectivity and scheduling."""
-
-    def _find(parents, i):
-        if parents[i] != i:
-            parents[i] = GraphProblems._find(parents, parents[i])
-        return parents[i]
-
-    def components_in_graph(gb):
-        """
-        (min, max) component sizes in edge list.
-        Example: GraphProblems.components_in_graph([[1,2],[3,4],[1,4]]) -> (2, 4)
-        """
-        parents = list(range(len(gb) * 2 + 1))
-        for a, b in gb:
-            p1, p2 = GraphProblems._find(parents, a), GraphProblems._find(parents, b)
-            parents[p1] = parents[p2] = parents[a] = parents[b] = min(p1, p2)
-        from collections import Counter
-        cnt = Counter(GraphProblems._find(parents, p) for p in parents)
-        counts = [c for c in cnt.values() if c > 1]
-        return min(counts), max(counts)
-
-    def minimum_average(cust):
-        """
-        Min average wait time (heap scheduling).
-        Example: GraphProblems.minimum_average([[0,3],[1,9],[2,5]]) -> 5
-        """
-        from heapq import heapify, heappop, heappush
-        cust = list(cust)
-        n = len(cust)
-        if not n:
-            return 0
-        heapify(cust)
-        tl, done, orders = 0, 0, []
-        while orders or cust:
-            while ((not cust) or done < cust[0][0]) and orders:
-                dw, dt = heappop(orders)
-                done = dw + max(done, dt)
-                tl += done - dt
-            if cust:
-                heappush(orders, heappop(cust)[::-1])
-        return tl // n
-
-
 class BSTShowcase:
     """BST construction, validation, and largest-BST-subtree problems."""
 

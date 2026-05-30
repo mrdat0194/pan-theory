@@ -23,6 +23,8 @@ from datastructure.story_teller import (
     ArrayUtils,
     GraphProblems,
     DisjointSet,
+    KunduAndTree,
+    SuperMaximumCostQuery,
     BSTShowcase,
     CameraCoverSolution,
     SynonymQueries,
@@ -239,6 +241,19 @@ class TestStory(unittest.TestCase):
         with open(filepath, "r") as f:
             content = f.read().strip().split('\n')
         self.assertEqual(content, ["1", "3", "5", "5", "10"])
+
+    def test_kundu_and_tree(self):
+        # N=5 nodes, black edges: 1-2, 4-5. Red edges: 2-3, 3-4.
+        edges = [
+            (1, 2, 'b'),
+            (2, 3, 'r'),
+            (3, 4, 'r'),
+            (4, 5, 'b')
+        ]
+        ans = KunduAndTree.solve(5, edges)
+        self.assertEqual(ans, 4)
+
+
 
     def test_board_solve(self):
         from datastructure.story_teller import Board
