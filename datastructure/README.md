@@ -32,6 +32,18 @@ The unified unit test suite. It includes:
 
 ---
 
+## Design Guidelines & Standards
+
+### Standard Library First
+For core algorithm implementations in `story_teller`, we prioritize Python's built-in types and standard library modules over custom data structure classes:
+*   **Stacks**: Use Python's built-in `list` (with `append()` and `pop()`), which is highly optimized and runs in $O(1)$ amortized time.
+*   **Queues / Deques**: Use `collections.deque` (with `append()` and `popleft()`) for fast $O(1)$ double-ended queue operations, or `queue.Queue` if thread-safety is required.
+*   **Priority Queues / Heaps**: Use the built-in `heapq` module or `queue.PriorityQueue`.
+
+Custom classes (such as `Stack` and `Node` from [common.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/common.py)) and their corresponding showcase wrappers are intended purely for educational lessons and compatibility with the Master repository, and should not be used in performance-sensitive core algorithms.
+
+---
+
 ## How to Test
 
 To run the full test suite and verify that all implementations work as expected, execute the following command from the project root directory:
