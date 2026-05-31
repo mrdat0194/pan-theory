@@ -11,6 +11,7 @@ import operator  # noqa: E402
 import random  # noqa: E402
 import queue  # noqa: E402
 from queue import Queue  # noqa: E402
+from datastructure.common import Node, Stack  # noqa: E402
 
 from my_functions.timer import print_param, timer  # noqa: E402
 
@@ -3148,3 +3149,612 @@ class CameraCoverSolution:
             if v < 3: return 0
             self.ans += 1; return 1
         return self.ans + 1 if dfs(self) > 2 else self.ans
+
+
+class BSTShowcase_2:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Adapted import
+
+    class BSTNode:
+        def __init__(self, data):
+            self.data = data
+            self.leftChild = None
+            self.rightChild = None
+
+    def insertNode(rootNode, nodeValue):
+        if rootNode.data == None:
+            rootNode.data = nodeValue
+        elif nodeValue <= rootNode.data:
+            if rootNode.leftChild is None:
+                rootNode.leftChild = BSTNode(nodeValue)
+            else:
+                insertNode(rootNode.leftChild, nodeValue)
+        else:
+            if rootNode.rightChild is None:
+                rootNode.rightChild = BSTNode(nodeValue)
+            else:
+                insertNode(rootNode.rightChild, nodeValue)
+        return "The node has been successfully inserted"
+
+    def preOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        print(rootNode.data)
+        preOrderTraversal(rootNode.leftChild)
+        preOrderTraversal(rootNode.rightChild)
+
+    def inOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        inOrderTraversal(rootNode.leftChild)
+        print(rootNode.data)
+        inOrderTraversal(rootNode.rightChild)
+
+    def postOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        postOrderTraversal(rootNode.leftChild)
+        postOrderTraversal(rootNode.rightChild)
+        print(rootNode.data)
+
+    def levelOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        else:
+            customQueue = QueueLinkedListShowcase.Queue()
+            customQueue.enqueue(rootNode)
+            while not(customQueue.isEmpty()):
+                root = customQueue.dequeue()
+                print(root.value.data)
+                if root.value.leftChild is not None:
+                    customQueue.enqueue(root.value.leftChild)
+                if root.value.rightChild is not None:
+                    customQueue.enqueue(root.value.rightChild)
+
+
+    def searchNode(rootNode, nodeValue):
+        if rootNode.data == nodeValue:
+            print("The value is found")
+        elif nodeValue < rootNode.data:
+            if rootNode.leftChild.data == nodeValue:
+                print("The value is found")
+            else:
+                searchNode(rootNode.leftChild, nodeValue)
+        else:
+            if rootNode.rightChild.data == nodeValue:
+                print("The value is found")
+            else:
+                searchNode(rootNode.rightChild, nodeValue)
+
+
+    def minValueNode(bstNode):
+        current = bstNode
+        while (current.leftChild is not None):
+            current = current.leftChild
+        return current
+
+
+    def deleteNode(rootNode, nodeValue):
+        if rootNode is None:
+            return rootNode
+        if nodeValue < rootNode.data:
+            rootNode.leftChild = deleteNode(rootNode.leftChild, nodeValue)
+        elif nodeValue > rootNode.data:
+            rootNode.rightChild = deleteNode(rootNode.rightChild, nodeValue)
+        else:
+            if rootNode.leftChild is None:
+                temp = rootNode.rightChild
+                rootNode = None
+                return temp
+
+            if rootNode.rightChild is None:
+                temp = rootNode.leftChild
+                rootNode = None
+                return temp
+
+            temp = minValueNode(rootNode.rightChild)
+            rootNode.data = temp.data 
+            rootNode.rightChild = deleteNode(rootNode.rightChild, temp.data)
+        return rootNode
+
+    def deleteBST(rootNode):
+        rootNode.data = None
+        rootNode.leftChild = None
+        rootNode.rightChild = None
+        return "The BST has been successfully deleted"
+
+
+
+    @staticmethod
+    def demo():
+        newBST = BSTNode(None)
+        insertNode(newBST, 70)
+        insertNode(newBST,50)
+        insertNode(newBST,90)
+        insertNode(newBST, 30)
+        insertNode(newBST,60)
+        insertNode(newBST,80)
+        insertNode(newBST,100)
+        insertNode(newBST,20)
+        insertNode(newBST,40)
+        # print(deleteBST(newBST))
+        levelOrderTraversal(newBST)
+
+
+
+class TopologicalSortShowcase:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2021 AppMillers. All rights reserved.
+
+    from collections import defaultdict
+
+    class Graph:
+        def __init__(self, numberofVertices):
+            self.graph = defaultdict(list)
+            self.numberofVertices = numberofVertices
+
+        def addEdge(self, vertex, edge):
+            self.graph[vertex].append(edge)
+
+        def topogologicalSortUtil(self, v, visited, stack):
+            visited.append(v)
+
+            for i in self.graph[v]:
+                if i not in visited:
+                    self.topogologicalSortUtil(i, visited, stack)
+
+            stack.insert(0, v)
+
+        def topologicalSort(self):
+
+            visited = []
+            stack = []
+
+            for k in list(self.graph):
+                if k not in visited:
+                    self.topogologicalSortUtil(k, visited, stack)
+
+            print(stack)
+
+
+    @staticmethod
+    def demo():
+        customGraph = Graph(8)
+        customGraph.addEdge("A", "C")
+        customGraph.addEdge("C", "E")
+        customGraph.addEdge("E", "H")
+        customGraph.addEdge("E", "F")
+        customGraph.addEdge("F", "G")
+        customGraph.addEdge("B", "D")
+        customGraph.addEdge("B", "C")
+        customGraph.addEdge("D", "F")
+
+        customGraph.topologicalSort()
+
+class BellmanFordShowcase:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2021 AppMillers. All rights reserved.
+
+
+    class Graph:
+
+        def __init__(self, vertices):
+            self.V = vertices   
+            self.graph = []     
+            self.nodes = []
+
+        def add_edge(self, s, d, w):
+            self.graph.append([s, d, w])
+
+        def addNode(self,value):
+            self.nodes.append(value)
+
+        def print_solution(self, dist):
+            print("Vertex Distance from Source")
+            for key, value in dist.items():
+                print('  ' + key, ' :    ', value)
+
+        def bellmanFord(self, src):
+            dist = {i : float("Inf") for i in self.nodes}
+            dist[src] = 0
+
+            for _ in range(self.V-1):
+                for s, d, w in self.graph:
+                    if dist[s] != float("Inf") and dist[s] + w < dist[d]:
+                        dist[d] = dist[s] + w
+
+            for s, d, w in self.graph:
+                if dist[s] != float("Inf") and dist[s] + w < dist[d]:
+                    print("Graph contains negative cycle")
+                    return
+
+
+            self.print_solution(dist)
+
+    @staticmethod
+    def demo():
+        g = Graph(5)
+        g.addNode("A")
+        g.addNode("B")
+        g.addNode("C")
+        g.addNode("D")
+        g.addNode("E")
+        g.add_edge("A", "C", 6)
+        g.add_edge("A", "D", 6)
+        g.add_edge("B", "A", 3)
+        g.add_edge("C", "D", 1)
+        g.add_edge("D", "C", 2)
+        g.add_edge("D", "B", 1)
+        g.add_edge("E", "B", 4)
+        g.add_edge("E", "D", 2)
+        g.bellmanFord("E")
+
+
+
+
+
+
+
+class QueueLinkedListShowcase:
+    #   Created by Elshad Karimov on 30/05/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+
+    class LinkedList:
+        def __init__(self):
+            self.head = None
+            self.tail = None
+
+
+
+    class Queue:
+        def __init__(self):
+            self.linkedList = QueueLinkedListShowcase.LinkedList()
+
+        def __str__(self):
+            values = [str(x) for x in self.linkedList]
+            return ' '.join(values)
+
+        def enqueue(self, value):
+            newNode = Node(value)
+            if self.linkedList.head == None:
+                self.linkedList.head = newNode
+                self.linkedList.tail = newNode
+            else:
+                self.linkedList.tail.next = newNode
+                self.linkedList.tail = newNode
+
+        def isEmpty(self):
+            if self.linkedList.head == None:
+                return True
+            else:
+                return False
+
+        def dequeue(self):
+            if self.isEmpty():
+                return "There is not any node in the Queue"
+            else:
+                tempNode = self.linkedList.head
+                if self.linkedList.head == self.linkedList.tail:
+                    self.linkedList.head = None
+                    self.linkedList.tail = None
+                else:
+                    self.linkedList.head = self.linkedList.head.next
+                return tempNode
+
+        def peek(self):
+            if self.isEmpty():
+                return "There is not any node in the Queue"
+            else:
+                return self.linkedList.head
+
+        def delete(self):
+            self.linkedList.head = None
+            self.linkedList.tail = None
+
+
+
+
+    # custQueue = Queue()
+    # custQueue.enqueue(1)
+    # custQueue.enqueue(2)
+    # custQueue.enqueue(3)
+    # print(custQueue)
+    # print(custQueue.peek())
+    # print(custQueue)
+
+class MultiStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Use a single list to implement three stacks.
+
+    class MultiStack:
+        def __init__(self, stacksize):
+            self.numberstacks = 3
+            self.custList = [0] * (stacksize * self.numberstacks)
+            self.sizes = [0] * self.numberstacks
+            self.stacksize = stacksize
+
+        def isFull(self, stacknum):
+            if self.sizes[stacknum] == self.stacksize:
+                return True
+            else:
+                return False
+
+        def isEmpty(self, stacknum):
+            if self.sizes[stacknum] == 0:
+                return True
+            else:
+                return False
+
+        def indexOfTop(self, stacknum):
+            offset = stacknum * self.stacksize
+            return offset + self.sizes[stacknum]- 1
+
+        def push(self, item, stacknum):
+            if self.isFull(stacknum):
+                return "The stack is full"
+            else:
+                self.sizes[stacknum] += 1
+                self.custList[self.indexOfTop(stacknum)] = item
+
+        def pop(self, stacknum):
+            if self.isEmpty(stacknum):
+                return "The stack is empty"
+            else:
+                value = self.custList[self.indexOfTop(stacknum)]
+                self.custList[self.indexOfTop(stacknum)] = 0
+                self.sizes[stacknum] -= 1
+                return value
+
+        def peek(self, stacknum):
+            if self.isEmpty(stacknum):
+                return "The stack is empty"
+            else:
+                value = self.custList[self.indexOfTop(stacknum)]
+                return value
+
+
+    @staticmethod
+    def demo():
+        customStack = MultiStack(6)
+        print(customStack.isFull(0))
+        print(customStack.isEmpty(1))
+        customStack.push(1, 0)
+        customStack.push(2, 0)
+        customStack.push(3, 2)
+        print(customStack.pop(0))
+
+
+
+class StackMinShowcase:
+    #   Created by Elshad Karimov on 04/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    #   Create Stack with min method
+
+    class Stack():
+        def __init__(self):
+            self.top = None
+            self.minNode = None
+
+        def min(self):
+            if not self.minNode:
+                return None
+            return self.minNode.value
+
+        def push(self, item):
+            if self.minNode and (self.minNode.value < item):
+                self.minNode = Node(value = self.minNode.value, next=self.minNode)
+            else:
+                self.minNode = Node(value = item, next=self.minNode)
+            self.top = Node(value=item, next=self.top)
+
+        def pop(self):
+            if not self.top:
+                return None
+            self.minNode = self.minNode.next
+            item = self.top.value
+            self.top = self.top.next
+            return item
+
+    @staticmethod
+    def demo():
+        customStack = Stack()
+        customStack.push(5)
+        print(customStack.min())
+        customStack.push(6)
+        print(customStack.min())
+        customStack.push(3)
+        print(customStack.min())
+        customStack.pop()
+        print(customStack.min())
+
+
+
+class PlateStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Stack of Plates
+
+    class PlateStack():
+        def __init__(self, capacity):
+            self.capacity = capacity
+            self.stacks = []
+
+        def __str__(self):
+            return self.stacks
+
+        def push(self, item):
+            if len(self.stacks) > 0 and (len(self.stacks[-1])) < self.capacity:
+                self.stacks[-1].append(item)
+            else:
+                self.stacks.append([item])
+
+        def pop(self):
+            while len(self.stacks) and len(self.stacks[-1]) == 0:
+                self.stacks.pop()
+            if len(self.stacks) == 0:
+                return None
+            else:
+                return self.stacks[-1].pop()
+
+        def pop_at(self, stackNumber):
+            if len(self.stacks[stackNumber]) > 0:
+                return self.stacks[stackNumber].pop()
+            else:
+                return None
+
+
+    @staticmethod
+    def demo():
+        customStack= PlateStack(2)
+        customStack.push(1)
+        customStack.push(2)
+        customStack.push(3)
+        customStack.push(4)
+        print(customStack.pop_at(1))
+
+class QueueViaStackShowcase:
+    #   Created by Elshad Karimov on 04/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Implement a queue using two stacks.
+
+
+
+    class QueueviaStack():
+      def __init__(self):
+        self.inStack = Stack()
+        self.outStack = Stack()
+
+      def enqueue(self, item):
+        self.inStack.push(item)
+
+      def dequeue(self):
+        while len(self.inStack):
+          self.outStack.push(self.inStack.pop())
+        result = self.outStack.pop()
+        while len(self.outStack):
+          self.inStack.push(self.outStack.pop())
+        return result
+
+
+    @staticmethod
+    def demo():
+        customQueue = QueueviaStack()
+        customQueue.enqueue(1)
+        customQueue.enqueue(2)
+        customQueue.enqueue(3)
+        print(customQueue.dequeue())
+        customQueue.enqueue(4)
+        print(customQueue.dequeue())
+
+class AnimalShelterShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Implement a cat and dog queue for an animal shelter.
+
+    class AnimalShelter():
+      def __init__(self):
+        self.cats = []
+        self.dogs = []
+
+      def enqueue(self, animal, type):
+        if type == 'Cat':
+          self.cats.append(animal)
+        else:
+          self.dogs.append(animal)
+
+      def dequeueCat(self):
+        if len(self.cats) == 0:
+          return None
+        else:
+          cat = self.cats.pop(0)
+          return cat
+
+      def dequeueDog(self):
+        if len(self.dogs) == 0:
+          return None
+        else:
+          dog = self.dogs.pop(0)
+          return dog
+
+      def dequeueAny(self):
+        if len(self.cats) == 0:
+          result = self.dogs.pop(0)
+        else:
+          result = self.cats.pop(0)
+        return result
+
+    @staticmethod
+    def demo():
+        customQueue = AnimalShelter()
+        customQueue.enqueue('Cat1', 'Cat')
+        customQueue.enqueue('Cat2', 'Cat')
+        customQueue.enqueue('Dog1', 'Dog')
+        customQueue.enqueue('Cat3', 'Cat')
+        customQueue.enqueue('Dog2', 'Dog')
+        print(customQueue.dequeueAny())
+
+
+class SortStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Sort a stack with the smallest on top using only a single temporary stack.
+
+    def sort_stack(stack):
+      previous = stack.pop()
+      current = stack.pop()
+      temp = Stack()
+      while current:
+        if previous < current:
+          temp.push(previous)
+          previous = current
+          current = stack.pop()
+        else: 
+          temp.push(current)
+          current = stack.pop()
+        if current == None and previous: temp.push(previous)
+
+      sorted = True
+      previous = temp.pop()
+      current = temp.pop()
+      while current:
+        if previous > current:
+          stack.push(previous)
+          previous = current
+          current = temp.pop()
+        else: 
+          stack.push(current)
+          current = temp.pop()
+          sorted = False
+        if current == None and previous: stack.push(previous)
+      if sorted: return stack
+      else: return sort_stack(stack)
+
+
+
+    import unittest  # noqa: E402
+
+    class Test(unittest.TestCase):
+      def test_sort_stack(self):
+        self.assertEqual(str(sort_stack(Stack())), "None")
+        stack = Stack()
+        stack.push(10)
+        stack.push(30)
+        stack.push(70)
+        stack.push(40)
+        stack.push(80)
+        stack.push(20)
+        stack.push(90)
+        stack.push(50)
+        stack.push(60)
+        self.assertEqual(str(stack), "60,50,90,20,80,40,70,30,10,None")
+        self.assertEqual(str(sort_stack(stack)), "10,20,30,40,50,60,70,80,90,None")
