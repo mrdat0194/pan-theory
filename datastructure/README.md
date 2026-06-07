@@ -30,6 +30,14 @@ The unified unit test suite. It includes:
 *   Tests verifying algorithm correctness.
 *   The `TestDocstringExamples` test class, containing test cases derived from example parameters described in python docstrings (`"""`).
 
+### 3. Other Algorithmic & Educational Directories
+While `story_teller.py` serves as the core library for coding puzzles, this directory contains other specialized folders serving different educational purposes:
+
+*   **[CodingGame](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/CodingGame)**: Practical application of search algorithms, pathfinding (like BFS/DFS in `labyrinth.py` and dynamic tracking in `Skynet.py`), and heuristic optimization (like simulated annealing in `sodoku_anneal.py`) under real-time game constraints.
+*   **[Lesson](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Lesson)**: Focuses on mathematical and probabilistic modeling. It contains notebooks and scripts exploring stochastic models (Markov/Bernoulli processes), linear algebra projections, Stirling numbers of the second kind, and random matrix theory.
+*   **[problem](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/problem)**: A structured playground for design exercises, including markdown sheets detailing the problem statement, brute force baselines, optimal solutions, and automated test case generators.
+*   **[Data_Structures_Algorithms_In_Python-master](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Data_Structures_Algorithms_In_Python-master)**: Formal, textbook implementations of fundamental data structures in Python (e.g., standard Binary Search Tree). It provides academic reference designs using explicit object relationships (such as parent pointers and deletion nodes).
+
 ---
 
 ## Design Guidelines & Standards
