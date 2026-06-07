@@ -7,9 +7,9 @@ import os
 from sklearn.ensemble import BaggingRegressor
 
 
-def logistic_model(X_train, X_test, Y_train, Y_test):
+def logistic_model(X_train, X_test, Y_train, Y_test, class_weight=None):
 
-    logReg = LogisticRegression(max_iter=10000, tol=1e-4, C=1e5,penalty='l2', solver='liblinear')
+    logReg = LogisticRegression(max_iter=10000, tol=1e-4, C=1e5, penalty='l2', solver='liblinear', class_weight=class_weight)
     # logReg = LogisticRegression(max_iter=10000, tol=1e-4, C=1e5, penalty='l2')
     # logReg = BaggingRegressor(logReg, n_estimators=10, bootstrap=True)
     logReg.fit(X_train, Y_train)

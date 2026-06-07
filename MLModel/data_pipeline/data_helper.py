@@ -224,7 +224,7 @@ def data_pipeline_nn(X, Y, random_state=42):
 
     return X_train, X_test, X_val, Y_train, Y_test, Y_val
 
-def get_clean_data(train_link, aug_link_1, aug_link_2, use_scaling=True, use_downsampling=False):
+def get_clean_data(train_link, aug_link_1, aug_link_2, use_scaling=True, use_downsampling=False, use_smote=False, use_smoteenn=False):
     # 1. Load data pools
     X_p, Y_p = get_data(train_link)
     X_a1, Y_a1 = get_data(aug_link_1)
@@ -236,11 +236,20 @@ def get_clean_data(train_link, aug_link_1, aug_link_2, use_scaling=True, use_dow
     X_train_raw, X_test, Y_train_raw, Y_test = train_test_split(X_pool, Y_pool, test_size=0.2, random_state=42)
 
     # 3. Augment ONLY the training portion
-    # We pass empty arrays for the external augment files because they are already in the pool
-    X_train, Y_train = imbalance_solve(X_train_raw, Y_train_raw, 
-                                      np.empty((0, X_train_raw.shape[1])), np.empty(0), 
-                                      np.empty((0, X_train_raw.shape[1])), np.empty(0), 
-                                      -1, 0.5)
+    if use_smote:
+        from imblearn.over_sampling import SMOTE
+        smote = SMOTE(random_state=42)
+        X_train, Y_train = smote.fit_resample(X_train_raw, Y_train_raw)
+    elif use_smoteenn:
+        from imblearn.combine import SMOTEENN
+        smoteenn = SMOTEENN(random_state=42)
+        X_train, Y_train = smoteenn.fit_resample(X_train_raw, Y_train_raw)
+    else:
+        # We pass empty arrays for the external augment files because they are already in the pool
+        X_train, Y_train = imbalance_solve(X_train_raw, Y_train_raw, 
+                                          np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                          np.empty((0, X_train_raw.shape[1])), np.empty(0), 
+                                          -1, 0.5)
 
     # 4. Apply downsampling if requested (usually for Random Forest)
     if use_downsampling:
