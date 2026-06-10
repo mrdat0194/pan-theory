@@ -15,6 +15,7 @@ import os
 from abc import ABC, abstractmethod
 import numpy as np
 import scipy.stats as stats
+import scipy.special as special
 import matplotlib.pyplot as plt
 
 # =====================================================================
@@ -92,11 +93,14 @@ class ToyImportanceSampler(BaseImportanceSampler):
     """
     Estimates the integral of x^gamma over (0, 1] using a proposal distribution x^zeta.
     Re-creates the logic of Algorithm 1.30 within our modular framework.
+    Now also computes the Laplace Transform of x^gamma:
+        L{x^gamma}(s) = \int_0^1 e^{-sx} x^gamma dx
     """
-    def __init__(self, gamma, zeta, seed=None):
+    def __init__(self, gamma, zeta, s=0.0, seed=None):
         super().__init__(seed)
         self.gamma = gamma
         self.zeta = zeta
+        self.s = s
 
     def sample_proposal(self):
         # Sample from g(x) = (1 + zeta) * x^zeta via inverse CDF
@@ -110,8 +114,9 @@ class ToyImportanceSampler(BaseImportanceSampler):
         return np.log(1.0 + self.zeta) + self.zeta * np.log(x)
 
     def log_target_prob(self, x):
-        # ln f(x) = gamma * ln(x)
-        return self.gamma * np.log(x)
+        # ln f(x) = gamma * ln(x) - s * x
+        # The target density incorporates the Laplace kernel e^{-sx}
+        return self.gamma * np.log(x) - self.s * x
 
 
 # =====================================================================
@@ -122,12 +127,16 @@ class StickBreakingImportanceSampler(BaseImportanceSampler):
     Importance sampler for Dirichlet Process (DP) mixture model weights.
     We propose weights pi from the Stick-Breaking prior and data partitions z,
     and compute weights based on the data likelihood.
+    
+    Includes Laplace Smoothing (epsilon) to avoid zero-probability assignments,
+    and smoothed Dirac delta density evaluation.
     """
-    def __init__(self, data, alpha, K_trunc=10, seed=None):
+    def __init__(self, data, alpha, K_trunc=10, epsilon=1e-6, seed=None):
         super().__init__(seed)
         self.data = data
         self.alpha = alpha
         self.K = K_trunc
+        self.epsilon = epsilon
         # Let clusters have standard Normal priors for their means: G_0 = N(0, 3^2)
         self.mu_prior_std = 3.0
         self.likelihood_std = 0.5
@@ -144,30 +153,32 @@ class StickBreakingImportanceSampler(BaseImportanceSampler):
             rem *= (1.0 - betas[k])
         pi[-1] = rem  # the rest of the stick
         
+        # Apply Laplace Smoothing to the cluster probability profile.
+        # This prevents any cluster from having a hard 0 probability of selection
+        # (categorical smoothing of the proposal distribution).
+        smoothed_pi = (pi + self.epsilon) / (1.0 + self.K * self.epsilon)
+        
         # 3. Propose cluster centers theta_k from G_0 = N(0, mu_prior_std^2)
         thetas = self.rng.normal(0, self.mu_prior_std, size=self.K)
         
-        # 4. Propose cluster assignments z for each data point
-        z = self.rng.choice(self.K, size=len(self.data), p=pi)
+        # 4. Propose cluster assignments z using the smoothed probabilities
+        z = self.rng.choice(self.K, size=len(self.data), p=smoothed_pi)
         
-        return {"pi": pi, "thetas": thetas, "z": z}
+        return {"pi": pi, "smoothed_pi": smoothed_pi, "thetas": thetas, "z": z}
 
     def log_proposal_prob(self, sample):
-        # Since we sample directly from the prior, the proposal probability is the prior.
-        # This makes the importance weights reduce to the likelihood of the data.
-        # However, to be mathematically explicit, we evaluate the log prior.
         pi = sample["pi"]
+        smoothed_pi = sample.get("smoothed_pi", pi)
         thetas = sample["thetas"]
         z = sample["z"]
         
         # Log prior of thetas
         log_prior_thetas = np.sum(stats.norm.logpdf(thetas, 0, self.mu_prior_std))
         
-        # Log prior of z given pi
-        log_prior_z = np.sum(np.log(pi[z] + 1e-15))
+        # Log prior of z given smoothed_pi (representing the smoothed categorical draw)
+        log_prior_z = np.sum(np.log(smoothed_pi[z] + 1e-15))
         
         # Log prior of pi (Beta parts)
-        # Note: beta_k = pi_k / (1 - sum_{j<k} pi_j)
         log_prior_pi = 0
         rem = 1.0
         for k in range(self.K - 1):
@@ -191,6 +202,28 @@ class StickBreakingImportanceSampler(BaseImportanceSampler):
         
         return log_prior + log_like
 
+    def evaluate_dirac_mixture_density(self, sample, x_grid, sigma_dirac=None):
+        """
+        Evaluate the probability density under the DP mixture using a smoothed Dirac delta representation.
+        
+        The theoretical DP probability measure is a discrete distribution:
+            G = \sum_{k=1}^K pi_k \delta_{\theta_k}
+        where \delta_{\theta_k} is the Dirac delta measure. The resulting predictive density
+        for data is the mixture:
+            p(x) = \sum_{k=1}^K pi_k \mathcal{N}(x | \theta_k, \sigma^2)
+        We use the cluster standard deviation (likelihood_std) as the smoothed Dirac delta width.
+        """
+        if sigma_dirac is None:
+            sigma_dirac = self.likelihood_std
+        pi = sample["pi"]
+        thetas = sample["thetas"]
+        
+        density = np.zeros_like(x_grid)
+        for k in range(self.K):
+            # Sum up the smoothed Dirac deltas scaled by their stick-breaking weights
+            density += pi[k] * stats.norm.pdf(x_grid, thetas[k], sigma_dirac)
+        return density
+
 
 # =====================================================================
 # 4. Chinese Restaurant Process (CRP) Sequential Importance Sampler
@@ -200,6 +233,11 @@ class CRPImportanceSampler:
     Implements Sequential Importance Sampling (SIS) for the Chinese Restaurant Process.
     Since CRP is sequential, we assign customer clusters one-by-one.
     We compare a "Blind" proposal (prior) to a "Likelihood-Informed" proposal.
+    
+    NOTE ON LAPLACE SMOOTHING & DIRAC DELTA:
+    - The concentration parameter alpha acts exactly as a Laplace Smoothing parameter (pseudo-count)
+      for unseen categories (creating a new table), preventing zero-probability cluster selection.
+    - Each customer i is assigned to a table using a Dirac delta measure \delta_{z_i, c}.
     """
     def __init__(self, data, alpha, likelihood_std=0.5, seed=None):
         self.data = data
@@ -314,6 +352,11 @@ class IBPImportanceSampler:
     """
     Implements Sequential Importance Sampling for the Indian Buffet Process.
     Generates binary matrices where row i represents feature allocations for customer i.
+    
+    NOTE ON DIRAC DELTA & INDICATORS:
+    - The binary matrix elements Z_{i,k} are indicator random variables: Z_{i,k} = \mathbb{I}(customer i has feature k).
+    - Since features are discrete point allocations, the binary rows are sums of Dirac measures
+      at the active feature indices.
     """
     def __init__(self, alpha, num_customers, seed=None):
         self.alpha = alpha
@@ -378,34 +421,42 @@ if __name__ == "__main__":
     print("Starting Bayesian Importance Sampling Framework")
     print("--------------------------------------------------")
 
-    # 1. Run Toy Importance Sampler (Matches previous findings)
-    print("\n--- 1. Running Toy Importance Sampler (1D Integral & Expectation) ---")
+    # 1. Run Toy Importance Sampler (With Laplace Transform)
+    print("\n--- 1. Running Toy Importance Sampler (Laplace Transform) ---")
     gamma = -0.8
     zeta = -0.25
-    toy_sampler = ToyImportanceSampler(gamma=gamma, zeta=zeta, seed=42)
+    s_val = 2.0
+    toy_sampler = ToyImportanceSampler(gamma=gamma, zeta=zeta, s=s_val, seed=42)
     samples, weights, ess, log_weights = toy_sampler.run(n_samples=5000)
     
-    # Estimating expectation of X under the normalized target distribution p(x) ~ x^gamma
-    # E[X] = (gamma + 1) / (gamma + 2)
-    est_expectation = np.sum(np.array(samples) * weights)
-    true_expectation = (gamma + 1.0) / (gamma + 2.0)
+    # Laplace Transform L{x^gamma}(s) = \int_0^1 e^{-sx} x^gamma dx
+    est_laplace = np.mean(np.exp(log_weights))
     
-    # Estimating the unnormalized integral (normalizing constant Z)
-    # Z = int_0^1 x^gamma dx = 1 / (gamma + 1)
-    # The standard importance sampling estimator of Z is the sample mean of exp(log_weights)
-    est_integral = np.mean(np.exp(log_weights))
+    # Analytical Laplace transform calculation using scipy incomplete gamma function
+    def analytical_laplace_transform(g, s):
+        if s == 0:
+            return 1.0 / (g + 1.0)
+        else:
+            return (s ** (-(g + 1.0))) * special.gammainc(g + 1.0, s) * special.gamma(g + 1.0)
+            
+    true_laplace = analytical_laplace_transform(gamma, s_val)
+    
+    # Also run standard integral (s = 0.0) for comparison
+    toy_sampler_standard = ToyImportanceSampler(gamma=gamma, zeta=zeta, s=0.0, seed=42)
+    _, _, _, log_weights_std = toy_sampler_standard.run(n_samples=5000)
+    est_integral = np.mean(np.exp(log_weights_std))
     true_integral = 1.0 / (gamma + 1.0)
     
-    print(f"1. Integral (Normalizing Constant Z) Estimation:")
+    print(f"1. Standard Integral (Normalizing Constant Z, s=0) Estimation:")
     print(f"   Estimated Integral value:    {est_integral:.5f}")
     print(f"   Analytical Integral value:   {true_integral:.5f}")
-    print(f"2. Expectation of X Estimation:")
-    print(f"   Estimated expectation E[X]:  {est_expectation:.5f}")
-    print(f"   Analytical expectation E[X]: {true_expectation:.5f}")
+    print(f"2. Laplace Transform (s={s_val}) Estimation:")
+    print(f"   Estimated L{{x^gamma}}({s_val}):   {est_laplace:.5f}")
+    print(f"   Analytical L{{x^gamma}}({s_val}):  {true_laplace:.5f}")
     print(f"Effective Sample Size (ESS):     {ess:.2f} / 5000")
 
-    # 2. Run Stick-Breaking Importance Sampler
-    print("\n--- 2. Running Stick-Breaking DP Mixture Sampler ---")
+    # 2. Run Stick-Breaking Importance Sampler (With Laplace Smoothing)
+    print("\n--- 2. Running Stick-Breaking DP Mixture Sampler (Laplace Smoothed) ---")
     # Generate some synthetic grouped data: 3 true clusters around -2, 0, and 2
     true_means = [-2.0, 0.0, 2.0]
     rng = np.random.default_rng(42)
@@ -415,7 +466,7 @@ if __name__ == "__main__":
         rng.normal(true_means[2], 0.2, 5)
     ])
     
-    sb_sampler = StickBreakingImportanceSampler(data=synthetic_data, alpha=1.5, K_trunc=8, seed=42)
+    sb_sampler = StickBreakingImportanceSampler(data=synthetic_data, alpha=1.5, K_trunc=8, epsilon=1e-5, seed=42)
     sb_samples, sb_weights, sb_ess, sb_log_weights = sb_sampler.run(n_samples=2000)
     
     # Find the best sample (maximum weight)
@@ -462,19 +513,28 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
     # Top Left: Toy Sampler expectation convergence of E[X]
-    cumsum_expect = np.cumsum(np.array(samples) * weights) / np.cumsum(weights)
-    axes[0, 0].plot(cumsum_expect, color="blue", label="Running Estimate")
-    axes[0, 0].axhline(true_expectation, color="red", linestyle="--", label="True Expectation")
-    axes[0, 0].set_title("Toy Sampler E[X] Convergence")
+    running_laplace = np.cumsum(np.exp(log_weights)) / np.arange(1, len(log_weights) + 1)
+    axes[0, 0].plot(running_laplace, color="blue", label="Running Estimate")
+    axes[0, 0].axhline(true_laplace, color="red", linestyle="--", label=f"True L{{x^gamma}}({s_val})")
+    axes[0, 0].set_title(f"Toy Sampler Laplace Transform Convergence (s={s_val})")
     axes[0, 0].set_xlabel("Sample index")
-    axes[0, 0].set_ylabel("Expectation")
+    axes[0, 0].set_ylabel("Laplace Transform Value")
     axes[0, 0].legend()
     
-    # Top Right: Stick-Breaking mixture weight profile of best sample
-    axes[0, 1].bar(range(len(best_sample['pi'])), best_sample['pi'], color="teal", alpha=0.8)
-    axes[0, 1].set_title("Stick-Breaking Truncated Mixture Weights (Best Sample)")
-    axes[0, 1].set_xlabel("Cluster index")
-    axes[0, 1].set_ylabel("Probability mass (pi)")
+    # Top Right: Stick-Breaking mixture weight profile of best sample and Dirac mixture density
+    x_grid = np.linspace(-4, 4, 300)
+    dirac_density = sb_sampler.evaluate_dirac_mixture_density(best_sample, x_grid)
+    
+    axes[0, 1].hist(synthetic_data, bins=10, density=True, alpha=0.4, color="grey", label="Synthetic Data")
+    axes[0, 1].plot(x_grid, dirac_density, color="teal", linewidth=2.0, label="Smoothed Dirac DP Density")
+    for k in range(len(best_sample['pi'])):
+        if best_sample['pi'][k] > 0.01:
+            axes[0, 1].axvline(best_sample['thetas'][k], color="teal", linestyle=":", alpha=0.6,
+                               label="Cluster Center" if k == np.argmax(best_sample['pi']) else "")
+    axes[0, 1].set_title("DP Smoothed Dirac Mixture Density vs Data")
+    axes[0, 1].set_xlabel("Data Value")
+    axes[0, 1].set_ylabel("Density")
+    axes[0, 1].legend()
     
     # Bottom Left: CRP data assignment clustering
     best_z = partitions_info[best_part_idx]
