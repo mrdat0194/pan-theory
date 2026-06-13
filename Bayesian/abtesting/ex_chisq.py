@@ -37,4 +37,24 @@ B_noclk = b.size - b.sum()
 
 T = np.array([[A_clk, A_noclk], [B_clk, B_noclk]])
 # Most authors refer to statistically significant as P < 0.05 and statistically highly significant as P < 0.001 (less than one in a thousand chance of being wrong)
+print(T)
 print(get_p_value(T))
+
+# This test show ab test where a is better than b or not when both is statiscally independent.
+def bayes_ab_test(df, seed=1984):
+    np.random.seed(seed)
+    clicks = df
+    exposure_a = len(clicks[clicks['advertisement_id'] == "A"])
+    exposure_b = len(clicks[clicks['advertisement_id'] == "B"])
+    click_a = len(clicks[clicks['advertisement_id'] == "A"][clicks['action'] == 1])
+    click_b = len(clicks[clicks['advertisement_id'] == "B"][clicks['action'] == 1])
+    post_a = np.random.beta(1 + click_a, 5 + exposure_a - click_b, 10000)
+    post_b = np.random.beta(1 + click_b, 5 + exposure_b - click_b, 10000)
+
+    prob_a_better = (post_a > post_b).mean()
+    return prob_a_better
+
+result = bayes_ab_test(df)
+print(result)
+
+df.plot()

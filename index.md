@@ -41,6 +41,7 @@ pip install -r requirements.txt
 within the project
 
 ## Library At-A-Glance
+- `assets-image-index` &mdash; Used for web https://mrdat0194.github.io/pan-theory/
 - `adHoc` &mdash; As an analyst, there is always adhoc.
     - For reproducible result, adHoc can use notebook to test and implement beforehand (Eg. SQL flow).
 
@@ -82,7 +83,11 @@ within the project
 - `MLModel` &mdash; Components
     - data_pipeline: helper function nn and ml
     - MLData: dataset
-    - model: code in-progress
+    - model: 
+      - code:
+        - xgboost
+      - EDA
+      - imbalance
     - model_nn_save: weight
     - openCV: image processing
     - run: factory

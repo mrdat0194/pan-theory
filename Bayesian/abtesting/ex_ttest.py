@@ -35,6 +35,9 @@ N2 = len(b)
 s2_sq = b.var()
 t = (a.mean() - b.mean()) / np.sqrt(s1_sq / N1 + s2_sq / N2)
 
+print(s1_sq)
+print(s2_sq)
+
 nu1 = N1 - 1
 nu2 = N2 - 1
 df = (s1_sq / N1 + s2_sq / N2)**2 / ( (s1_sq*s1_sq) / (N1*N1 * nu1) + (s2_sq*s2_sq) / (N2*N2 * nu2) )

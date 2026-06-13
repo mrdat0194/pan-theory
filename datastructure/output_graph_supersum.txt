@@ -1,6 +1,0 @@
-1
-3
-5
-5
-10
-object solve at 0x7ffd182be820>

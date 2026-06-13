@@ -1,0 +1,32 @@
+# Data files
+*.csv
+*.json
+*.txt
+!ignored_files_log.txt
+*.xlsx
+*.parquet
+*.bin
+*.sqlite3
+*.marker
+
+# Image files
+*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+VAE/VAE_LSTM/
+VAE/iVAE/
+VAE/Beta-VAE/
+datastructure/problem/
+espnet_artifact/
+
+# IDEs
+.idea/
+.vscode/
+
+VAE/ivae_dsprites_latest.pth
+VAE/*.pth

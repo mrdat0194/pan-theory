@@ -13,3 +13,7 @@ f.write(output_text)
 f.close()
 myfile = open(output, 'rb')
 print(myfile.readlines())
+
+
+
+

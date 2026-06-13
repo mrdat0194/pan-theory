@@ -5,38 +5,231 @@ Created on Sun Feb 24 11:56:32 2019
 
 @author: petern
 """
-#setwd()
-# Numpy
 
-import scipy.optimize
-import numpy as np
-def fun(y):
-    x= y**(1.0/3)+y-1
-    return x
+# No1 given the infinite sequence of numbers: {1,2,2,3,3,3,...} (number k apperas eactly k times in the sequence) given an integer i, return the ith digit in the sequence above
 
-a = scipy.optimize.fsolve(fun, np.arange(0, 1, 0.01) )
-print(a[0])
+# def find_ith_digit(i):
+#     # Find the group number to which the ith digit belongs
+#     group = 1
+#     while i > group * (group + 1) // 2:
+#         group += 1
+#
+#     # Calculate the position of the ith digit within the group
+#     position_within_group = i - group * (group - 1) // 2
+#
+#     # Return the group number (k) which represents the ith digit
+#     return group
+#
+# # Example usage:
+# i = 10
+# result = find_ith_digit(i)
+# print(f"The {i}th digit in the sequence is: {result}")
+
+
+# No2 Huma khan is a graduate studnt at slide education. as a part of the regular assignment process, the students of slide education are asked to display the last unique character in the given string. help huma khan to solve the prolem in python. if no such unique character is present, display "none"
+# def last_unique_character(s):
+#     char_count = {}  # Dictionary to store character frequencies
+#
+#     # Count the occurrences of each character in the string
+#     for char in s:
+#         char_count[char] = char_count.get(char, 0) + 1
+#
+#     # Traverse the string in reverse to find the last unique character
+#     for char in reversed(s):
+#         if char_count[char] == 1:
+#             return char
+#
+#     return "none"  # If no unique character is found
+#
+# # Example usage:
+# input_string = "slideeducation"
+# result = last_unique_character(input_string)
+# print("The last unique character is:", result)
+
+# No3 given a pyramid of integers, it is possible to traverse different paths from top to bottom. find the highest sum obtained by adding the numbers in the path using python
+# def highest_sum_pyramid(pyramid):
+#     if not pyramid or not pyramid[0]:
+#         return 0
+#
+#     rows = len(pyramid)
+#
+#     # Create a memoization table to store the maximum sum for each position in the pyramid
+#     memo = [[0] * (i + 1) for i in range(rows)]
+#
+#     # Initialize the memo table with the values of the bottom row of the pyramid
+#     memo[rows - 1] = pyramid[rows - 1]
+#
+#     # Start from the second-to-last row and work upwards
+#     for row in range(rows - 2, -1, -1):
+#         for col in range(row + 1):
+#             # The maximum sum at a position is the sum of the current value plus
+#             # the maximum of the two adjacent values in the row below
+#             memo[row][col] = pyramid[row][col] + max(memo[row + 1][col], memo[row + 1][col + 1])
+#
+#     # The highest sum will be at the top of the pyramid
+#     return memo[0][0]
+#
+# # Example usage:
+# pyramid = [
+#     [1, 0, 0, 0],
+#     [2, 3, 0, 0],
+#     [3, 4, 6, 0],
+#     [-1, -2, -3, -4]
+# ]
+#
+# result = highest_sum_pyramid(pyramid)
+# print("The highest sum obtained by traversing the pyramid is:", result)
+
+#
+# input_str = "1 0 0 0\n2 3 0 0\n3 4 6 0\n-1 -2 -3 -4"
+#
+# # Split the input string by newlines to get each row
+# rows_str = input_str.split('\n')
+#
+# # Split each row string by spaces and convert elements to integers
+# pyramid = [[int(num) for num in row_str.split()] for row_str in rows_str]
+#
+# # Print the resulting 2D list
+# print(pyramid)
+
+
+
+# Daily Coding Problem: Problem #687 [Hard]
+
+# This problem was asked by Airbnb.
+#
+# An 8-puzzle is a game played on a 3 x 3 board of tiles, with the ninth tile missing. The remaining tiles are labeled 1 through 8 but shuffled randomly. Tiles may slide horizontally or vertically into an empty space, but may not be removed from the board.
+#
+# Design a class to represent the board, and find a series of steps to bring the board to the state [[1, 2, 3], [4, 5, 6], [7, 8, None]].
+
+# #289
+# The game of Nim is played as follows. Starting with three heaps, each containing a variable number of items, two players take turns removing one or more items from a single pile.
+# https://github.com/ruppysuppy/Daily-Coding-Problem-Solutions/blob/master/Solutions/289.py
+
+# #673
+# This problem was asked by LinkedIn.
+# 
+# Given a list of points, a central point, and an integer k, find the nearest k points from the central point.
+#
+# For example, given the list of points [(0, 0), (5, 4), (3, 1)], the central point (1, 2), and k = 2, return [(0, 0), (3, 1)].
+
+
+
+"""
+#195
+This problem was asked by Google.
+Let A be an N by M matrix in which every row and every column is sorted.
+
+Given i1, j1, i2, and j2, compute the number of elements of M smaller than M[i1, j1] and larger than M[i2, j2].
+
+For example, given the following matrix:
+
+[[1, 3, 7, 10, 15, 20],
+ [2, 6, 9, 14, 22, 25],
+ [3, 8, 10, 15, 25, 30],
+ [10, 11, 12, 23, 30, 35],
+ [20, 25, 30, 35, 40, 45]]
+And i1 = 1, j1 = 1, i2 = 3, j2 = 3, return 15 as there are 15 numbers in the matrix smaller than 6 or greater than 23.
+
+"""
+
+# from typing import List
+#
+#
+# def get_num_in_range(mat: List[List[int]], i1: int, j1: int, i2: int, j2: int) -> int:
+#     num1, num2 = mat[i1][j1], mat[i2][j2]
+#     count = sum([len([x for x in row if (x < num1 and x > num2)]) for row in mat])
+#     return count
+#
+#
+# if __name__ == "__main__":
+#     mat = [
+#         [1, 3, 7, 10, 15, 20],
+#         [2, 6, 9, 14, 22, 25],
+#         [3, 8, 10, 15, 25, 30],
+#         [10, 11, 12, 23, 30, 35],
+#         [20, 25, 30, 35, 40, 45],
+#     ]
+#     print(get_num_in_range(mat, 3, 3, 1, 1))
+#
+#     matrix = [
+#         [1, 2, 3, 4],
+#         [5, 8, 9, 13],
+#         [6, 10, 12, 14],
+#         [7, 11, 15, 16]
+#     ]
+#     print(get_num_in_range(matrix, 1, 3, 3, 1))
+#
+#     matrix = [
+#         [1, 2, 3, 4],
+#         [5, 6, 7, 8],
+#         [10, 11, 12, 13],
+#         [20, 21, 22, 23]
+#     ]
+#     print(get_num_in_range(matrix, 3, 3, 1, 0))
+#
+#
+# """
+# SPECS:
+# TIME COMPLEXITY: O(n ^ 2)
+# SPACE COMPLEXITY: O(n ^ 2)
+# """
+
+# from my_functions import timer
+
+# 1. move_file
+
+# from my_functions import Complete_Function
+#
+# Complete_Function.Move_file.Data_move("hello.py" ,"/Users/petern/Desktop/samV/Project/", "/Users/petern/Desktop/samV/Project/helper_functions/")
+
+# 1. append to excel
+# Complete_Function.append_df_to_excel("/Users/petern/Desktop/hello.xlsx" ,"a")
+
+# Lesson 1
+
+# from scipy.stats import norm
+#
+# print('%.4f' % (norm.cdf(-2, loc=3, scale=4) - norm.cdf(2, loc=3, scale=4)))
+#
+# print('%.4f' % (norm.cdf(-0.25) - norm.cdf(-1.25)))
+
+# Lesson 2
+# print("'HAN','SGN','DAD','PQC','CXR','BMV','CAH','VCA','VCL','VCS','DLI','DIN','VDH','HPH','HUI','PXU','UIH','VKG','THD','TBB','VDO','VII'".replace("'", "").replace(",","|"))
+
+# Lesson 3
 
 ######
-
-arr = np.array([[1,2,3],[4,5,6],[7,8,9]])
-slice = arr[:2,1:3]
-print(slice)
-print(slice[0,0])
-
+# setwd()
+# Numpy
 #
+# import scipy.optimize
+# import numpy as np
+# def fun(y):
+#     x= y**(1.0/3)+y-1
+#     return x
+#
+# a = scipy.optimize.fsolve(fun, np.arange(0, 1, 0.01) )
+# print(a[0])
 
-print(arr[arr<0])
+######
+# import numpy as np
+# arr = np.array([[1,2,3],[4,5,6],[7,8,9]])
+# slice = arr[:2,1:3]
+# print(slice)
+# print(slice[0,0])
 
-A = np.array([[1],[2]])
-B = np.array([[1,2],[3,4]])
-print(A + B)
+# print(arr[arr<0])
+#
+# A = np.array([[1],[2]])
+# B = np.array([[1,2],[3,4]])
+# print(A + B)
 
+######
 # Pandas
 import pandas as pd
-#
 
-#Dict_to_frame
+# Dict_to_frame
 # Dictionary with list object in values
 studentData = {
     'name': ['jack', 'Riti', 'Aadi'],

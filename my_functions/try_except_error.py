@@ -1,12 +1,7 @@
 import traceback
-# import sentry_sdk
-# sentry_sdk.init(
-#     dsn="http://532914a0477f48cd8e5dd0452f1f52d6@v-mail.samV.net/5"
-# )
 
 def func():
     print("this is a func")
-
 
 if __name__ == "__main__":
     try:
@@ -29,3 +24,17 @@ if __name__ == "__main__":
     except:  # noqa
         print("Unknown error")
         print(traceback.format_exc())
+
+####
+def elements_check(array):
+    try:
+        first = next(array)
+    except StopIteration:
+        return True
+    return all(first == x for x in array)
+
+if __name__ == '__main__':
+    array1 = [5, 5, 5, 5, 5]
+    array2 = ["a", "a", "a", "a", "a"]
+    array_iter = iter(array2)
+    print(elements_check(array_iter))

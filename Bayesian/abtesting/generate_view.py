@@ -3,6 +3,10 @@ import numpy as np
 import seaborn as sns
 from scipy import stats
 
+# from scipy.stats import beta
+#
+# np.random.beta()
+
 mu = 5
 sigma2 = 1.3
 N = 1000000

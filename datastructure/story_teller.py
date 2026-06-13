@@ -1,19 +1,11 @@
 #!/bin/python3
-
-
 import os
-import math
-import random
-import re
-import sys
+from math import factorial
 import itertools
-from collections import Counter
+from collections import defaultdict, Counter, namedtuple
 from functools import cmp_to_key
-from functools import partial
-from collections import defaultdict
 import heapq
-from typing import Set
-from typing import List
+from typing import Set, List, TypeVar
 
 from my_functions.timer import print_param, timer
 
@@ -269,8 +261,77 @@ class story_teller:
 
 
 
+    class newNode:
+        def __init__(self, data):
+            self.data = data
+            self.left = None
+            self.right = None
+
+    def largestBST(node):
+        # Set the initial values for calling largestBSTUtil()
+        Min = [float('inf')]
+        Max = [float('-inf')]
+        max_size = [0]
+        is_bst = [0]
+        story_teller.largestBSTUtil(node, Min, Max, max_size, is_bst)
+        return max_size[0]
+
+    def largestBSTUtil(node, min_ref, max_ref, max_size_ref, is_bst_ref):
+        if node == None:
+            is_bst_ref[0] = 1 # An empty tree is BST
+            return 0 # Size of the BST is 0
+
+        Min = float('inf')
+        left_flag = False
+        right_flag = False
+        ls, rs = 0, 0
+
+        max_ref[0] = float('-inf')
+        ls = story_teller.largestBSTUtil(node.left, min_ref, max_ref, max_size_ref, is_bst_ref)
+        if is_bst_ref[0] == 1 and node.data > max_ref[0]:
+            left_flag = True
+
+        Min = min_ref[0]
+        min_ref[0] = float('inf')
+        rs = story_teller.largestBSTUtil(node.right, min_ref, max_ref, max_size_ref, is_bst_ref)
+        if is_bst_ref[0] == 1 and node.data < min_ref[0]:
+            right_flag = True
+
+        if Min < min_ref[0]:
+            min_ref[0] = Min
+        if node.data < min_ref[0]:
+            min_ref[0] = node.data
+        if node.data > max_ref[0]:
+            max_ref[0] = node.data
+
+        if left_flag and right_flag:
+            if ls + rs + 1 > max_size_ref[0]:
+                max_size_ref[0] = ls + rs + 1
+            return ls + rs + 1
+        else:
+            is_bst_ref[0] = 0
+            return 0
+
+    def printArray(array):
+        element = None
+        for element in array:
+            print(element)
+        return element
+
+    def twoSumHashing(num_arr, pair_sum):
+        hashTable = {}
+        for i in range(len(num_arr)):
+            complement = pair_sum - num_arr[i]
+            if complement in hashTable:
+                print("Pair with sum", pair_sum,"is: (", num_arr[i],",",complement,")")
+            hashTable[num_arr[i]] = num_arr[i]
+
     @print_param("output_freqQuery.txt", BASE_DIR)
+
+
+
     def freqQuery(queries):
+
         """
             command:
             1 - x : Insert x in your data structure.
@@ -458,6 +519,270 @@ class story_teller:
 
         return min(sum(abs(x - y) for x, y in zip(gl, s)) for gl in gen)
 
+
+    # ── from Biggest_BST2.py ──────────────────────────────────────────────────
+    def largestBSTBT(root):
+        """
+        Alternative approach to find largest BST in a Binary Tree.
+        Returns tuple (size, max_val, min_val, bst_size, is_bst).
+
+        Example:
+            root = story_teller.newNode(60)
+            root.left = story_teller.newNode(65)
+            root.right = story_teller.newNode(70)
+            root.left.left = story_teller.newNode(50)
+            print(story_teller.largestBSTBT(root)[3])
+
+        :param root: binary tree root (story_teller.newNode)
+        :return: list [size, max, min, bst_size, is_bst]
+        """
+        INT_MIN = -2147483648
+        INT_MAX = 2147483647
+        if root is None:
+            return [0, INT_MIN, INT_MAX, 0, True]
+        if root.left is None and root.right is None:
+            return [1, root.data, root.data, 1, True]
+        l = story_teller.largestBSTBT(root.left)
+        r = story_teller.largestBSTBT(root.right)
+        ret = [0, 0, 0, 0, False]
+        ret[0] = 1 + l[0] + r[0]
+        if l[4] and r[4] and l[1] < root.data and r[2] > root.data:
+            ret[2] = min(l[2], min(r[2], root.data))
+            ret[1] = max(r[1], max(l[1], root.data))
+            ret[3] = ret[0]
+            ret[4] = True
+        else:
+            ret[3] = max(l[3], r[3])
+            ret[4] = False
+        return ret
+
+    # ── from Contruct_BST.py ──────────────────────────────────────────────────
+    def printPaths(root):
+        """
+        Print all root-to-leaf paths in a binary tree.
+
+        Example:
+            root = story_teller.newNode(10)
+            root.left = story_teller.newNode(8)
+            root.right = story_teller.newNode(2)
+            story_teller.printPaths(root)
+
+        :param root: binary tree root (story_teller.newNode)
+        """
+        story_teller._printPathsRec(root, [], 0)
+
+    def _printPathsRec(root, path, pathLen):
+        if root is None:
+            return
+        if len(path) > pathLen:
+            path[pathLen] = root.data
+        else:
+            path.append(root.data)
+        pathLen += 1
+        if root.left is None and root.right is None:
+            print(' '.join(str(x) for x in path[:pathLen]))
+        else:
+            story_teller._printPathsRec(root.left, path, pathLen)
+            story_teller._printPathsRec(root.right, path, pathLen)
+
+    # ── from goodness.py ──────────────────────────────────────────────────────
+    def goodness(s):
+        """
+        Goodness = product(len of lowercase runs) - sum(len of digit runs).
+
+        Example:
+            story_teller.goodness("defGEhfX2")  # -> 5
+
+        :param s: str
+        :return: int
+        """
+        mul = reduce(operator.mul, (len(m) for m in re.findall(r'[a-z]+', s)), 1)
+        sub = sum(len(m) for m in re.findall(r'[0-9]+', s))
+        return mul - sub
+
+    # ── from numberOfsequence.py ──────────────────────────────────────────────
+    def prime_factors(n):
+        """
+        Return the prime factors of n.
+
+        :param n: int
+        :return: list of int
+        """
+        i = 2
+        factors = []
+        while i * i <= n:
+            if n % i:
+                i += 1
+            else:
+                n //= i
+                factors.append(i)
+        if n > 1:
+            factors.append(n)
+        return factors
+
+    def primes(n):
+        """
+        Return a list of primes < n using a sieve.
+
+        :param n: int
+        :return: list of int
+        """
+        sieve = [True] * (n // 2)
+        for i in range(3, int(n ** 0.5) + 1, 2):
+            if sieve[i // 2]:
+                sieve[i * i // 2::i] = [False] * ((n - i * i - 1) // (2 * i) + 1)
+        return [2] + [2 * i + 1 for i in range(1, n // 2) if sieve[i]]
+
+    def number_nice(A):
+        """
+        Count the number of nice sequences.
+        https://www.hackerrank.com/contests/w22/challenges/number-of-sequences/
+
+        :param A: list of int (-1 means wildcard)
+        :return: int
+        """
+        if A[0] != 0 and A[0] != -1:
+            return 0
+        nice_seqs = 1
+        N = len(A)
+        for prime in story_teller.primes(N + 1):
+            positions = [i for i in range(N) if (i + 1) % prime == 0]
+            test = [A[i] for i in positions]
+            fixed_mods = [x % prime for x in test if x != -1]
+            if len(set(fixed_mods)) > 1:
+                return 0
+            elif -1 not in test:
+                continue
+            elif -1 in test and len(set(test)) == 1:
+                nice_seqs *= prime * factorial((positions[-1] + 1) / prime)
+            else:
+                minus_ones = [i + 1 for i in positions if A[i] == -1]
+                for position in minus_ones:
+                    nice_seqs *= position / prime
+        return nice_seqs % (7 + 10 ** 9)
+
+    # ── from roadLibrary.py ───────────────────────────────────────────────────
+    def _DFSrec(adj, s, visited, val):
+        visited[s] = 1
+        val += 1
+        for i in adj[s]:
+            if visited[i] == 0:
+                val = story_teller._DFSrec(adj, i, visited, val)
+        return val
+
+    def roadsAndLibraries(n, c_lib, c_road, cities):
+        """
+        Minimum cost to give every city access to a library.
+        https://www.hackerrank.com/challenges/torque-and-development/problem
+
+        Example:
+            story_teller.roadsAndLibraries(3, 2, 1, [[1,2],[3,1],[2,3]])  # -> 4
+
+        :param n: int - number of cities
+        :param c_lib: int - cost to build a library
+        :param c_road: int - cost to build a road
+        :param cities: list of [int, int]
+        :return: int - minimum total cost
+        """
+        if c_road > c_lib:
+            return n * c_lib
+        adj = {}
+        for u, v in cities:
+            adj.setdefault(u, []).append(v)
+            adj.setdefault(v, []).append(u)
+        for i in range(1, n + 1):
+            adj.setdefault(i, [])
+        visited = [0] * (n + 1)
+        components = []
+        for i in range(1, n + 1):
+            if visited[i] == 0:
+                components.append(story_teller._DFSrec(adj, i, visited, 0))
+        total = sum(c_road * (nodes - 1) for nodes in components)
+        total += len(components) * c_lib
+        return total
+
+    # ── from shortestGraph.py ─────────────────────────────────────────────────
+    def _bfs_weight(g, target_nodes, node, limit=-1):
+        visited = set()
+        q = Queue()
+        q.put((node, 0))
+        while not q.empty():
+            n, w = q.get()
+            if n in visited:
+                continue
+            if n in target_nodes and n != node:
+                return w
+            visited.add(n)
+            if w == limit:
+                return -1
+            for nxt in g[n]:
+                if nxt not in visited:
+                    q.put((nxt, w + 1))
+        return -1
+
+    def findShortest(graph_nodes, graph_from, graph_to, ids, val):
+        """
+        Find shortest path between two nodes that share color val.
+
+        Example:
+            story_teller.findShortest(5, [1,1,2,3], [2,3,4,5], [1,2,3,3,2], 2)
+
+        :param graph_nodes: int
+        :param graph_from: list of int
+        :param graph_to: list of int
+        :param ids: list of int (color of each node, 1-indexed)
+        :param val: int (target color)
+        :return: int (shortest distance, -1 if impossible)
+        """
+        g = {i + 1: [] for i in range(graph_nodes)}
+        for i in range(len(graph_from)):
+            g[graph_from[i]].append(graph_to[i])
+            g[graph_to[i]].append(graph_from[i])
+        target_nodes = [i + 1 for i, c in enumerate(ids) if c == val]
+        result = -1
+        for node in target_nodes:
+            w = story_teller._bfs_weight(g, target_nodes, node, result)
+            if w > 0 and (w < result or result == -1):
+                result = w
+        return result
+
+    # ── from temp_close_0.py ──────────────────────────────────────────────────
+    def closestToZero(temps):
+        """
+        Return the temperature closest to zero (positive wins on tie).
+        Returns 0 if list is empty.
+
+        Example:
+            story_teller.closestToZero([-2, 1, 3, 5])  # -> 1
+
+        :param temps: list of int
+        :return: int
+        """
+        closest = None
+        for current in temps:
+            if (closest is None
+                    or abs(closest) > abs(current)
+                    or (abs(closest) == abs(current) and closest < current)):
+                closest = current
+        return 0 if closest is None else closest
+
+    # ── from shuffle_deck.py ──────────────────────────────────────────────────
+    def shuffleDeck():
+        """
+        Build a standard 52-card deck and return it shuffled.
+
+        Example:
+            deck = story_teller.shuffleDeck()
+
+        :return: list of namedtuple card(rank, suit)
+        """
+        suits = ['Spades', 'Diamonds', 'Hearts', 'Clubs']
+        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        Card = namedtuple('card', ['suit', 'rank'])
+        cards = [Card(rank, suit) for suit in suits for rank in ranks]
+        random.shuffle(cards)
+        return cards
+
 class problem308:
     """
     # Determine the number of ways to group the array elements using parentheses so that the entire expression evaluates to True.
@@ -584,8 +909,21 @@ class Player:
         aakansha 75
         aleksa 150
         :return:
+
+        data = [
+            Player("amy", 100),
+            Player("david", 100),
+            Player("heraldo", 50),
+            Player("aakansha", 75),
+            Player("aleksa", 150)
+        ]
+        
+        print("Running score_billboard:")
+        Player.score_billboard(data)
         """
         data = sorted(data, key=cmp_to_key(Player.comparator))
+        # data = sorted(data, key=lambda p: (-p.score, p.name)
+
         for i in data:
             print(i.name, i.score)
 
@@ -889,17 +1227,18 @@ class DisjointSet:
     def get_total(self, a):
         return self.total[self.find(a)]
 
-# N = int(input())
-# ds = DisjointSet(N)
-# for i in range(N - 1):
-#     x, y, color = input().split()
-#     if color == 'b':
-#         ds.union(int(x) - 1, int(y) - 1)
-# set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
-# complement = sum(x * (x - 1) * (N - x) // 2 +              #1
-#                  x * (x - 1) * (x - 2) // 6                #2
-#                  for x in set_size.values())
-# print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
+if __name__ == '__main__':
+    N = int(input())
+    ds = DisjointSet(N)
+    for i in range(N - 1):
+        x, y, color = input().split()
+        if color == 'b':
+            ds.union(int(x) - 1, int(y) - 1)
+    set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
+    complement = sum(x * (x - 1) * (N - x) // 2 +              #1
+                     x * (x - 1) * (x - 2) // 6                #2
+                     for x in set_size.values())
+    print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
 
 
 # super maximum cost query
@@ -1271,10 +1610,66 @@ def hourglassSum(arr):
              for j in range(len(arr)-2) for i in range(len(arr[0])-1)] )
     return a
 
+# ── from BFShortest.py ────────────────────────────────────────────────────────
+class Graph:
+    """
+    Find all distances from a starting node via BFS (each edge weight = 6).
 
-if __name__ == '__main__':
-    pass
+    Example:
+        g = Graph(4)
+        g.connect(0, 1)
+        g.connect(0, 2)
+        g.find_all_distances(0)
+    """
+    def __init__(self, n):
+        self.n = n
+        self.edges = defaultdict(list)
+
+    def connect(self, x, y):
+        self.edges[x].append(y)
+        self.edges[y].append(x)
+
+    def find_all_distances(self, root):
+        distances = [-1] * self.n
+        unvisited = set(range(self.n))
+        q = queue.Queue()
+        distances[root] = 0
+        unvisited.remove(root)
+        q.put(root)
+        while not q.empty():
+            node = q.get()
+            for child in self.edges[node]:
+                if child in unvisited:
+                    distances[child] = distances[node] + 6
+                    unvisited.remove(child)
+                    q.put(child)
+        distances.pop(root)
+        print(' '.join(map(str, distances)))
 
 
+# ── from shuffle_deck.py ──────────────────────────────────────────────────────
+class PlayingDeck:
+    """
+    A full 52-card playing deck with index-based access.
 
+    Example:
+        deck = PlayingDeck()
+        random.shuffle(deck)
+        for card in deck:
+            print(card)
+    """
+    def __init__(self):
+        suits = ['Spades', 'Diamonds', 'Hearts', 'Clubs']
+        ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        Card = namedtuple('card', ['suit', 'rank'])
+        self.cards = [Card(rank, suit) for suit in suits for rank in ranks]
+
+    def __len__(self):
+        return len(self.cards)
+
+    def __getitem__(self, position):
+        return self.cards[position]
+
+    def __setitem__(self, position, card):
+        self.cards[position] = card
 
