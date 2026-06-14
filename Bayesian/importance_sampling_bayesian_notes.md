@@ -1,6 +1,6 @@
 # Importance Sampling, Laplace Transforms, and Dirac Measures in Bayesian Nonparametrics
 
-This document consolidates the mathematical foundations and verification logs for the integrations in [importance_sampling_bayesian.py](file:///c:/Users/mrdat/PycharmProjects/smac/book/importance_sampling_bayesian.py).
+This document consolidates the mathematical foundations and verification logs for the integrations in [importance_sampling_bayesian.py](importance_sampling_bayesian.py).
 
 ---
 
@@ -57,9 +57,33 @@ It represents a discrete probability point mass (atom) located at $\theta$.
 
 ---
 
+## 1.5 Comparison: Importance Sampling vs. MCMC
+
+This repository implements both Importance Sampling (IS) and Markov Chain Monte Carlo (MCMC). Here is a comparison of their strengths, weaknesses, and how MCMC implementations evolved to solve specific problems.
+
+### Pros and Cons
+| Feature | Importance Sampling (IS) | Markov Chain Monte Carlo (MCMC) |
+| :--- | :--- | :--- |
+| **Sample Independence** | **Independent** (No trapping) | **Dependent** (Highly correlated, requires burn-in) |
+| **Singularities / Peaks** | **Excellent** (if proposal is good) | **Poor** (mixes slowly or gets physically trapped) |
+| **High Dimensions** | **Extremely Poor** (Weight collapse, ESS $\to 1$) | **Good** (Finds the high-probability typical set) |
+| **Normalizing Constant** | Calculates integral directly | Cannot easily compute the integral |
+
+### Evolution of MCMC in this Repository
+1. **Standard Local MCMC (Ch 1-2):** E.g., the Metropolis algorithm in `markov-zeta.py`. Works well to scale into higher dimensions but gets physically trapped near non-integrable singularities (e.g. $\gamma \le -1.0$) or gets stuck in local modes (critical slowing down).
+2. **Informed Metropolis-Hastings (Independence Sampler):** Implemented in `mcmc_bayesian.py`, this evolution borrows the global proposal from Importance Sampling to generate MCMC steps, vastly reducing autocorrelation and allowing escape from local traps.
+3. **Path Integral Monte Carlo (PIMC) (Ch 7):** As seen in the `homework_7` BEC simulations, MCMC evolves beyond sampling discrete variables or single coordinates by sampling entire continuous paths (Lévy flights) and permutation cycles to handle quantum indistinguishability.
+4. **Cluster Algorithms (Ch 5 & 8):** Algorithms like the Wolff cluster update in `cluster_ising.py` solve critical slowing down by flipping macroscopic clusters of spins at once, allowing global, rejection-free moves.
+5. **SOTA - Mirror HMC (Reparameterization Trick):** Implemented in `mcmc_bayesian.py`. The absolute state-of-the-art for continuous spaces relies on gradients. Mirror HMC applies a logit transform to map bounded parameters into an unbounded smooth space, allowing Hamiltonian Leapfrog integration to deterministically glide toward high probabilities—exactly mirroring how VAEs in Deep Learning use the reparameterization trick.
+6. **SOTA - Tempered HMC:** Also implemented in `mcmc_bayesian.py`. For multimodal distributions (like a bimodal Gaussian Mixture), gradients can trap samplers in local valleys. Tempered HMC temporarily flattens the energy landscape to allow physical trajectories to cross impossible barriers before returning to the target density.
+7. **Dynamic Monte Carlo / Kinetic MC (Ch 9):** Scripts like `dynamic_ising.py` solve the low-acceptance-rate problem at low temperatures by tracking all possible moves and executing them rejection-free based on their physical transition rates.
+8. **Sequential Importance Sampling (CRP/IBP):** For complex, growing-dimension Bayesian nonparametric models, the repo builds configurations step-by-step with likelihood-informed proposals, beautifully combining the independence of Importance Sampling with the sequential state-building of MCMC.
+
+---
+
 ## 2. Implementation Overview
 
-The components are implemented inside [importance_sampling_bayesian.py](file:///c:/Users/mrdat/PycharmProjects/smac/book/importance_sampling_bayesian.py):
+The components are implemented inside [importance_sampling_bayesian.py](importance_sampling_bayesian.py):
 *   **`ToyImportanceSampler`**: Evaluates Laplace transform estimates of $x^\gamma$ at arbitrary frequency $s$.
 *   **`StickBreakingImportanceSampler`**: Implements Laplace smoothing `epsilon` to prevent cluster proposal collapse, and provides `evaluate_dirac_mixture_density` to compute DP mixture density curves.
 *   **`CRPImportanceSampler`**: Combines tables using sequential importance sampling (SIS) with likelihood-informed proposals.
@@ -115,6 +139,6 @@ Example binary matrix (Customer x Feature allocation):
  [0 0 0 1 1 0 1 0]]
 
 --- 5. Generating and Saving Diagnostic Plot ---
-Visualizations saved successfully to: [figs/importance_sampling_bayesian.png](file:///C:/Users/mrdat/PycharmProjects/smac/figs/importance_sampling_bayesian.png)
+Visualizations saved successfully to: [figs/importance_sampling_bayesian.png](figs/importance_sampling_bayesian.png)
 --------------------------------------------------
 ```
