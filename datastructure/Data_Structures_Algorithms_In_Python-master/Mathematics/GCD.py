@@ -6,4 +6,5 @@ def gcd(a, b):
         return b
     return gcd(b % a, a)
 
-print(gcd(21, 6))
+if __name__ == '__main__':
+    print(gcd(21, 6))
