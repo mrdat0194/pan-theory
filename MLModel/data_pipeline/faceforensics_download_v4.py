@@ -14,7 +14,6 @@ import tempfile
 import time
 import sys
 import json
-import random
 from tqdm import tqdm
 from os.path import join
 
