@@ -19,7 +19,7 @@ from sklearn.metrics import roc_curve, accuracy_score, roc_auc_score
 
 import statsmodels.api as sm
 
-from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
+from imblearn.over_sampling import SMOTE, ADASYN
 from pygam import LinearGAM, s, f, l
 
 
