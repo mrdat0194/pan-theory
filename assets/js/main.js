@@ -44,7 +44,7 @@
 						$body.addClass('is-mobile');
 					});
 
-		// Fix: Placeholder polyfill.
+		// Apply placeholder polyfill to forms.
 			$('form').placeholder();
 
 		// Prioritize "important" elements on medium.
