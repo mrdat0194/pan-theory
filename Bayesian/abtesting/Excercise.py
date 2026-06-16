@@ -2,7 +2,7 @@
 # https://docs.google.com/spreadsheets/d/1CpRMgzMfWxmvRASPkfHOd4XBQDNdaW2Q_W1-GitubtU/edit#gid=138966392
 
 # ztest
-# https://colab.research.google.com/drive/1hu-vJLeUHTQEn8fytWWRMiI2z-mtpIvS?usp=sharinghttps://colab.research.google.com/drive/1hu-vJLeUHTQEn8fytWWRMiI2z-mtpIvS?usp=sharing
+# https://colab.research.google.com/drive/1hu-vJLeUHTQEn8fytWWRMiI2z-mtpIvS?usp=sharing
 
 # https://docs.pymc.io/Gaussian_Processes.html
 # https://en.wikipedia.org/wiki/Gaussian_process
