@@ -1,6 +1,8 @@
 import datetime
 import requests
+from functools import lru_cache
 
+@lru_cache(maxsize=1024)
 def get_exchange_rate(base_currency, symbols, date):
     api_key = "jNC2YcPZXWCYJIAqDQJyvxMW23VgzK3x"
     headers = {"apikey": api_key}
@@ -23,14 +25,15 @@ def generate_date_list(start_month=5, start_year=2024):
         current_date += datetime.timedelta(days=1)  # Increment by 1 day
     return date_list
 
-# Get the list of dates from May 2024 to today
-dates = generate_date_list()
+if __name__ == '__main__':
+    # Get the list of dates from May 2024 to today
+    dates = generate_date_list()
 
-# Calculate the average exchange rate
-total_rate = 0
-for date in dates:
-    rate = get_exchange_rate('USD', 'VND', date)
-    total_rate += rate
+    # Calculate the average exchange rate
+    total_rate = 0
+    for date in dates:
+        rate = get_exchange_rate('USD', 'VND', date)
+        total_rate += rate
 
-average_rate = total_rate / len(dates)
-print(average_rate)
+    average_rate = total_rate / len(dates)
+    print(average_rate)
