@@ -78,7 +78,7 @@ def show_mat(mat, vect, prod, threshold=-1):
     fig.colorbar(cax3, ax=ax3)
 
     # Fix y-axis limits
-    ax1.set_ylim(bottom=max(len(prod), len(vect)) - 0.5)
+    ax1.set_ylim(bottom=max(len(prod), len(vect)) - 0.5, top=-0.5)
 
 
 colors = dict(
