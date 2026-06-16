@@ -3,6 +3,7 @@
 *.json
 *.txt
 !ignored_files_log.txt
+!**/requirements.txt
 *.xlsx
 *.parquet
 *.bin
