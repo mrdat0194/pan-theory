@@ -3,6 +3,7 @@ from Cryptodome.Cipher import AES
 
 import base64
 from hashlib import md5
+import os
 
 BLOCK_SIZE = 16
 
@@ -47,7 +48,10 @@ def decrypt(encrypted, passphrase):
 # password = "My Secret Passphrase".encode()
 # ct_b64 = "U2FsdGVkX1/c4g8sJK4kHGvAnBXeaG1RNQdVMmvE39glvfafkWhdVFpXEKwyaflb"
 
-password = "b".encode()
+aes_password = os.environ.get("AES_PASSWORD")
+if not aes_password:
+    raise ValueError("AES_PASSWORD environment variable is required")
+password = aes_password.encode()
 ct_b64 = "U2FsdGVkX18Qgpmhv+u3TYTtCBq7TQ76ua2gVK6+iPg="
 print(password)
 pt = decrypt(ct_b64, password)
