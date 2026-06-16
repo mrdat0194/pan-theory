@@ -1,0 +1,12 @@
+functions-framework==3.*
+google-api-python-client==2.137.0
+google-auth==2.32.0
+requests
+gspread
+polars
+numpy==2.0.0
+pandas==2.2.2
+pyarrow
+typing
+gtm-manager
+PyDrive2
