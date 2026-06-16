@@ -1,4 +1,3 @@
-from MLModel.data_pipeline import data_helper
 from MLModel.model import bayesian
 import pandas as pd
 import warnings
