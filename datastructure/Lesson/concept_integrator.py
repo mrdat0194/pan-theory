@@ -86,10 +86,47 @@ def compare_stirling_combinations(L, N):
     print(f"  - Stirling's approximation: {stirling_states:,.2f}")
     print(f"  - Approximation error: {percent_error:.4f}%")
 
+def map_grid_neighbors(shape, index, periodic=False):
+    """
+    6. GRID COORDINATE MAPPING & BOUNDARY CONDITIONS:
+    Translates a 1D flat index into a d-dimensional coordinate tuple,
+    identifies adjacent neighbors by stepping along each axis, applies
+    boundary conditions (periodic wrapping vs. open boundaries), and
+    converts coordinates back to 1D flat indices.
+    """
+    coords = np.unravel_index(index, shape)
+    neighbors = []
+    
+    # Iterate through all dimensions (axes) of the coordinate space
+    for dim in range(len(coords)):
+        val = coords[dim]
+        # Step left (-1) and step right (+1)
+        for step in [-1, 1]:
+            target = val + step
+            if periodic:
+                # Wrap coordinates using modulo arithmetic
+                target_wrapped = target % shape[dim]
+                neighbor_coords = tuple(
+                    target_wrapped if k == dim else coords[k]
+                    for k in range(len(coords))
+                )
+                neighbor_flat = np.ravel_multi_index(neighbor_coords, shape)
+                neighbors.append(neighbor_flat)
+            else:
+                # Reject steps that fall out of bounds
+                if 0 <= target < shape[dim]:
+                    neighbor_coords = tuple(
+                        target if k == dim else coords[k]
+                        for k in range(len(coords))
+                    )
+                    neighbor_flat = np.ravel_multi_index(neighbor_coords, shape)
+                    neighbors.append(neighbor_flat)
+    return coords, neighbors
+
 if __name__ == '__main__':
-    print("=" * 60)
-    print("INTEGRATING BERNOULLI, RANDOM WALK, MARKOV, LINALG & STIRLING")
-    print("=" * 60)
+    print("=" * 65)
+    print("INTEGRATING BERNOULLI, RANDOM WALK, MARKOV, LINALG, STIRLING & NEIGHBORS")
+    print("=" * 65)
     
     # Parameters
     L = 10       # Size of the ring
@@ -114,3 +151,18 @@ if __name__ == '__main__':
     # 5. Stirling's approximation
     # If we put 15 Bosons on a ring of size 10, what is the state space size?
     compare_stirling_combinations(L=10, N=15)
+    
+    # 6. Grid Coordinate Mapping & Boundary Conditions (Ising Model Style)
+    shape_2d = (3, 3)
+    target_site = 0
+    print("\n--- Grid Coordinate Mapping & Boundary Conditions ---")
+    print(f"Lattice Shape: {shape_2d}")
+    print(f"Target Site Flat Index: {target_site}")
+    
+    # Open boundaries
+    coords_open, nbrs_open = map_grid_neighbors(shape_2d, target_site, periodic=False)
+    print(f"  - Open Boundaries: Coordinates {coords_open} -> Neighbors: {nbrs_open}")
+    
+    # Periodic boundaries
+    coords_per, nbrs_per = map_grid_neighbors(shape_2d, target_site, periodic=True)
+    print(f"  - Periodic Boundaries: Coordinates {coords_per} -> Neighbors: {nbrs_per}")

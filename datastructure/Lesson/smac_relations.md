@@ -27,3 +27,9 @@ This note outlines how the mathematical concepts learned in these lessons form t
 *   **SMAC Connection:**
     *   **Ising model state spaces** (`enumerate_ising.py`): Estimating the number of possible spin configurations ($2^N$) and the entropy of states.
     *   **Permutation Cycles** (`permutation.py`): Computing cycle probabilities of large permutations, which is essential for path-integral simulations of quantum Bosons.
+
+## 5. Grid Coordinate Mapping & Boundary Conditions $\to$ Ising Model Neighborhoods
+*   **Concept:** Converting between linear memory index and multi-dimensional grid coordinates using `np.unravel_index` and `np.ravel_multi_index`. Boundary conditions determine whether steps outside the grid boundary wrap around (periodic/torus) or are omitted (open boundaries).
+*   **SMAC Connection:**
+    *   **Ising Model (`ising.py`, `markov_ising.py`):** Neighbor tables map the 2D/3D physical lattice onto a flat 1D layout.
+    *   **Efficiency:** During MCMC updates, rather than converting coordinates on-the-fly, precomputing the neighbor table allows the simulation to calculate energy changes ($\Delta E = 2 s_i \sum_{j \in \text{nbr}} s_j$) in $O(1)$ lookup time.
