@@ -17,6 +17,7 @@
 *.png
 *.jpg
 *.json 
+*.wav
 
 # Python
 __pycache__/

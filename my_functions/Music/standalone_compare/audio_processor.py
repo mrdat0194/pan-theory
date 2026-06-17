@@ -136,6 +136,7 @@ class LogMelProcessor(nn.Module):
             
         return logmel_feat, ilens
 
+
 class UtteranceMVN(nn.Module):
     """PyTorch Utterance Mean and Variance Normalization replicating ESPnet's UtteranceMVN."""
     def __init__(self, norm_means: bool = True, norm_vars: bool = True, eps: float = 1e-20, compat_espnet: bool = True):
@@ -180,6 +181,8 @@ class UtteranceMVN(nn.Module):
                 x = x.masked_fill(mask, 0.0)
                 
         return x, ilens
+
+
 class SpecAugment(nn.Module):
     """PyTorch SpecAugment (Time & Frequency Masking) replicating ESPnet's implementation."""
     def __init__(
