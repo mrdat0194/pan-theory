@@ -69,7 +69,7 @@ if __name__ == "__main__":
     print("Initializing V-JEPA 2 for Fire/Smoke Detection...")
     
     # Paths to centralized data
-    data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'FireSmoke', 'data')
+    data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'FireSmoke', 'test_img')
     
     transform = transforms.Compose([
         transforms.Resize((224, 224)),
@@ -95,13 +95,35 @@ if __name__ == "__main__":
             # Dummy Training Loop
             model.train()
             print("Starting classification fine-tuning...")
-            # for epoch in range(5):
-            #     for images, labels in train_loader:
-            #         optimizer.zero_grad()
-            #         logits = model(images)
-            #         loss = criterion(logits, labels)
-            #         loss.backward()
-            #         optimizer.step()
-            print("Training loop setup complete. (Uncomment loop to run)")
+            for epoch in range(1, 6):
+                running_loss = 0.0
+                for images, labels in train_loader:
+                    optimizer.zero_grad()
+                    logits = model(images)
+                    loss = criterion(logits, labels)
+                    loss.backward()
+                    optimizer.step()
+                    running_loss += loss.item()
+                print(f"Epoch {epoch}/5 - Training Loss: {running_loss/len(train_loader):.4f}")
+            
+            # Dummy Testing Loop
+            model.eval()
+            print("Starting evaluation...")
+            test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+            test_loss = 0.0
+            correct = 0
+            total = 0
+            with torch.no_grad():
+                for images, labels in test_loader:
+                    logits = model(images)
+                    loss = criterion(logits, labels)
+                    test_loss += loss.item()
+                    _, predicted = torch.max(logits.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+            
+            print(f"Test Loss: {test_loss/len(test_loader):.4f}")
+            print(f"Test Accuracy: {100 * correct / total:.2f}%")
+            
     except Exception as e:
         print(f"Error loading dataset: {e}")

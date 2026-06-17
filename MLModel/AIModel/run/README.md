@@ -44,13 +44,15 @@ Following the transition to the **Le-WM** architecture, the Baseline model emplo
 
 We have integrated the official **V-JEPA 2** architecture (`facebookresearch/vjepa2`) to handle spatiotemporal video/image patches for downstream Object Detection tasks. The datasets for these tasks have been centralized into `MLModel/data` using our unified `data_pipeline`.
 
+*Note: You must have `torchvision` installed to run these models (e.g. `pip install torchvision`).*
+
 ### 1. **Gun Detection** (`main_vjepa2_gun.py`)
-- **Dataset**: `MLModel/data/WeaponS` (contains bounding box annotations).
+- **Dataset**: `MLModel/data/WeaponS` (contains bounding box annotations in `WeaponS_bbox`). Corrupted macOS hidden files (`._*`) were recently cleaned to ensure stable loading via PIL/OpenCV.
 - **Architecture**: V-JEPA 2 Backbone + Localization Head.
-- **Objective**: Replaces legacy SSD/YOLO methodologies for detecting weapons in frames.
+- **Objective**: Replaces legacy SSD/YOLO methodologies for detecting weapons in frames, using MSE loss against parsed bounding box regression targets.
 
 ### 2. **Fire/Smoke Detection** (`main_vjepa2_fire.py`)
-- **Dataset**: `MLModel/data/FireSmoke` (FireSense, FurgFire, etc.).
+- **Dataset**: `MLModel/data/FireSmoke/test_img` (FireSense, FurgFire, etc.). Note that the base `data` folder only contained label maps, so the data pipeline has been repointed to `test_img`.
 - **Architecture**: V-JEPA 2 Backbone + Multi-class Classification Head.
 - **Objective**: Categorizes surveillance frames into Flame vs Smoke vs Safe.
 

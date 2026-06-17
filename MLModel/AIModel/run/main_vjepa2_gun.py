@@ -95,14 +95,28 @@ if __name__ == "__main__":
         # Dummy Training Loop
         model.train()
         print("Starting fine-tuning...")
-        # for epoch in range(5):
-        #     for images, bboxes in train_loader:
-        #         optimizer.zero_grad()
-        #         preds = model(images)
-        #         loss = criterion(preds, bboxes)
-        #         loss.backward()
-        #         optimizer.step()
-        print("Training loop setup complete. (Uncomment loop to run)")
+        for epoch in range(1, 6):
+            running_loss = 0.0
+            for images, bboxes in train_loader:
+                optimizer.zero_grad()
+                preds = model(images)
+                loss = criterion(preds, bboxes)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+            print(f"Epoch {epoch}/5 - Training Loss: {running_loss/len(train_loader):.4f}")
+        
+        # Dummy Testing Loop
+        model.eval()
+        print("Starting evaluation...")
+        test_loader = DataLoader(test_dataset, batch_size=16, shuffle=False)
+        test_loss = 0.0
+        with torch.no_grad():
+            for images, bboxes in test_loader:
+                preds = model(images)
+                loss = criterion(preds, bboxes)
+                test_loss += loss.item()
+        print(f"Test Loss: {test_loss/len(test_loader):.4f}")
 
     except FileNotFoundError:
         print(f"Dataset not found at {data_dir}. Ensure data pipeline migration is complete.")
