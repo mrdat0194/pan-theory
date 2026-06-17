@@ -40,6 +40,27 @@ Following the transition to the **Le-WM** architecture, the Baseline model emplo
 
 ---
 
+## 👁️ Vision-JEPA 2 Suite
+
+We have integrated the official **V-JEPA 2** architecture (`facebookresearch/vjepa2`) to handle spatiotemporal video/image patches for downstream Object Detection tasks. The datasets for these tasks have been centralized into `MLModel/data` using our unified `data_pipeline`.
+
+### 1. **Gun Detection** (`main_vjepa2_gun.py`)
+- **Dataset**: `MLModel/data/WeaponS` (contains bounding box annotations).
+- **Architecture**: V-JEPA 2 Backbone + Localization Head.
+- **Objective**: Replaces legacy SSD/YOLO methodologies for detecting weapons in frames.
+
+### 2. **Fire/Smoke Detection** (`main_vjepa2_fire.py`)
+- **Dataset**: `MLModel/data/FireSmoke` (FireSense, FurgFire, etc.).
+- **Architecture**: V-JEPA 2 Backbone + Multi-class Classification Head.
+- **Objective**: Categorizes surveillance frames into Flame vs Smoke vs Safe.
+
+### 🔮 Future Action: Face-Recognition Migration
+In the future, the `face-recognition` repository will be migrated to the V-JEPA 2 backbone:
+1. **SSL Pre-training**: Unsupervised patch masking on unlabeled face datasets (e.g., WIDER FACE) to learn geometric face embeddings.
+2. **Supervised Fine-Tuning**: Attaching the ArcFace (Additive Angular Margin Loss) head to the frozen V-JEPA 2 encoder for 1:1 Cosine Similarity matching.
+
+---
+
 ## 🛠️ Other JEPA Implementations
 
 - **`main_jepa_anomaly.py`**: MTS-JEPA implementation for anomaly detection (replaces legacy VAE-LSTM). Built for structural vibration data, inspired by the multi-resolution architecture described in [MTS-JEPA (arxiv:2602.04643)](https://arxiv.org/html/2602.04643v1). Utilizes `eb_jepa` backbone with RankFeat/RankWeight noise suppression.

@@ -44,3 +44,6 @@ MLModel/AIModel/run/deep_did_model/
 MLModel/AIModel/run/deep_iv_model/
 MLModel/AIModel/run/deep_rdd_model/
 *.log
+*.xml
+*.mp4
+*.avi
