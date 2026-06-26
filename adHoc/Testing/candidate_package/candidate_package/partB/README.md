@@ -43,14 +43,16 @@ Returns `{"status": "ok", "vectorstore_ready": true}` if the vector store initia
 
 ## Design decisions
 
-<!-- Complete this section — explain at least ONE deliberate design choice -->
-
 ### Chunk size and overlap
-*Your explanation here.*
-e.g.: "I chose chunk_size=500 with overlap=50 because..."
+I chose `chunk_size=500` with `overlap=50`. This size is large enough to capture complete sentences and meaningful context from the policy documents, which are relatively short. The overlap ensures that if a key piece of information is split between two chunks, it can still be retrieved and understood in context.
 
 ### Prompt design
-*Your explanation here.*
+The system prompt explicitly instructs the model to:
+1. Act as an expert assistant for EDB policy questions.
+2. Use only the provided context to answer questions.
+3. Cite the source document filename for every claim made.
+4. Say "I don't know" if the answer is not in the context.
+This ensures grounding and prevents hallucinations.
 
 ---
 
