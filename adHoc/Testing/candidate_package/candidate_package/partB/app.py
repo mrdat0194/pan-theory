@@ -15,11 +15,10 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# TODO (B1): import LangChain / embedding / vector store dependencies
-# e.g. from langchain_community.document_loaders import TextLoader
-#      from langchain.text_splitter import RecursiveCharacterTextSplitter
-#      from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-#      from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
 
 app = FastAPI(title="EDB Policy Q&A", version="1.0")
 
