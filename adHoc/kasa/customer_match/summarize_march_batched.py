@@ -13,7 +13,7 @@ def main():
     
     # 2. Authentication with Gemini API Key
     # Using the same key from summarize_bubbly_ga4.py
-    API_KEY = "AIzaSyBuD1ZDhkhiuKew9diygaLBef0kfy1DBy0"
+    API_KEY = os.environ.get("GOOGLE_API_KEY")
     print(f"Configuring Gemini API...")
     
     try:

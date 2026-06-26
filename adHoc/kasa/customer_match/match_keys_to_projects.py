@@ -1,15 +1,10 @@
 import requests
 import re
 import json
+import os
 
-keys = [
-    "AIzaSyCZNhvHu_fXy7OfNa1jm8E8zhk7c3q2L_E",
-    "AIzaSyD3HTx9W0v854m_tCjp9cfyXU_F8_wpRR0",
-    "AIzaSyDVNm1D_iIemwPLfvZ5zSIfLy-J9GfuNXE",
-    "AIzaSyBn9_j-O4JVQaOMmvehVKBC6QQ4SGr_Ypo",
-    "AIzaSyBuD1ZDhkhiuKew9diygaLBef0kfy1DBy0",
-    "AIzaSyBB6_3Yu4v3Yw98ZCg-ARXfJwkQOd-b-Q4"
-]
+# Load keys from environment variable GOOGLE_API_KEYS (comma-separated)
+keys = [k.strip() for k in os.environ.get("GOOGLE_API_KEYS", "").split(",") if k.strip()]
 
 project_ids = [
     "bubbly-cascade-398303",
