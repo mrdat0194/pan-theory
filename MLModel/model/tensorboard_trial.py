@@ -21,7 +21,7 @@
 
 #%%
 
-from res.plot_lib import plot_data, plot_model, set_default
+from res.plot_lib import set_default
 
 #%%
 

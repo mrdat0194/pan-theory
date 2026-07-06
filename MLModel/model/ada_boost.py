@@ -1,6 +1,6 @@
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, BaggingClassifier, VotingClassifier
+from sklearn.ensemble import AdaBoostClassifier, VotingClassifier
 
 # from tensorflow.python.util import deprecation
 from sklearn.linear_model import LogisticRegression

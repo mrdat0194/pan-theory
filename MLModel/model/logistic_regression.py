@@ -1,6 +1,5 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report
-from tensorflow.python.util import deprecation
 from sklearn.metrics import confusion_matrix
 import tensorflow as tf
 import os
