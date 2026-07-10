@@ -14,12 +14,16 @@ Test with: curl -X POST http://localhost:8000/ask \
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
-# TODO (B1): import LangChain / embedding / vector store dependencies
-# e.g. from langchain_community.document_loaders import TextLoader
-#      from langchain.text_splitter import RecursiveCharacterTextSplitter
-#      from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-#      from langchain_community.vectorstores import FAISS
+# B1: import LangChain / embedding / vector store dependencies
+from langchain_community.document_loaders import TextLoader, DirectoryLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain.prompts import ChatPromptTemplate
+
+load_dotenv()
 
 app = FastAPI(title="EDB Policy Q&A", version="1.0")
 
@@ -48,17 +52,37 @@ def build_vectorstore():
     5. Return the retriever
     """
     docs_dir = os.path.join(os.path.dirname(__file__), "docs")
-    # ... your code here ...
-    raise NotImplementedError("Complete build_vectorstore()")
+
+    if not os.path.exists(docs_dir):
+        raise FileNotFoundError(f"Documents directory not found: {docs_dir}")
+
+    # 1. Load all .txt files
+    loader = DirectoryLoader(docs_dir, glob="*.txt", loader_cls=TextLoader)
+    documents = loader.load()
+
+    # 2. Split into chunks
+    # I chose chunk_size=500 with overlap=50 to balance context preservation and precision.
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    chunks = text_splitter.split_documents(documents)
+
+    # 3. Generate embeddings
+    embeddings = OpenAIEmbeddings()
+
+    # 4. Store in FAISS
+    vectorstore = FAISS.from_documents(chunks, embeddings)
+
+    # 5. Return the retriever
+    top_k = int(os.getenv("TOP_K", 4))
+    return vectorstore.as_retriever(search_kwargs={"k": top_k})
 
 
 # Initialise at startup
 try:
     retriever = build_vectorstore()
     print("✓ Vector store ready")
-except NotImplementedError:
+except Exception as e:
     retriever = None
-    print("⚠  Vector store not yet implemented")
+    print(f"⚠  Vector store not initialised: {e}")
 
 
 # ── B2: /ask endpoint ──────────────────────────────────────────────────────────
@@ -81,8 +105,41 @@ async def ask(request: QuestionRequest):
     if retriever is None:
         raise HTTPException(status_code=503, detail="Vector store not initialised")
 
-    # ... your code here ...
-    raise NotImplementedError("Complete the /ask endpoint")
+    # 1. Retrieve the top-k most relevant chunks
+    docs = retriever.invoke(request.question)
+
+    # 2. Construct a prompt
+    context_text = ""
+    sources = []
+    for doc in docs:
+        filename = os.path.basename(doc.metadata.get("source", "Unknown"))
+        content_preview = doc.page_content[:100].replace("\n", " ") + "..."
+        source_str = f"{filename} — {content_preview}"
+        sources.append(source_str)
+        context_text += f"\n---\nSOURCE: {filename}\nCONTENT: {doc.page_content}\n"
+
+    prompt_template = ChatPromptTemplate.from_messages([
+        ("system", (
+            "You are an EDB policy expert. Answer the user's question using ONLY the provided context. "
+            "If the answer is not in the context, say 'I don't know'. "
+            "When answering, you must cite the filename of the source you are using. "
+            "\n\nContext:\n{context}"
+        )),
+        ("user", "{question}")
+    ])
+
+    # 3. Call the LLM
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    chain = prompt_template | llm
+
+    try:
+        response = chain.invoke({"context": context_text, "question": request.question})
+        answer = response.content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM call failed: {e}")
+
+    # 4. Return the answer and sources
+    return AnswerResponse(answer=answer, sources=sources)
 
 
 # ── Health check ───────────────────────────────────────────────────────────────
