@@ -20,4 +20,5 @@ def delete_all_heic_files(folder):
                 print(f"Failed to delete {filename}: {e}")
 
 # Example usage:
-delete_all_heic_files(input_folder)
+if __name__ == "__main__":
+    delete_all_heic_files(input_folder)
