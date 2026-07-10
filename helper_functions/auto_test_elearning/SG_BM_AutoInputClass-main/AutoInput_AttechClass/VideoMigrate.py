@@ -217,6 +217,9 @@ def down_class():
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         executor.map(_download_video_task, items_to_download)
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(_download_video_task, items_to_download)
+
 def get_and_down():
     '''
     Not Neccessary
