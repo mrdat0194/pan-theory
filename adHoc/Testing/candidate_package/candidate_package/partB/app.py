@@ -14,19 +14,11 @@ Test with: curl -X POST http://localhost:8000/ask \
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-# B1: LangChain / embedding / vector store dependencies
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_community.vectorstores import FAISS
-from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains import create_retrieval_chain
 
 app = FastAPI(title="EDB Policy Q&A", version="1.0")
 
@@ -47,27 +39,16 @@ class AnswerResponse(BaseModel):
 
 def build_vectorstore():
     """
+    TODO:
     1. Load all .txt files from the docs/ directory
-    2. Split into chunks (chunk_size=500, overlap=50)
-    3. Generate embeddings using OpenAIEmbeddings (text-embedding-3-small)
-    4. Store in a FAISS in-memory vector store
+    2. Split into chunks (choose your chunk_size and overlap — document your choice in README.md)
+    3. Generate embeddings using OpenAIEmbeddings or a local model
+    4. Store in a FAISS or Chroma in-memory vector store
     5. Return the retriever
     """
     docs_dir = os.path.join(os.path.dirname(__file__), "docs")
-
-    # Load documents
-    loader = DirectoryLoader(docs_dir, glob="*.txt", loader_cls=TextLoader)
-    documents = loader.load()
-
-    # Split into chunks
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-    chunks = text_splitter.split_documents(documents)
-
-    # Generate embeddings and store in FAISS
-    embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-    vectorstore = FAISS.from_documents(chunks, embeddings)
-
-    return vectorstore.as_retriever(search_kwargs={"k": int(os.getenv("TOP_K", 4))})
+    # ... your code here ...
+    raise NotImplementedError("Complete build_vectorstore()")
 
 
 # Initialise at startup
@@ -84,52 +65,23 @@ except NotImplementedError:
 @app.post("/ask", response_model=AnswerResponse)
 async def ask(request: QuestionRequest):
     """
-    1. Retrieve relevant chunks using the retriever
-    2. Construct a prompt with context and instructions
-    3. Call the LLM (gpt-4o)
-    4. Return answer and source references
+    TODO:
+    1. Retrieve the top-k most relevant chunks using the retriever
+    2. Construct a prompt that:
+       - Provides the retrieved chunks as context
+       - Instructs the model to cite sources (filename + chunk preview)
+       - Instructs the model to say "I don't know" for out-of-scope questions
+    3. Call the LLM (ChatOpenAI or equivalent)
+    4. Return the answer and a list of source references
+
+    The response MUST follow this format:
+      {"answer": "...", "sources": ["doc1.txt — chunk preview...", ...]}
     """
     if retriever is None:
         raise HTTPException(status_code=503, detail="Vector store not initialised")
 
-    # Define LLM
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
-
-    # Define prompt template
-    system_prompt = (
-        "You are an expert assistant for EDB policy questions. "
-        "Use the following pieces of retrieved context to answer the question. "
-        "For every claim you make, you must cite the source document filename. "
-        "If the answer is not in the provided context, say 'I don't know'. "
-        "Keep the answer concise and professional.\n\n"
-        "Context:\n{context}"
-    )
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            ("human", "{input}"),
-        ]
-    )
-
-    # Create retrieval chain
-    question_answer_chain = create_stuff_documents_chain(llm, prompt)
-    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-
-    # Invoke chain
-    response = rag_chain.invoke({"input": request.question})
-
-    # Prepare sources
-    sources = []
-    for doc in response["context"]:
-        filename = os.path.basename(doc.metadata.get("source", "unknown"))
-        preview = doc.page_content[:100].replace("\n", " ")
-        sources.append(f"{filename} — {preview}...")
-
-    return AnswerResponse(
-        answer=response["answer"],
-        sources=list(set(sources))  # Unique sources
-    )
+    # ... your code here ...
+    raise NotImplementedError("Complete the /ask endpoint")
 
 
 # ── Health check ───────────────────────────────────────────────────────────────
