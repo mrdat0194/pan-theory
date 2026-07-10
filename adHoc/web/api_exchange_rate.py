@@ -36,4 +36,4 @@ if __name__ == '__main__':
         total_rate += rate
 
     average_rate = total_rate / len(dates)
-    print(average_rate) 
+    print(average_rate)
