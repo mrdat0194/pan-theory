@@ -1,39 +1,32 @@
-import unittest
-from PIL import Image
-from my_functions.collage.collage import getAvgColor
+import pytest
+from my_functions.collage.collage import matchQuality
 
-class TestCollage(unittest.TestCase):
+def test_match_quality_success():
+    # match = (10, 20, 30), quantized (8, 16, 24)
+    # target = (10, 20, 30)
+    # dR = 10 - 8 = 2
+    # dG = 20 - 16 = 4
+    # dB = 30 - 24 = 6
+    # return 2 + 4 + 6 = 12
+    assert matchQuality((10, 20, 30), (10, 20, 30)) == 12
 
-    def test_getAvgColor_solid_color(self):
-        # Create a 10x10 solid red image
-        im = Image.new("RGB", (10, 10), (255, 0, 0))
-        avg_color = getAvgColor(im)
-        self.assertEqual(avg_color, (255.0, 0.0, 0.0))
+def test_match_quality_invalid_match_type():
+    with pytest.raises(TypeError):
+        matchQuality(None, (255, 255, 255))
 
-    def test_getAvgColor_1x1(self):
-        # Create a 1x1 blue image
-        im = Image.new("RGB", (1, 1), (0, 0, 255))
-        avg_color = getAvgColor(im)
-        self.assertEqual(avg_color, (0.0, 0.0, 255.0))
+def test_match_quality_invalid_target_type():
+    with pytest.raises(TypeError):
+        matchQuality((255, 255, 255), None)
 
-    def test_getAvgColor_mixed_pixels(self):
-        # Create a 2x1 image with two different pixels
-        im = Image.new("RGB", (2, 1))
-        im.putpixel((0, 0), (100, 50, 200))
-        im.putpixel((1, 0), (200, 150, 100))
-        # Average: ((100+200)/2, (50+150)/2, (200+100)/2) = (150, 100, 150)
-        avg_color = getAvgColor(im)
-        self.assertEqual(avg_color, (150.0, 100.0, 150.0))
+def test_match_quality_short_match():
+    with pytest.raises(IndexError):
+        matchQuality((255, 255), (255, 255, 255))
 
-    def test_getAvgColor_all_black(self):
-        im = Image.new("RGB", (5, 5), (0, 0, 0))
-        avg_color = getAvgColor(im)
-        self.assertEqual(avg_color, (0.0, 0.0, 0.0))
+def test_match_quality_short_target():
+    with pytest.raises(IndexError):
+        matchQuality((255, 255, 255), (255, 255))
 
-    def test_getAvgColor_all_white(self):
-        im = Image.new("RGB", (5, 5), (255, 255, 255))
-        avg_color = getAvgColor(im)
-        self.assertEqual(avg_color, (255.0, 255.0, 255.0))
-
-if __name__ == '__main__':
-    unittest.main()
+def test_match_quality_non_numeric_match():
+    # quantize will fail on int('a')
+    with pytest.raises(ValueError):
+        matchQuality(('a', 'b', 'c'), (255, 255, 255))
