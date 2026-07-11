@@ -183,3 +183,29 @@ statsmodels  >= 0.14.0
 | `Bayesian/` (root) | Theory reference — MCMC / Bayesian module planned for future Stage 5 |
 
 The legacy folders remain **unchanged** — OmniStats is a new, unified layer on top.
+
+---
+
+## Advanced Experimentation Roadmap & Bayesian Integration
+
+To move the current experimentation framework (`modules/ab_testing.py`) from basic statistical tests (Welch's t-test and two-proportion z-tests) toward advanced industry standards (Statsig / Netflix / Stats-tech), the local files in the `Bayesian/` directory serve as a direct integration roadmap:
+
+### 1. Bayesian Model Averaging (BMA)
+*   **Asset:** [BMA.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/BMA.ipynb)
+*   **Advanced Tactic:** Subgroup Analysis & Heterogeneous Treatment Effects (HTE) under uncertainty.
+*   **Integration:** Instead of running isolated sub-group tests (which inflates the false-positive rate), integrate the BMA class to model interaction effects (e.g., `Treatment * Demographic`). BMA averages over all plausible covariate structures to output **Posterior Inclusion Probabilities (PIPs)** representing the exact probability that a subgroup response is a true treatment effect.
+
+### 2. MCMC & Importance Sampling
+*   **Assets:** [mcmc_bayesian.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/mcmc_bayesian.py) and [importance_sampling_bayesian.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/importance_sampling_bayesian.py)
+*   **Advanced Tactic:** Sequential Bayesian A/B Testing (continuous monitoring without peaking inflation).
+*   **Integration:** Traditional A/B testing suffers from the "peaking problem" (inflated error rates when checking p-values early). Integrate the Importance Sampling and Metropolis-Hastings MCMC engines to numerically calculate the posterior probability $P(\text{Treatment} > \text{Control} \mid \text{Data})$ dynamically as data streams in. This allows tests to be safely terminated early once a posterior threshold (e.g., 95% probability of improvement) is reached.
+
+### 3. Non-Linear Variance Reduction (CUPED)
+*   **Asset:** [mono_casual.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/mono_casual.ipynb)
+*   **Advanced Tactic:** Covariate-Adjusted Experimentation (variance reduction via machine learning).
+*   **Integration:** CUPED reduces variance by regressing out pre-experiment covariates. For complex, non-linear but monotonic relationships (e.g., historical user engagement), integrate the monotonic constraints (e.g. `CatBoostRegressor` or `DecisionTreeRegressor` with `monotone_constraints`) from `mono_casual.ipynb` to predict and adjust post-experiment metrics. This significantly lowers required sample sizes and speeds up test convergence.
+
+### 4. Bayesian Counterfactual Time-Series
+*   **Asset:** [prophet.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/prophet.ipynb)
+*   **Advanced Tactic:** Switchback Experiments & Geo-Testing.
+*   **Integration:** When network effects prevent 50/50 allocation (e.g., matching algorithms or platform pricing), users are exposed to time-blocked treatments (switchbacks). Integrate `Prophet` to model the historical time-series baseline. This generates the counterfactual control prediction for treatment windows, allowing evaluation of treatment lift where concurrent controls are impossible.
