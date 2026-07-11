@@ -30,6 +30,26 @@ The unified unit test suite. It includes:
 *   Tests verifying algorithm correctness.
 *   The `TestDocstringExamples` test class, containing test cases derived from example parameters described in python docstrings (`"""`).
 
+### 3. Other Algorithmic & Educational Directories
+While `story_teller.py` serves as the core library for coding puzzles, this directory contains other specialized folders serving different educational purposes:
+
+*   **[CodingGame](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/CodingGame)**: Practical application of search algorithms, pathfinding (like BFS/DFS in `labyrinth.py` and dynamic tracking in `Skynet.py`), and heuristic optimization (like simulated annealing in `sodoku_anneal.py`) under real-time game constraints.
+*   **[Lesson](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Lesson)**: Focuses on mathematical and probabilistic modeling. It contains notebooks and scripts exploring stochastic models (Markov/Bernoulli processes), linear algebra projections, Stirling numbers of the second kind, and random matrix theory.
+*   **[problem](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/problem)**: A structured playground for design exercises, including markdown sheets detailing the problem statement, brute force baselines, optimal solutions, and automated test case generators.
+*   **[Data_Structures_Algorithms_In_Python-master](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Data_Structures_Algorithms_In_Python-master)**: Formal, textbook implementations of fundamental data structures in Python (e.g., standard Binary Search Tree). It provides academic reference designs using explicit object relationships (such as parent pointers and deletion nodes).
+
+---
+
+## Design Guidelines & Standards
+
+### Standard Library First
+For core algorithm implementations in `story_teller`, we prioritize Python's built-in types and standard library modules over custom data structure classes:
+*   **Stacks**: Use Python's built-in `list` (with `append()` and `pop()`), which is highly optimized and runs in $O(1)$ amortized time.
+*   **Queues / Deques**: Use `collections.deque` (with `append()` and `popleft()`) for fast $O(1)$ double-ended queue operations, or `queue.Queue` if thread-safety is required.
+*   **Priority Queues / Heaps**: Use the built-in `heapq` module or `queue.PriorityQueue`.
+
+Custom classes (such as `Stack` and `Node` from [common.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/datastructure/common.py)) and their corresponding showcase wrappers are intended purely for educational lessons and compatibility with the Master repository, and should not be used in performance-sensitive core algorithms.
+
 ---
 
 ## How to Test

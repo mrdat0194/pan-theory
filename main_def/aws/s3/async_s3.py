@@ -9,6 +9,11 @@ from app.biz.aws.s3.aws_s3 import existing_on_s3
 # https://aiobotocore.readthedocs.io
 
 
+def _write_file(path: str, data: bytes):
+    with open(path, "wb") as f:
+        f.write(data)
+
+
 @auto_s3_async_client
 async def upload_to_s3_async(client, s3_key: str, file_path: str, bucket: str = AWSConfig.S3_DEFAULT_BUCKET) -> bool:
     try:
@@ -28,8 +33,8 @@ async def download_from_s3_async(
     try:
         response = await client.get_object(Bucket=bucket, Key=s3_key)
         async with response["Body"] as stream:
-            with open(downloaded_file_path, "wb") as f:
-                f.write(await stream.read())
+            data = await stream.read()
+            await asyncio.to_thread(_write_file, downloaded_file_path, data)
         return True
 
     except Exception as ex:

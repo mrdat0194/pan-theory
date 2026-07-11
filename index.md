@@ -81,6 +81,9 @@ within the project
     - Data_Structures : borrowing and improving.
 
 - `MLModel` &mdash; Components
+    - AIModel: Deep Learning, Causal ML, and Joint-Embedding Predictive Architectures (JEPA)
+      - model: vae, bnn, jepa_backbone, optimal_control, etc.
+      - run: execution scripts (See [MLModel/AIModel/run/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/run/README.md) for Audio JEPA benchmarks, Anomaly Detection, and Causal Inference ML)
     - data_pipeline: helper function nn and ml
     - MLData: dataset
     - model: 
@@ -90,7 +93,7 @@ within the project
       - imbalance
     - model_nn_save: weight
     - openCV: image processing
-    - run: factory
+    - run: factory (See [MLModel/run/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/run/README.md) for detailed benchmarks including class imbalance mitigation sweeps, where SMOTEENN improved Random Forest F1 from 0.23 to 0.71)
 
 
 ## License

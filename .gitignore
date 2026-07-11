@@ -3,6 +3,7 @@
 *.json
 *.txt
 !ignored_files_log.txt
+!**/requirements.txt
 *.xlsx
 *.parquet
 *.bin
@@ -24,6 +25,7 @@
 *.png
 *.jpg
 *.json 
+*.wav
 
 # Python
 __pycache__/
@@ -41,5 +43,15 @@ espnet_artifact/
 .idea/
 .vscode/
 
-VAE/ivae_dsprites_latest.pth
 VAE/*.pth
+
+# Weights & Biases (wandb) logs and local run folders
+**/wandb/
+wandb_run_id.txt
+MLModel/AIModel/run/deep_did_model/
+MLModel/AIModel/run/deep_iv_model/
+MLModel/AIModel/run/deep_rdd_model/
+*.log
+*.xml
+*.mp4
+*.avi

@@ -1,6 +1,6 @@
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import classification_report
-from sklearn.ensemble import AdaBoostClassifier, GradientBoostingClassifier, BaggingClassifier, VotingClassifier
+from sklearn.ensemble import AdaBoostClassifier, VotingClassifier
 
 # from tensorflow.python.util import deprecation
 from sklearn.linear_model import LogisticRegression
@@ -15,8 +15,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 
-def model_ada(X_train, X_test, Y_train, Y_test):
-    logReg = LogisticRegression(max_iter=100, tol=1e-4, C=1e5, penalty='l2', solver='liblinear')
+def model_ada(X_train, X_test, Y_train, Y_test, class_weight=None):
+    logReg = LogisticRegression(max_iter=100, tol=1e-4, C=1e5, penalty='l2', solver='liblinear', class_weight=class_weight)
     ada = AdaBoostClassifier(estimator=logReg, n_estimators=100, learning_rate=1)
     vote = VotingClassifier(estimators=[('lr', logReg), ('rf', ada)], voting='soft')
     ndc = vote

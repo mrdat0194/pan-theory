@@ -36,4 +36,10 @@ Read index.md instead, this is just teaching note.
 
 Note: Do not duplicate story or lesson. Created.
 
+---
+
+### Class Imbalance Mitigation Notes
+* **Imbalance Sweep Improvements**: Applying SMOTEENN to Random Forest increased the F1-Score from **0.2326** to **0.7119** (a **+206%** improvement). Detailed sweep results can be found in [MLModel/run/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/run/README.md).
+
+
 

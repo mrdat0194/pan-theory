@@ -11,6 +11,7 @@ import operator  # noqa: E402
 import random  # noqa: E402
 import queue  # noqa: E402
 from queue import Queue  # noqa: E402
+from datastructure.common import Node, Stack  # noqa: E402
 
 from my_functions.timer import print_param, timer  # noqa: E402
 
@@ -1121,260 +1122,265 @@ class greedy:
 
 
 class DisjointSet:
-# Kunno And Tree
-# https://math.stackexchange.com/questions/838792/counting-triplets-with-red-edges-in-each-pair?newreg=60eee35f0b3844de852bda39f6dfec88
-# https://www.hackerrank.com/contests/w5/challenges/kundu-and-tree
-    def __init__(self, N):
-        self.parent = [i for i in range(N)]
-        self.total = [1] * N
+    """
+    Unified Disjoint Set Union (DSU) with:
+    - Iterative path compression (safe from RecursionError)
+    - Union by size  — union():         balances by component size, O(α(N))
+    - Union by rank  — union_by_rank(): balances by tree height,   O(α(N))
+
+    When to use which:
+    - union()         — when you need component sizes (e.g., path counting)
+    - union_by_rank() — when you only care about connectivity, not sizes
+    Both achieve the same amortized complexity with path compression.
+
+    Supports two modes:
+    - Integer mode: DisjointSet(N) — nodes are 0..N-1, uses flat lists
+    - Dict mode:    DisjointSet()  — nodes are any hashable, uses dicts
+
+    Used by:
+    - Kundu and Tree (counting red-edge triplets)
+    - Super Maximum Cost Query (counting paths by weight range)
+    - SynonymQueries (transitive word equivalence)
+    """
+
+    def __init__(self, n=None):
+        if n is not None:
+            # Integer mode: flat lists for O(1) access
+            self.parent = list(range(n))
+            self.size = [1] * n
+            self.rank = [0] * n
+            self._dict_mode = False
+        else:
+            # Dict mode: supports arbitrary hashable keys
+            self.parent = {}
+            self.size = {}
+            self.rank = {}
+            self._dict_mode = True
+
+    def make_set(self, x):
+        """Register a new element (dict mode only, no-op if exists)."""
+        if self._dict_mode and x not in self.parent:
+            self.parent[x] = x
+            self.size[x] = 1
+            self.rank[x] = 0
+
+    def find(self, x):
+        """Iterative path compression to find root representative."""
+        if self._dict_mode and x not in self.parent:
+            self.make_set(x)
+        path = []
+        i = x
+        while self.parent[i] != i:
+            path.append(i)
+            i = self.parent[i]
+        for node in path:
+            self.parent[node] = i
+        return i
 
     def union(self, a, b):
-        a_parent = self.find(a)
-        b_parent = self.find(b)
-        if a_parent != b_parent:
-            self.parent[b_parent] = a_parent
-            self.total[a_parent] += self.total[b_parent]
+        """
+        Union by size. Returns (size_a, size_b) if merged, None if already same set.
+        Callers can use the returned sizes for problem-specific logic
+        (e.g., current_ans += size_a * size_b for path counting).
+        """
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return None
+        sa, sb = self.size[ra], self.size[rb]
+        # Merge smaller tree under larger tree
+        if sa < sb:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        self.size[ra] += self.size[rb]
+        return (sa, sb)
 
-    def find(self, a):
-        if self.parent[a] != a:
-            self.parent[a] = self.find(self.parent[a])
-        return self.parent[a]
+    def union_by_rank(self, a, b):
+        """
+        Union by rank (tree height). Returns True if merged, False if already same set.
+        Use when you only need connectivity, not component sizes.
+        """
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        # Attach shorter tree under taller tree
+        if self.rank[ra] > self.rank[rb]:
+            self.parent[rb] = ra
+            self.size[ra] += self.size[rb]
+        elif self.rank[ra] < self.rank[rb]:
+            self.parent[ra] = rb
+            self.size[rb] += self.size[ra]
+        else:
+            self.parent[rb] = ra
+            self.size[ra] += self.size[rb]
+            self.rank[ra] += 1
+        return True
 
-    def get_total(self, a):
-        return self.total[self.find(a)]
+    def get_size(self, a):
+        """Return the size of the component containing element a."""
+        return self.size[self.find(a)]
 
-if __name__ == '__main__':
-    N = int(input())
-    ds = DisjointSet(N)
-    for i in range(N - 1):
-        x, y, color = input().split()
-        if color == 'b':
-            ds.union(int(x) - 1, int(y) - 1)
-    set_size = {ds.find(i): ds.get_total(i) for i in range(N)}
-    complement = sum(x * (x - 1) * (N - x) // 2 +              #1
-                     x * (x - 1) * (x - 2) // 6                #2
-                     for x in set_size.values())
-    print((N * (N - 1) * (N - 2) // 6 - complement) % (10 ** 9 + 7))
+    def connected(self, a, b):
+        """Check if a and b are in the same component."""
+        return self.find(a) == self.find(b)
+
+# Kundu And Tree
+# https://math.stackexchange.com/questions/838792/counting-triplets-with-red-edges-in-each-pair?newreg=60eee35f0b3844de852bda39f6dfec88
+# https://www.hackerrank.com/contests/w5/challenges/kundu-and-tree
+class KunduAndTree:
+    """Solve Kundu and Tree problem (counting triplets with red edges)."""
+
+    @staticmethod
+    def solve(n, edges):
+        """
+        n: int
+        edges: list of tuples (u, v, color)
+        """
+        ds = DisjointSet(n)
+        for x, y, color in edges:
+            if color == 'b':
+                ds.union(int(x) - 1, int(y) - 1)
+        set_size = {ds.find(i): ds.get_size(i) for i in range(n)}
+        complement = sum(x * (x - 1) * (n - x) // 2 +              #1
+                         x * (x - 1) * (x - 2) // 6                #2
+                         for x in set_size.values())
+        return (n * (n - 1) * (n - 2) // 6 - complement) % (10 ** 9 + 7)
+
 
 
 # super maximum cost query
 # Complete the solve function below.
 
-from bisect import bisect_right  # noqa: E402
-parents = {}
-rep = {}
-def make_set(n):
-    global parents,rep
-    parents=dict(zip(range(1,n+1),range(1,n+1)))
-    rep=dict(zip(range(1,n+1),({i} for i in range(1,n+1))))
+from bisect import bisect_right, bisect_left  # noqa: E402
 
-def add_edge(x, y,paths,w):
-    xroot = find(x)
-    yroot = find(y)
-    paths[w]+=len(rep[xroot])*len(rep[yroot])
-    if xroot == yroot:
-        return
-    else:
-        if len(rep[yroot])<len(rep[xroot]):
-            parents[yroot] = xroot
-            rep[xroot].update(rep[yroot])
-            del rep[yroot]
-        else:
-            parents[xroot] = yroot
-            rep[yroot].update(rep[xroot])
-            del rep[xroot]
+class SuperMaximumCostQuery:
+    """Solve Super Maximum Cost Query problem."""
 
-def find(x):
-    if parents[x] != x:
-        parent = find(parents[x])
-        parents[x] = parent
-    return parents[x]
+    @staticmethod
+    @print_param("output_graph_supersum.txt", BASE_DIR)
+    def solve(tree, queries):
+        """
+        Solve super maximum cost query.
+        
+        :param tree: List of [u, v, w] edges
+        :param queries: List of [L, R] queries
+        :return: generator yielding results
+        """
+        tree = sorted(tree, key=lambda x: x[2])
+        weights_raw = [x[2] for x in tree]
+        if not weights_raw:
+            for _ in queries:
+                yield 0
+            return
+            
+        # Uses DisjointSet in integer mode. Nodes are 1-indexed, so allocate n+1.
+        dsu = DisjointSet(len(tree) + 2)
+        anses = []
+        current_ans = 0
 
-@print_param("output_graph_supersum.txt", BASE_DIR)
-def solve(tree, queries):
-    """
-        5 5
-        1 2 3
-        1 4 2
-        2 5 6
-        3 4 1
-        1 1
-        1 2
-        2 3
-        2 5
-        1 6
-
-    nq = input().split()
-
-    n = int(nq[0])
-
-    q = int(nq[1])
-
-    tree = []
-
-    for _ in range(n-1):
-        tree.append(list(map(int, input().rstrip().split())))
-
-    queries = []
-
-    for _ in range(q):
-        queries.append(list(map(int, input().rstrip().split())))
-
-    result = solve(tree, queries)
+        for u, v, w in tree:
+            result = dsu.union(u, v)
+            if result:
+                # New paths formed = size of component U * size of component V.
+                current_ans += result[0] * result[1]
+            anses.append(current_ans)
+            
+        for qleft, qright in queries:
+            if qright < weights_raw[0]:
+                yield 0
+            else:
+                right = bisect_right(weights_raw, qright) - 1
+                if qleft <= weights_raw[0]:
+                    yield anses[right]
+                else:
+                    left = bisect_left(weights_raw, qleft) - 1
+                    yield anses[right] - anses[left]
 
 
-#
-# #Another solution to super
-#
-# # Complete the solve function below.
-#
-# #!/bin/python3
-#
-#
-# class disjoint_set:
-#     class Node:
-#         def __init__(self, data = 0):
-#             self.data = data
-#             self.parent = self
-#             self.rank = 0
-#             self.size = 1
-#
-#     def __init__(self):
-#         self.items = dict()
-#         self.ans = 0
-#
-#     def make_set(self, data):
-#         if not data in self.items:
-#             self.items[data] = self.Node(data)
-#         return self.items
-#
-#     def find_set(self, data):
-#         if data in self.items:
-#             node = self.items[data]
-#         else:
-#             return False
-#
-#         if node.parent == node:
-#             return node
-#         node.parent = self.find_set(node.parent.data)
-#
-#         return node.parent
-#
-#     def union(self, rep1, rep2):
-#         node1 = self.find_set(rep1)
-#         node2 = self.find_set(rep2)
-#
-#         #print("union: node1 = {} node2 = {}".format(node1.data, node2.data))
-#
-#         if node1 and node2 and node1 != node2:
-#             if node1.rank >= node2.rank:
-#                 if node1.rank == node2.rank:
-#                     node1.rank += 1
-#                 self.ans -= (node1.size*(node1.size - 1))//2 + (node2.size*(node2.size - 1))//2
-#                 node2.parent = node1
-#                 node1.size += node2.size
-#                 self.ans += (node1.size*(node1.size - 1))//2
-#             else:
-#                 self.ans -= (node1.size*(node1.size - 1))//2 + (node2.size*(node2.size - 1))//2
-#                 node1.parent = node2
-#                 node2.size += node1.size
-#                 self.ans += (node2.size*(node2.size - 1))//2
-#         return True
-#
-#     def get_size(self, rep):
-#         return self.find_set(rep).size
-#
-#     def get_ans(self):
-#         return self.ans
-#
-# # Complete the solve function below.
-# def solve(tree, queries):
-#     dset = disjoint_set()
-#     tree = sorted(tree, key=lambda x: x[2])
-#     weights = list(map(lambda x: x[2], tree))
-#     anses = []
-#
-#     for el in tree:
-#         dset.make_set(el[0])
-#         dset.make_set(el[1])
-#         dset.union(el[0], el[1])
-#
-#         anses.append(dset.get_ans())
-#         print("adding {} ans = {}".format(el, dset.get_ans()))
-#
-#     print("weights: {} anses: {}".format(weights, anses))
-#     # do queries
-#     output = []
-#     for q in queries:
-#         qleft, qright = q[0], q[1]
-#
-#         if qright < weights[0]:
-#             output.append(0)
-#         else:
-#             right = bisect_right(weights, qright) - 1
-#             print("query: {} RIGHT weights[{}] = {}".format(q, right, weights[right]))
-#
-#             if qleft <= weights[0]:
-#                 output.append(anses[right])
-#             else:
-#                 left = bisect_left(weights, qleft) - 1
-#                 print("query: {} LEFT weights[{}] = {}".format(q, left, weights[left]))
-#                 output.append(anses[right] - anses[left])
-#
-#
-#     return output
-# #
-# # if __name__ == '__main__':
-# #     os.environ['HOME'] = '/Users/petern/Desktop/Python/DataStructure/graph_supersum.txt'
-# #
-# #     fptr = open(os.environ['HOME'], 'w')
-# #
-# #     nq = input().split()
-# #
-# #     n = int(nq[0])
-# #
-# #     q = int(nq[1])
-# #
-# #     tree = []
-# #
-# #     for _ in range(n-1):
-# #         tree.append(list(map(int, input().rstrip().split())))
-# #
-# #     queries = []
-# #
-# #     for _ in range(q):
-# #         queries.append(list(map(int, input().rstrip().split())))
-# #
-# #     result = solve(tree, queries)
-# #
-# #     fptr.write(str(result))
-# #
-# #     fptr.close()
-# #
-# #     myfile = open(os.environ['HOME'],'r')
-# #
-# #     print((myfile.readlines()))
-#
-    :param tree:
-    :param queries:
-    :return:
-    """
-    n = len(tree)+1
-    tree.sort(key=lambda e:e[2])
-    paths = {0:0}
-    weights = [0]
-    prev = 0
-    make_set(len(tree)+1)
-    for a,b,w in tree:
-        if w != prev:
-            weights.append(w)
-            paths[w] = paths[prev]
-        add_edge(a,b,paths,w)
-        prev=w
-    for l,r in queries:
-        wr = weights[bisect_right(weights,r)-1]
-        wl = weights[bisect_right(weights,l-1)-1]
-        yield paths[wr]-paths[wl]
+solve = SuperMaximumCostQuery.solve
+
+
+class SynonymQueries:
+    """Sentence equivalence via synonym lookup."""
+
+    def solve_naive(synonym_words, queries):
+        """
+        (naive) defaultdict — no transitive synonyms.
+        Example: SynonymQueries.solve_naive([("big","large")],[("He is big.","He is large.")]) -> [True]
+        """
+        from collections import defaultdict
+        syn = defaultdict(set)
+        for w1, w2 in synonym_words:
+            syn[w1].add(w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(
+                w1 == w2 or (w1 in syn and w2 in syn[w1]) or (w2 in syn and w1 in syn[w2])
+                for w1, w2 in zip(q1, q2)
+            ))
+        return out
+
+    def solve_disjoint_set(synonym_words, queries):
+        """
+        (best) DisjointSet path compression — handles transitivity.
+        Example: SynonymQueries.solve_disjoint_set([("big","large"),("large","huge")],[("big","huge")]) -> [True]
+        """
+        ds = DisjointSet()  # dict mode for arbitrary string keys
+        for w1, w2 in synonym_words:
+            ds.union_by_rank(w1, w2)
+        out = []
+        for q1, q2 in queries:
+            q1, q2 = q1.split(), q2.split()
+            if len(q1) != len(q2):
+                out.append(False); continue
+            out.append(all(w1 == w2 or ds.connected(w1, w2) for w1, w2 in zip(q1, q2)))
+        return out
+
+
+class GraphProblems:
+    """Graph connectivity and scheduling."""
+
+    def components_in_graph(gb):
+        """
+        (min, max) component sizes in edge list.
+        Example: GraphProblems.components_in_graph([[1,2],[3,4],[1,4]]) -> (2, 4)
+        """
+        ds = DisjointSet(len(gb) * 2 + 1)
+        active_nodes = set()
+        for a, b in gb:
+            ds.union(a, b)
+            active_nodes.add(a)
+            active_nodes.add(b)
+        roots = {ds.find(node) for node in active_nodes}
+        counts = [ds.get_size(r) for r in roots]
+        valid_counts = [c for c in counts if c > 1]
+        if not valid_counts:
+            return 0, 0
+        return min(valid_counts), max(valid_counts)
+
+    def minimum_average(cust):
+        """
+        Min average wait time (heap scheduling).
+        Example: GraphProblems.minimum_average([[0,3],[1,9],[2,5]]) -> 5
+        """
+        from heapq import heapify, heappop, heappush
+        cust = list(cust)
+        n = len(cust)
+        if not n:
+            return 0
+        heapify(cust)
+        tl, done, orders = 0, 0, []
+        while orders or cust:
+            while ((not cust) or done < cust[0][0]) and orders:
+                dw, dt = heappop(orders)
+                done = dw + max(done, dt)
+                tl += done - dt
+            if cust:
+                heappush(orders, heappop(cust)[::-1])
+        return tl // n
+
 
 # An 8-puzzle is a game played on a 3 x 3 board of tiles, with the ninth tile missing.
 # The remaining tiles are labeled 1 through 8 but shuffled randomly.
@@ -3005,85 +3011,6 @@ class ArrayUtils:
         for k, v in d.items():
             out.extend([k, v])
         return out
-
-
-class GraphProblems:
-    """Graph connectivity and scheduling."""
-
-    def _find(parents, i):
-        if parents[i] != i:
-            parents[i] = GraphProblems._find(parents, parents[i])
-        return parents[i]
-
-    def components_in_graph(gb):
-        """
-        (min, max) component sizes in edge list.
-        Example: GraphProblems.components_in_graph([[1,2],[3,4],[1,4]]) -> (2, 4)
-        """
-        parents = list(range(len(gb) * 2 + 1))
-        for a, b in gb:
-            p1, p2 = GraphProblems._find(parents, a), GraphProblems._find(parents, b)
-            parents[p1] = parents[p2] = parents[a] = parents[b] = min(p1, p2)
-        from collections import Counter
-        cnt = Counter(GraphProblems._find(parents, p) for p in parents)
-        counts = [c for c in cnt.values() if c > 1]
-        return min(counts), max(counts)
-
-    def minimum_average(cust):
-        """
-        Min average wait time (heap scheduling).
-        Example: GraphProblems.minimum_average([[0,3],[1,9],[2,5]]) -> 5
-        """
-        from heapq import heapify, heappop, heappush
-        cust = list(cust)
-        n = len(cust)
-        if not n:
-            return 0
-        heapify(cust)
-        tl, done, orders = 0, 0, []
-        while orders or cust:
-            while ((not cust) or done < cust[0][0]) and orders:
-                dw, dt = heappop(orders)
-                done = dw + max(done, dt)
-                tl += done - dt
-            if cust:
-                heappush(orders, heappop(cust)[::-1])
-        return tl // n
-
-
-class UnionFind:
-    """Disjoint Set Forest with rank and path compression."""
-
-    class UFNode:
-        def __init__(self, data):
-            self.data = data
-            self.parent = self
-            self.rank = 0
-            self.size = 1
-
-    def make_set(data):
-        """Example: node = UnionFind.make_set(1)"""
-        return UnionFind.UFNode(data)
-
-    def find(node):
-        """Find with path compression."""
-        if node != node.parent:
-            node.parent = UnionFind.find(node.parent)
-        return node.parent
-
-    def union(node_a, node_b):
-        """Union by rank. Example: UnionFind.union(a, b)"""
-        ra, rb = UnionFind.find(node_a), UnionFind.find(node_b)
-        if ra == rb:
-            return
-        if ra.rank > rb.rank:
-            rb.parent = ra; ra.size += rb.size
-        else:
-            ra.parent = rb; rb.size += ra.size
-            if ra.rank == rb.rank:
-                rb.rank += 1
-
-
 class BSTShowcase:
     """BST construction, validation, and largest-BST-subtree problems."""
 
@@ -3224,55 +3151,610 @@ class CameraCoverSolution:
         return self.ans + 1 if dfs(self) > 2 else self.ans
 
 
-class SynonymQueries:
-    """Sentence equivalence via synonym lookup."""
+class BSTShowcase_2:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2020 AppMillers. All rights reserved.
 
-    def solve_naive(synonym_words, queries):
-        """
-        (naive) defaultdict — no transitive synonyms.
-        Example: SynonymQueries.solve_naive([("big","large")],[("He is big.","He is large.")]) -> [True]
-        """
-        from collections import defaultdict
-        syn = defaultdict(set)
-        for w1, w2 in synonym_words:
-            syn[w1].add(w2)
-        out = []
-        for q1, q2 in queries:
-            q1, q2 = q1.split(), q2.split()
-            if len(q1) != len(q2):
-                out.append(False); continue
-            out.append(all(
-                w1 == w2 or (w1 in syn and w2 in syn[w1]) or (w2 in syn and w1 in syn[w2])
-                for w1, w2 in zip(q1, q2)
-            ))
-        return out
+    # Adapted import
 
-    def solve_disjoint_set(synonym_words, queries):
-        """
-        (best) DisjointSet path compression — handles transitivity.
-        Example: SynonymQueries.solve_disjoint_set([("big","large"),("large","huge")],[("big","huge")]) -> [True]
-        """
-        class _DS:
-            def __init__(self): self.p = {}
-            def root(self, w):
-                if w not in self.p: self.p[w] = w
-                path = []
-                while self.p[w] != w: path.append(w); w = self.p[w]
-                for x in path: self.p[x] = w
-                return w
-            def add(self, a, b):
-                ra, rb = self.root(a), self.root(b)
-                if ra > rb: ra, rb = rb, ra
-                self.p[rb] = ra
-            def same(self, a, b): return self.root(a) == self.root(b)
+    class BSTNode:
+        def __init__(self, data):
+            self.data = data
+            self.leftChild = None
+            self.rightChild = None
 
-        ds = _DS()
-        for w1, w2 in synonym_words:
-            ds.add(w1, w2)
-        out = []
-        for q1, q2 in queries:
-            q1, q2 = q1.split(), q2.split()
-            if len(q1) != len(q2):
-                out.append(False); continue
-            out.append(all(w1 == w2 or ds.same(w1, w2) for w1, w2 in zip(q1, q2)))
-        return out
+    def insertNode(rootNode, nodeValue):
+        if rootNode.data == None:
+            rootNode.data = nodeValue
+        elif nodeValue <= rootNode.data:
+            if rootNode.leftChild is None:
+                rootNode.leftChild = BSTNode(nodeValue)
+            else:
+                insertNode(rootNode.leftChild, nodeValue)
+        else:
+            if rootNode.rightChild is None:
+                rootNode.rightChild = BSTNode(nodeValue)
+            else:
+                insertNode(rootNode.rightChild, nodeValue)
+        return "The node has been successfully inserted"
+
+    def preOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        print(rootNode.data)
+        preOrderTraversal(rootNode.leftChild)
+        preOrderTraversal(rootNode.rightChild)
+
+    def inOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        inOrderTraversal(rootNode.leftChild)
+        print(rootNode.data)
+        inOrderTraversal(rootNode.rightChild)
+
+    def postOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        postOrderTraversal(rootNode.leftChild)
+        postOrderTraversal(rootNode.rightChild)
+        print(rootNode.data)
+
+    def levelOrderTraversal(rootNode):
+        if not rootNode:
+            return
+        else:
+            customQueue = QueueLinkedListShowcase.Queue()
+            customQueue.enqueue(rootNode)
+            while not(customQueue.isEmpty()):
+                root = customQueue.dequeue()
+                print(root.value.data)
+                if root.value.leftChild is not None:
+                    customQueue.enqueue(root.value.leftChild)
+                if root.value.rightChild is not None:
+                    customQueue.enqueue(root.value.rightChild)
+
+
+    def searchNode(rootNode, nodeValue):
+        if rootNode.data == nodeValue:
+            print("The value is found")
+        elif nodeValue < rootNode.data:
+            if rootNode.leftChild.data == nodeValue:
+                print("The value is found")
+            else:
+                searchNode(rootNode.leftChild, nodeValue)
+        else:
+            if rootNode.rightChild.data == nodeValue:
+                print("The value is found")
+            else:
+                searchNode(rootNode.rightChild, nodeValue)
+
+
+    def minValueNode(bstNode):
+        current = bstNode
+        while (current.leftChild is not None):
+            current = current.leftChild
+        return current
+
+
+    def deleteNode(rootNode, nodeValue):
+        if rootNode is None:
+            return rootNode
+        if nodeValue < rootNode.data:
+            rootNode.leftChild = deleteNode(rootNode.leftChild, nodeValue)
+        elif nodeValue > rootNode.data:
+            rootNode.rightChild = deleteNode(rootNode.rightChild, nodeValue)
+        else:
+            if rootNode.leftChild is None:
+                temp = rootNode.rightChild
+                rootNode = None
+                return temp
+
+            if rootNode.rightChild is None:
+                temp = rootNode.leftChild
+                rootNode = None
+                return temp
+
+            temp = minValueNode(rootNode.rightChild)
+            rootNode.data = temp.data 
+            rootNode.rightChild = deleteNode(rootNode.rightChild, temp.data)
+        return rootNode
+
+    def deleteBST(rootNode):
+        rootNode.data = None
+        rootNode.leftChild = None
+        rootNode.rightChild = None
+        return "The BST has been successfully deleted"
+
+
+
+    @staticmethod
+    def demo():
+        newBST = BSTNode(None)
+        insertNode(newBST, 70)
+        insertNode(newBST,50)
+        insertNode(newBST,90)
+        insertNode(newBST, 30)
+        insertNode(newBST,60)
+        insertNode(newBST,80)
+        insertNode(newBST,100)
+        insertNode(newBST,20)
+        insertNode(newBST,40)
+        # print(deleteBST(newBST))
+        levelOrderTraversal(newBST)
+
+
+
+class TopologicalSortShowcase:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2021 AppMillers. All rights reserved.
+
+    from collections import defaultdict
+
+    class Graph:
+        def __init__(self, numberofVertices):
+            self.graph = defaultdict(list)
+            self.numberofVertices = numberofVertices
+
+        def addEdge(self, vertex, edge):
+            self.graph[vertex].append(edge)
+
+        def topogologicalSortUtil(self, v, visited, stack):
+            visited.append(v)
+
+            for i in self.graph[v]:
+                if i not in visited:
+                    self.topogologicalSortUtil(i, visited, stack)
+
+            stack.insert(0, v)
+
+        def topologicalSort(self):
+
+            visited = []
+            stack = []
+
+            for k in list(self.graph):
+                if k not in visited:
+                    self.topogologicalSortUtil(k, visited, stack)
+
+            print(stack)
+
+
+    @staticmethod
+    def demo():
+        customGraph = Graph(8)
+        customGraph.addEdge("A", "C")
+        customGraph.addEdge("C", "E")
+        customGraph.addEdge("E", "H")
+        customGraph.addEdge("E", "F")
+        customGraph.addEdge("F", "G")
+        customGraph.addEdge("B", "D")
+        customGraph.addEdge("B", "C")
+        customGraph.addEdge("D", "F")
+
+        customGraph.topologicalSort()
+
+class BellmanFordShowcase:
+    #   Created by Elshad Karimov 
+    #   Copyright © 2021 AppMillers. All rights reserved.
+
+
+    class Graph:
+
+        def __init__(self, vertices):
+            self.V = vertices   
+            self.graph = []     
+            self.nodes = []
+
+        def add_edge(self, s, d, w):
+            self.graph.append([s, d, w])
+
+        def addNode(self,value):
+            self.nodes.append(value)
+
+        def print_solution(self, dist):
+            print("Vertex Distance from Source")
+            for key, value in dist.items():
+                print('  ' + key, ' :    ', value)
+
+        def bellmanFord(self, src):
+            dist = {i : float("Inf") for i in self.nodes}
+            dist[src] = 0
+
+            for _ in range(self.V-1):
+                for s, d, w in self.graph:
+                    if dist[s] != float("Inf") and dist[s] + w < dist[d]:
+                        dist[d] = dist[s] + w
+
+            for s, d, w in self.graph:
+                if dist[s] != float("Inf") and dist[s] + w < dist[d]:
+                    print("Graph contains negative cycle")
+                    return
+
+
+            self.print_solution(dist)
+
+    @staticmethod
+    def demo():
+        g = Graph(5)
+        g.addNode("A")
+        g.addNode("B")
+        g.addNode("C")
+        g.addNode("D")
+        g.addNode("E")
+        g.add_edge("A", "C", 6)
+        g.add_edge("A", "D", 6)
+        g.add_edge("B", "A", 3)
+        g.add_edge("C", "D", 1)
+        g.add_edge("D", "C", 2)
+        g.add_edge("D", "B", 1)
+        g.add_edge("E", "B", 4)
+        g.add_edge("E", "D", 2)
+        g.bellmanFord("E")
+
+
+
+
+
+
+
+class QueueLinkedListShowcase:
+    #   Created by Elshad Karimov on 30/05/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+
+    class LinkedList:
+        def __init__(self):
+            self.head = None
+            self.tail = None
+
+
+
+    class Queue:
+        def __init__(self):
+            self.linkedList = QueueLinkedListShowcase.LinkedList()
+
+        def __str__(self):
+            values = [str(x) for x in self.linkedList]
+            return ' '.join(values)
+
+        def enqueue(self, value):
+            newNode = Node(value)
+            if self.linkedList.head == None:
+                self.linkedList.head = newNode
+                self.linkedList.tail = newNode
+            else:
+                self.linkedList.tail.next = newNode
+                self.linkedList.tail = newNode
+
+        def isEmpty(self):
+            if self.linkedList.head == None:
+                return True
+            else:
+                return False
+
+        def dequeue(self):
+            if self.isEmpty():
+                return "There is not any node in the Queue"
+            else:
+                tempNode = self.linkedList.head
+                if self.linkedList.head == self.linkedList.tail:
+                    self.linkedList.head = None
+                    self.linkedList.tail = None
+                else:
+                    self.linkedList.head = self.linkedList.head.next
+                return tempNode
+
+        def peek(self):
+            if self.isEmpty():
+                return "There is not any node in the Queue"
+            else:
+                return self.linkedList.head
+
+        def delete(self):
+            self.linkedList.head = None
+            self.linkedList.tail = None
+
+
+
+
+    # custQueue = Queue()
+    # custQueue.enqueue(1)
+    # custQueue.enqueue(2)
+    # custQueue.enqueue(3)
+    # print(custQueue)
+    # print(custQueue.peek())
+    # print(custQueue)
+
+class MultiStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Use a single list to implement three stacks.
+
+    class MultiStack:
+        def __init__(self, stacksize):
+            self.numberstacks = 3
+            self.custList = [0] * (stacksize * self.numberstacks)
+            self.sizes = [0] * self.numberstacks
+            self.stacksize = stacksize
+
+        def isFull(self, stacknum):
+            if self.sizes[stacknum] == self.stacksize:
+                return True
+            else:
+                return False
+
+        def isEmpty(self, stacknum):
+            if self.sizes[stacknum] == 0:
+                return True
+            else:
+                return False
+
+        def indexOfTop(self, stacknum):
+            offset = stacknum * self.stacksize
+            return offset + self.sizes[stacknum]- 1
+
+        def push(self, item, stacknum):
+            if self.isFull(stacknum):
+                return "The stack is full"
+            else:
+                self.sizes[stacknum] += 1
+                self.custList[self.indexOfTop(stacknum)] = item
+
+        def pop(self, stacknum):
+            if self.isEmpty(stacknum):
+                return "The stack is empty"
+            else:
+                value = self.custList[self.indexOfTop(stacknum)]
+                self.custList[self.indexOfTop(stacknum)] = 0
+                self.sizes[stacknum] -= 1
+                return value
+
+        def peek(self, stacknum):
+            if self.isEmpty(stacknum):
+                return "The stack is empty"
+            else:
+                value = self.custList[self.indexOfTop(stacknum)]
+                return value
+
+
+    @staticmethod
+    def demo():
+        customStack = MultiStack(6)
+        print(customStack.isFull(0))
+        print(customStack.isEmpty(1))
+        customStack.push(1, 0)
+        customStack.push(2, 0)
+        customStack.push(3, 2)
+        print(customStack.pop(0))
+
+
+
+class StackMinShowcase:
+    #   Created by Elshad Karimov on 04/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    #   Create Stack with min method
+
+    class Stack():
+        def __init__(self):
+            self.top = None
+            self.minNode = None
+
+        def min(self):
+            if not self.minNode:
+                return None
+            return self.minNode.value
+
+        def push(self, item):
+            if self.minNode and (self.minNode.value < item):
+                self.minNode = Node(value = self.minNode.value, next=self.minNode)
+            else:
+                self.minNode = Node(value = item, next=self.minNode)
+            self.top = Node(value=item, next=self.top)
+
+        def pop(self):
+            if not self.top:
+                return None
+            self.minNode = self.minNode.next
+            item = self.top.value
+            self.top = self.top.next
+            return item
+
+    @staticmethod
+    def demo():
+        customStack = Stack()
+        customStack.push(5)
+        print(customStack.min())
+        customStack.push(6)
+        print(customStack.min())
+        customStack.push(3)
+        print(customStack.min())
+        customStack.pop()
+        print(customStack.min())
+
+
+
+class PlateStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Stack of Plates
+
+    class PlateStack():
+        def __init__(self, capacity):
+            self.capacity = capacity
+            self.stacks = []
+
+        def __str__(self):
+            return self.stacks
+
+        def push(self, item):
+            if len(self.stacks) > 0 and (len(self.stacks[-1])) < self.capacity:
+                self.stacks[-1].append(item)
+            else:
+                self.stacks.append([item])
+
+        def pop(self):
+            while len(self.stacks) and len(self.stacks[-1]) == 0:
+                self.stacks.pop()
+            if len(self.stacks) == 0:
+                return None
+            else:
+                return self.stacks[-1].pop()
+
+        def pop_at(self, stackNumber):
+            if len(self.stacks[stackNumber]) > 0:
+                return self.stacks[stackNumber].pop()
+            else:
+                return None
+
+
+    @staticmethod
+    def demo():
+        customStack= PlateStack(2)
+        customStack.push(1)
+        customStack.push(2)
+        customStack.push(3)
+        customStack.push(4)
+        print(customStack.pop_at(1))
+
+class QueueViaStackShowcase:
+    #   Created by Elshad Karimov on 04/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Implement a queue using two stacks.
+
+
+
+    class QueueviaStack():
+      def __init__(self):
+        self.inStack = Stack()
+        self.outStack = Stack()
+
+      def enqueue(self, item):
+        self.inStack.push(item)
+
+      def dequeue(self):
+        while len(self.inStack):
+          self.outStack.push(self.inStack.pop())
+        result = self.outStack.pop()
+        while len(self.outStack):
+          self.inStack.push(self.outStack.pop())
+        return result
+
+
+    @staticmethod
+    def demo():
+        customQueue = QueueviaStack()
+        customQueue.enqueue(1)
+        customQueue.enqueue(2)
+        customQueue.enqueue(3)
+        print(customQueue.dequeue())
+        customQueue.enqueue(4)
+        print(customQueue.dequeue())
+
+class AnimalShelterShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Implement a cat and dog queue for an animal shelter.
+
+    class AnimalShelter():
+      def __init__(self):
+        self.cats = []
+        self.dogs = []
+
+      def enqueue(self, animal, type):
+        if type == 'Cat':
+          self.cats.append(animal)
+        else:
+          self.dogs.append(animal)
+
+      def dequeueCat(self):
+        if len(self.cats) == 0:
+          return None
+        else:
+          cat = self.cats.pop(0)
+          return cat
+
+      def dequeueDog(self):
+        if len(self.dogs) == 0:
+          return None
+        else:
+          dog = self.dogs.pop(0)
+          return dog
+
+      def dequeueAny(self):
+        if len(self.cats) == 0:
+          result = self.dogs.pop(0)
+        else:
+          result = self.cats.pop(0)
+        return result
+
+    @staticmethod
+    def demo():
+        customQueue = AnimalShelter()
+        customQueue.enqueue('Cat1', 'Cat')
+        customQueue.enqueue('Cat2', 'Cat')
+        customQueue.enqueue('Dog1', 'Dog')
+        customQueue.enqueue('Cat3', 'Cat')
+        customQueue.enqueue('Dog2', 'Dog')
+        print(customQueue.dequeueAny())
+
+
+class SortStackShowcase:
+    #   Created by Elshad Karimov on 02/06/2020.
+    #   Copyright © 2020 AppMillers. All rights reserved.
+
+    # Sort a stack with the smallest on top using only a single temporary stack.
+
+    def sort_stack(stack):
+      previous = stack.pop()
+      current = stack.pop()
+      temp = Stack()
+      while current:
+        if previous < current:
+          temp.push(previous)
+          previous = current
+          current = stack.pop()
+        else: 
+          temp.push(current)
+          current = stack.pop()
+        if current == None and previous: temp.push(previous)
+
+      sorted = True
+      previous = temp.pop()
+      current = temp.pop()
+      while current:
+        if previous > current:
+          stack.push(previous)
+          previous = current
+          current = temp.pop()
+        else: 
+          stack.push(current)
+          current = temp.pop()
+          sorted = False
+        if current == None and previous: stack.push(previous)
+      if sorted: return stack
+      else: return sort_stack(stack)
+
+
+
+    import unittest  # noqa: E402
+
+    class Test(unittest.TestCase):
+      def test_sort_stack(self):
+        self.assertEqual(str(sort_stack(Stack())), "None")
+        stack = Stack()
+        stack.push(10)
+        stack.push(30)
+        stack.push(70)
+        stack.push(40)
+        stack.push(80)
+        stack.push(20)
+        stack.push(90)
+        stack.push(50)
+        stack.push(60)
+        self.assertEqual(str(stack), "60,50,90,20,80,40,70,30,10,None")
+        self.assertEqual(str(sort_stack(stack)), "10,20,30,40,50,60,70,80,90,None")

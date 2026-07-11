@@ -265,10 +265,7 @@ def LongestIncreasingSubsequenceLength(v):
             # or the appropriate index at which element should be placed
 
             # finally replace the existing subsequene with new end value
-            print(tail)
             tail[bisect_left(tail, v[i], 0, length-1)] = v[i]
-            print(tail)
-            print(bisect_left(tail, v[i], 0, length-1))
     return length
 
 class T3sum:

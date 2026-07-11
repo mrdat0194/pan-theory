@@ -1,0 +1,42 @@
+# ============================================================
+# Core scientific computing (used in inventory_models.py
+# and example_problem.py)
+# ============================================================
+numpy>=1.26.0
+scipy>=1.13.0
+
+# ============================================================
+# Core: Supply Chain & Inventory Optimization
+# Backend for inventory_models.py (EOQ, Newsvendor, loss functions)
+# Docs: https://stockpyl.readthedocs.io
+# Notation: Snyder & Shen "Fundamentals of Supply Chain Theory" (FoSCT)
+# ============================================================
+stockpyl>=0.0.13
+
+# ============================================================
+# Google Sheets pipeline (gsheet_pipeline.py)
+# ============================================================
+gspread>=6.1.0          # Google Sheets API wrapper
+google-auth>=2.29.0     # OAuth2 credentials for Google APIs
+polars>=0.20.0          # Fast DataFrame library
+
+# ============================================================
+# Optimization & Operations Research (LP / network design)
+# SOTA open-source: PuLP 2.7+ ships with HiGHS solver built-in
+# HiGHS outperforms CBC and GLPK on LP/MIP benchmarks
+# Use when: multi-lane carrier selection, network flow, blending
+# ============================================================
+pulp>=2.8.0             # LP modeling; HiGHS solver included
+
+# -- OR-Tools (Vehicle Routing, Scheduling, CP-SAT) --
+# ortools>=9.10.0       # Uncomment for VRP / combinatorial logistics
+
+# ============================================================
+# Simulation
+# ============================================================
+# simpy>=4.1.1          # Discrete-event sim for policy testing (s,Q / R,S)
+
+# ============================================================
+# Visualization (optional)
+# ============================================================
+matplotlib>=3.9.0

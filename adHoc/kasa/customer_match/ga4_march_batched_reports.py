@@ -2,6 +2,7 @@ import os
 import polars as pl
 import time
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from GA4_CoreEngine import BuildReport, OrderBy
 
 def get_date_batches(start_date_str, end_date_str, batch_days=3):
@@ -85,34 +86,33 @@ def main():
                 
                 all_batches_data = []
 
-                for start, end in march_batches:
-                    print(f"    Fetching batch: {start} to {end}...", end=" ", flush=True)
-                    
-                    # Initialize using GA4_CoreEngine
-                    builder = BuildReport(
-                        property_id=p_id,
-                        ga_dimensions=config["dimensions"],
-                        ga_metrics=config["metrics"],
-                        start_date=start,
-                        end_date=end,
-                        creds_path=CREDS_PATH
-                    )
-                    
-                    # Sort Descending by first metric
-                    sort_order = [OrderBy(metric=OrderBy.MetricOrderBy(metric_name=first_metric), desc=True)]
-                    
-                    # FETCH ALL DATA (up to 250k rows per batch)
+                def fetch_batch(batch):
+                    start, end = batch
                     try:
+                        print(f"    Fetching batch: {start} to {end}...", flush=True)
+                        builder = BuildReport(
+                            property_id=p_id,
+                            ga_dimensions=config["dimensions"],
+                            ga_metrics=config["metrics"],
+                            start_date=start,
+                            end_date=end,
+                            creds_path=CREDS_PATH
+                        )
+                        sort_order = [OrderBy(metric=OrderBy.MetricOrderBy(metric_name=first_metric), desc=True)]
                         df_batch = builder.run_report(limit=250000, order_bys=sort_order)
-                        all_batches_data.append(df_batch)
-                        print(f"Done ({len(df_batch)} rows)")
-                        
-                        # Wait between batches (requested by user)
-                        if (start, end) != march_batches[-1]: 
-                            print(f"    Waiting 10 seconds before next batch...")
-                            time.sleep(10)
+                        print(f"    Batch {start} to {end} Done ({len(df_batch)} rows)")
+                        return df_batch
                     except Exception as batch_error:
-                        print(f"FAILED: {batch_error}")
+                        print(f"    FAILED on batch {start} to {end}: {batch_error}")
+                        return None
+
+                # We use executor.map to preserve chronological ordering of the dataframe chunks
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    # executor.map returns results in the exact order of march_batches
+                    results = executor.map(lambda b: (b, fetch_batch(b)), march_batches)
+                    for batch, df_batch in results:
+                        if df_batch is not None:
+                            all_batches_data.append(df_batch)
                 
                 # Combine batches
                 if all_batches_data:
