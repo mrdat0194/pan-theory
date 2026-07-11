@@ -1,3 +1,4 @@
+﻿import pytest
 from my_functions.logging_eg import add, subtract, multiply, divide
 
 def test_add():
@@ -5,6 +6,10 @@ def test_add():
     assert add(-1, 1) == 0
     assert add(-1, -1) == -2
     assert add(0, 0) == 0
+    assert add(10.5, 2.5) == 13.0
+    assert add('a', 'b') == 'ab'
+    with pytest.raises(TypeError):
+        add(1, 'a')
 
 def test_subtract():
     assert subtract(10, 5) == 5

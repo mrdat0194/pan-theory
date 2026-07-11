@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Thu Apr 11 18:47:17 2019
@@ -53,7 +53,7 @@ class LinkedList:
             ptr1 = ptr1.next
             k += 1
   
-        # Fix one pointer to head 
+        # Set one pointer to head
         ptr1 = self.head 
           
         # And the other pointer to k nodes after head 

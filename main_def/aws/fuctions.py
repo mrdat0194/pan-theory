@@ -1,4 +1,4 @@
-from main_def.aws.aws_config import AWSConfig
+﻿from main_def.aws.aws_config import AWSConfig
 from main_def.aws.s3.aws_s3 import existing_on_s3
 from main_def.crud.sql.datasource import get_all_by_ids, get_all_datasource_valid, related_datasourceid
 from main_def.crud.sql.track import get_all_by_track_ids
@@ -63,6 +63,19 @@ def checking_lost_datasource_background_from_S3(datasource_ids: list):
 def checking_lost_pip_from_S3(datasource_ids: list):
     print("\nstart checking pip")
     db_datasources = get_all_by_ids(datasource_ids)
+
+    # Pre-fetch all required track information to avoid N+1 queries
+    track_ids = list(set(db_datasource.track_id for db_datasource in db_datasources
+                         if db_datasource.format_id == "1A67A5F1E0D84FB9B48234AE65086375"))
+    db_tracks_all = get_all_by_track_ids(track_ids)
+
+    # Create a mapping from track_id to its corresponding tracks
+    tracks_map = {}
+    for track in db_tracks_all:
+        if track.id not in tracks_map:
+            tracks_map[track.id] = []
+        tracks_map[track.id].append(track)
+
     for db_datasource in db_datasources:
         print()
         if db_datasource.format_id == "1A67A5F1E0D84FB9B48234AE65086375":
@@ -73,8 +86,7 @@ def checking_lost_pip_from_S3(datasource_ids: list):
                 result = existing_on_s3(key_pip)
                 print(f"filename: {key_pip} - {result}")
 
-                trackid = [db_datasource.track_id]
-                db_trackids = get_all_by_track_ids(trackid)
+                db_trackids = tracks_map.get(db_datasource.track_id, [])
                 for db_trackid in db_trackids:
                     if db_trackid.image_url == db_datasource.ext['static_video']['image_url']:
                         print(f"datasource_id: {db_datasource.id} - True")

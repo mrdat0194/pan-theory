@@ -12,6 +12,14 @@
 *.pth
 *.npy
 *.pkl
+*.log
+*.avi
+*.xml
+*.wav
+*.mp4
+*.env
+*.yaml
+*.wandb
 # Image files
 *.png
 *.jpg

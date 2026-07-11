@@ -1,4 +1,4 @@
-from main_def.models.data_source_format_master import DataSourceFormatMaster
+﻿from main_def.models.data_source_format_master import DataSourceFormatMaster
 
 class crawlingtaskactionid:
     # Itunes Crawler
@@ -38,5 +38,6 @@ class when_exist:
 
 
 def generate_task(action_id: str, object_id: str, task_detail: dict) -> str:
+    pass
 
 

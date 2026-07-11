@@ -1,4 +1,4 @@
-# USAGE
+﻿# USAGE
 # python detect_drowsiness.py --shape-predictor shape_predictor_68_face_landmarks.dat
 # python detect_drowsiness.py --shape-predictor shape_predictor_68_face_landmarks.dat --alarm alarm.wav
 
@@ -45,7 +45,7 @@ ap.add_argument("-w", "--webcam", type=int, default=0,
 
 args = {}
 
-args["shape_predictor"] = 'C:\Hello\AI\my_functions\open_cv_function\drowsiness-detection\shape_predictor_68_face_landmarks.dat'
+args["shape_predictor"] = r'C:\Hello\AI\my_functions\open_cv_function\drowsiness-detection\shape_predictor_68_face_landmarks.dat'
 
 #args = vars(ap.parse_args())
  

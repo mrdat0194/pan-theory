@@ -1,4 +1,4 @@
-from selenium import webdriver
+﻿from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select,WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -14,6 +14,7 @@ import pyautogui
 import pyperclip
 import re
 import os
+import concurrent.futures
 
 # Global Variable
 driver = webdriver.Chrome(
@@ -50,7 +51,7 @@ def login(link):
 
 def down_avatar(name, portal_link):
     '''
-    Down Avatar trên Attech
+    Down Avatar trĂªn Attech
     :param name:
     :param portal_link:
     :return:
@@ -80,19 +81,19 @@ def them_lop_hoc(tenlop, info_name_edit,info_desc):
     element = driver.find_element_by_id('dnn_ctr457_inc_Main_ctl00_txtName')
     driver.execute_script(name_tenlop, element)
 
-    #Thêm avatar
+    #ThĂªm avatar
     element = driver.find_element_by_xpath('//*[@id="collapse1"]/div/div[5]/div/button')
     element.click()
-    tenlop_hinh = f"C:\\Users\\PeterN\\PycharmProjects\\pan-theory\\helper_functions\\auto_test_elearning\\avatar\{info_name_edit}.jpg"
+    tenlop_hinh = f"C:\\Users\\PeterN\\PycharmProjects\\pan-theory\\helper_functions\\auto_test_elearning\\avatar\\{info_name_edit}.jpg"
     time.sleep(1)
-    # Tương tác với Window Folder Browser
+    # TÆ°Æ¡ng tĂ¡c vá»›i Window Folder Browser
     pyperclip.copy(tenlop_hinh)
     pyautogui.hotkey('right')
     pyautogui.hotkey("ctrl", "v")
     pyautogui.press('enter')
     time.sleep(10)
 
-    #Thêm description
+    #ThĂªm description
     element = driver.find_element_by_id('dnn_ctr457_inc_Main_ctl00_txtDescription_contentIframe')
     driver.switch_to.frame(element)
     element = driver.find_element_by_xpath('/html/body')
@@ -136,7 +137,7 @@ def class_getinfo():
         info_name = baocao['Name'].loc[row]
         info_desc = baocao['Description'].loc[row]
         info_avatar = baocao['Avatar'].loc[row]
-        info_name_edit = re.sub('[^a-zA-Z0-9 \n\.]', '', info_name)
+        info_name_edit = re.sub(r'[^a-zA-Z0-9 \n\.]', '', info_name)
         print(info_name_edit)
         try:
             down_avatar(info_name_edit ,info_avatar)
@@ -182,6 +183,17 @@ def get_all_class():
             a_file.close()
             break
 
+def _download_video_task(item):
+    name, url, index = item
+    try:
+        info_name_edit = re.sub(r'[^a-zA-Z0-9 \n\.]', '', name)
+        r = requests.get(url, timeout=30)
+        path_to_file = f"down/{info_name_edit}.mp4"
+        with open(path_to_file, 'wb') as f:
+            f.write(r.content)
+    except Exception as e:
+        print(f"down {index}: {e}")
+
 def down_class():
     '''
     Down all the class, but not neccessary just down in Bulk:
@@ -191,23 +203,22 @@ def down_class():
     a_file = open("data_tailieu.pkl", "rb")
     my_dict = pickle.load(a_file)
     a_file.close()
+
+    items_to_download = []
     for i in range(284):
         try:
             name = my_dict['txtName'][i]
             url = my_dict['txtFileLocation'][i]
-            print(url)
-
-            # with connection_pool.request('GET', url, preload_content=True) as resp, open(path_to_file, 'wb') as out_file:
-            #     shutil.copyfileobj(resp, out_file)
-            #     print(path_to_file)
-
-            info_name_edit = re.sub('[^a-zA-Z0-9 \n\.]', '', name)
-            r = requests.get(url)
-            path_to_file = f"down/{info_name_edit}.mp4"
-            open(path_to_file, 'wb').write(r.content)
+            items_to_download.append((name, url, i))
         except:
-            print("down",i)
+            print("down prep", i)
             break
+            
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(_download_video_task, items_to_download)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(_download_video_task, items_to_download)
 
 def get_and_down():
     '''
@@ -364,15 +375,15 @@ def addCourse_classDest():
 
                 indexes = lopcourse.index
                 for index in indexes:
-                    if lopcourse['Loại dữ liệu'].loc[index] == 'Bài giảng':
+                    if lopcourse['Loáº¡i dá»¯ liá»‡u'].loc[index] == 'BĂ i giáº£ng':
                         element = driver.find_element_by_id(f'dnn_ctr457_inc_Main_ctl00_lbtnAddVideo')
                         driver.execute_script('arguments[0].click();', element)
                         element = driver.find_element_by_id(f'dnn_ctr457_inc_Main_ctl00_lbtnChooseMedia')
                         driver.execute_script('arguments[0].click();', element)
                         time.sleep(2)
-                        print(lopcourse["Tên tài liệu"].loc[index])
+                        print(lopcourse["TĂªn tĂ i liá»‡u"].loc[index])
                         element = driver.find_element_by_xpath(f'//*[@id="dnn_ctr457_inc_Main_ctl00_txtKeyword"]')
-                        driver.execute_script(f'arguments[0].setAttribute("value", "{lopcourse["Tên tài liệu"].loc[index]}");', element)
+                        driver.execute_script(f'arguments[0].setAttribute("value", "{lopcourse["TĂªn tĂ i liá»‡u"].loc[index]}");', element)
 
                         element = driver.find_element_by_id(f'dnn_ctr457_inc_Main_ctl00_lbtnSearch')
                         driver.execute_script('arguments[0].click();', element)

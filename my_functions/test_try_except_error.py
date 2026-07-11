@@ -1,4 +1,4 @@
-import pytest
+﻿import pytest
 from my_functions.try_except_error import elements_check
 
 def test_elements_check_all_same():
@@ -43,3 +43,13 @@ def test_elements_check_list_raises_typeerror():
     # Test with a regular list, which should raise a TypeError since it's not an iterator
     with pytest.raises(TypeError):
         elements_check([1, 1, 1])
+
+def test_elements_check_none():
+    # Test with None, which should raise a TypeError since it's not an iterator
+    with pytest.raises(TypeError):
+        elements_check(None)
+
+def test_elements_check_custom_iterator():
+    # Test with mixed types iterator
+    array_iter = iter([1, "1"])
+    assert elements_check(array_iter) is False

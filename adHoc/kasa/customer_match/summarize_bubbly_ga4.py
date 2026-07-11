@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import pandas as pd
 from PIL import Image
@@ -13,8 +13,11 @@ def main():
     JSON_PATH = os.path.join(BASE_DIR, 'bubbly-cascade-398303-5f3dd0a21703.json')
     
     # 2. Authentication with Gemini API Key
-    API_KEY = "AIzaSyBuD1ZDhkhiuKew9diygaLBef0kfy1DBy0"
-    print(f"Configuring Gemini API with key ending in {API_KEY[-4:]}...")
+    API_KEY = os.environ.get("GOOGLE_API_KEY")
+    if API_KEY:
+        print(f"Configuring Gemini API with key ending in {API_KEY[-4:]}...")
+    else:
+        print("Configuring Gemini API (No API Key found in environment)...")
     
     try:
         genai.configure(api_key=API_KEY)

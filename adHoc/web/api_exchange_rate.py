@@ -1,8 +1,9 @@
-import datetime
+﻿import datetime
 import requests
+import os
 
 def get_exchange_rate(base_currency, symbols, date):
-    api_key = "jNC2YcPZXWCYJIAqDQJyvxMW23VgzK3x"
+    api_key = os.environ.get("EXCHANGE_RATE_API_KEY")
     headers = {"apikey": api_key}
     url = f"https://api.apilayer.com/exchangerates_data/{date}?symbols={symbols}&base={base_currency}"
     response = requests.get(url, headers=headers)

@@ -1,4 +1,4 @@
-import time
+﻿import time
 import os
 from functools import wraps
 import types
@@ -39,6 +39,7 @@ def print_param(name_output = "error.txt", BASE_DIR = os.path.dirname(os.path.ab
     return print_result
 
 def timer(func):
+    @wraps(func)
     def f(*arg, **kwarg):
         before = time.time()
         rv = func(*arg, **kwarg)

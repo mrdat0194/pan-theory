@@ -1,4 +1,4 @@
-# from selenium.webdriver.chrome.service import Service
+﻿# from selenium.webdriver.chrome.service import Service
 # from selenium import webdriver
 # from selenium.webdriver.common.by import By
 # from selenium.webdriver.support.ui import Select,WebDriverWait
@@ -8,52 +8,58 @@
 # from selenium.webdriver.common.keys import Keys
 
 import os
-import util
-import time
 import pandas as pd
 from main_def import MAIN_DIR
-from seleniumbase import SB
+from pyppeteer import launch
+import asyncio
 
 def isNaN(num):
     return num != num
 
-executable_path = os.path.join(MAIN_DIR, "ggl_api", "Automate_data_model", "chromedriver_win32","chromedriver.exe")
-print(executable_path)
-# service = Service(executable_path=executable_path)
-# options = webdriver.ChromeOptions()
-
-# driver = webdriver.Chrome(service=service, options=options)
-
 # Global Variable
 save_path = os.path.join(MAIN_DIR, "ggl_api", "Automate_data_model", "info","url.csv")
 
-from pyppeteer import launch
-import asyncio
+async def capture(link, path_save):
+    browser = await launch(headless=True, args=['--no-sandbox'])
+    try:
+        page = await browser.newPage()
+        # Increased timeout to 60 seconds
+        await page.goto(link, {'waitUntil': ['load', 'domcontentloaded', 'networkidle0', 'networkidle2'], 'timeout': 60000})
+        await asyncio.sleep(8)
+        await page.screenshot({'path': path_save, 'fullPage': True})
+    finally:
+        await browser.close()
 
-async def capture(link, path_save, ):
-    browser = await launch(headless=True)
-    page = await browser.newPage()
-    await page.goto(link, {'waitUntil': ['load', 'domcontentloaded', 'networkidle0', 'networkidle2']})
-    await page.waitFor(8000)
+async def process_link(link, n, semaphore):
+    async with semaphore:
+        print(f"Processing: {link}")
+        path_save = os.path.join(MAIN_DIR, "ggl_api", "Automate_data_model", "Pic", str(n) + ".png")
+        try:
+            await capture(link, path_save)
+        except Exception as e:
+            print(f"Failed to capture {link}: {e}")
+        await asyncio.sleep(1)
 
-    await page.screenshot({'path': path_save, 'fullPage': True})
-    await browser.close()
+async def main():
+    if not os.path.exists(save_path):
+        print(f"File not found: {save_path}")
+        return
 
-linkes = pd.read_csv(save_path)
-# print(linkes)
+    linkes = pd.read_csv(save_path)
 
-n = 0
-row_indexes = linkes.index
-for row in row_indexes:
-    link = linkes['CaptureURL'].loc[row]
-    if not isNaN(link):
-        print(link)
-        with SB(uc=True) as sb:
-            sb.driver.get(link)
-            time.sleep(2)
-            path_save = os.path.join(MAIN_DIR,"ggl_api", "Automate_data_model","Pic", str(n) + ".png")
-            # util.fullpage_screenshot(sb, path_save,link,row)
-            asyncio.get_event_loop().run_until_complete(capture(link,path_save))
+    tasks = []
+    semaphore = asyncio.Semaphore(2) # Limit concurrency to 2
 
-            time.sleep(1)
-            n+=1
+    n = 0
+    row_indexes = linkes.index
+    for row in row_indexes:
+        link = linkes['CaptureURL'].loc[row]
+        if not isNaN(link):
+            tasks.append(process_link(link, n, semaphore))
+            n += 1
+
+    if tasks:
+        await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    asyncio.run(main())
