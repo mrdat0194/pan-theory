@@ -4,30 +4,30 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
 
-# Visualization script for March 2026 Batched GA4 Reports
+# Visualization script for April 2026 Batched GA4 Reports
 
 def main():
     # 1. Setup Configuration
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     
-    # Property names as they appear in the filenames: march_2026_{prop.lower()}_{tag}_full.csv
+    # Property names as they appear in the filenames: april_2026_{prop.lower()}_{tag}_full.csv
     properties = ['vna', 'vinpearl', 'vinwonders']
     reports = ['traffic', 'pages', 'hardware', 'events', 'revenue']
     
     # 2. Create grid of plots (3 properties x 5 reports)
     fig, axes = plt.subplots(len(properties), len(reports), figsize=(32, 22))
-    fig.suptitle('GA4 March 2026: Batched Data Visualization (Top 7 per Category)', fontsize=28, y=0.98)
+    fig.suptitle('GA4 April 2026: Batched Data Visualization (Top 7 per Category)', fontsize=28, y=0.98)
     
     cmap = plt.get_cmap('tab10')
 
-    print("Generating visualization for March 2026 batched reports...")
+    print("Generating visualization for April 2026 batched reports...")
 
     for i, prop in enumerate(properties):
         for j, report in enumerate(reports):
             # Handle grid indexing
             ax = axes[i, j]
                 
-            csv_file = f"march_2026_{prop}_{report}_full.csv"
+            csv_file = f"april_2026_{prop}_{report}_full.csv"
             csv_path = os.path.join(BASE_DIR, csv_file)
             
             if os.path.exists(csv_path):
@@ -100,9 +100,9 @@ def main():
                 ax.text(0.5, 0.5, 'Missing CSV', ha='center', transform=ax.transAxes, color='gray')
             
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    output_png = os.path.join(BASE_DIR, "ga4_march_batched_visual.png")
+    output_png = os.path.join(BASE_DIR, "ga4_april_batched_visual.png")
     plt.savefig(output_png, dpi=130)
-    print(f"\nSUCCESS! March 2026 visualization saved to: {output_png}")
+    print(f"\nSUCCESS! April 2026 visualization saved to: {output_png}")
 
 if __name__ == '__main__':
     main()

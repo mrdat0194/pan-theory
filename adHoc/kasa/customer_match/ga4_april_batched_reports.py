@@ -38,8 +38,8 @@ def main():
         print(f"Error: Credentials not found at {CREDS_PATH}")
         return
 
-    # Generate March 2026 Batches (3 days each)
-    march_batches = get_date_batches("2026-03-01", "2026-03-31", batch_days=3)
+    # Generate April 2026 Batches (3 days each)
+    april_batches = get_date_batches("2026-04-01", "2026-04-30", batch_days=3)
 
     # 3. Define the Report Types (5 per property)
     report_types = [
@@ -71,7 +71,7 @@ def main():
     ]
 
     print(f"--- GA4 MARCH DATA EXTRACTION (3 Properties x 5 Reports) ---")
-    print(f"Extraction Range: 2026-03-01 to 2026-03-31 (Batched by 3 days)")
+    print(f"Extraction Range: 2026-04-01 to 2026-04-30 (Batched by 3 days)")
     
     try:
         for prop in properties:
@@ -108,8 +108,8 @@ def main():
 
                 # We use executor.map to preserve chronological ordering of the dataframe chunks
                 with ThreadPoolExecutor(max_workers=5) as executor:
-                    # executor.map returns results in the exact order of march_batches
-                    results = executor.map(lambda b: (b, fetch_batch(b)), march_batches)
+                    # executor.map returns results in the exact order of april_batches
+                    results = executor.map(lambda b: (b, fetch_batch(b)), april_batches)
                     for batch, df_batch in results:
                         if df_batch is not None:
                             all_batches_data.append(df_batch)
@@ -118,8 +118,8 @@ def main():
                 if all_batches_data:
                     final_df = pl.concat(all_batches_data, how='vertical', rechunk=True)
                     
-                    # Final export name: march_2026_[PROPERTY]_[TYPE]_full.csv
-                    output_file = f"march_2026_{p_name.lower()}_{tag}_full.csv"
+                    # Final export name: april_2026_[PROPERTY]_[TYPE]_full.csv
+                    output_file = f"april_2026_{p_name.lower()}_{tag}_full.csv"
                     output_path = os.path.join(BASE_DIR, output_file)
                     
                     final_df.write_csv(output_path)
