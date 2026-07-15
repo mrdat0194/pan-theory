@@ -243,13 +243,33 @@ def build_report(verbose: bool = True) -> None:
     # ── Table 6: Causal Inference Results ─────────────────────────────────────
     if not caus_df.empty:
         _title(doc, "Causal Inference Results Summary", tbl_num); tbl_num += 1
-        cols_c = [c for c in caus_df.columns if c in
-                  ["method", "ATE_est", "LATE_est", "RDD_est", "SE", "p_value", "CI_lower", "CI_upper"]]
-        hdrs = [c.replace("_", " ").title() for c in cols_c]
-        rows = [[_fmt(row[c], 4) if c not in ["method"] else str(row[c]) for c in cols_c]
-                for _, row in caus_df.iterrows()]
+        # Standardised schema columns (new modules/causal/ subpackage)
+        SCHEMA = ["method", "estimand", "estimate", "se",
+                  "ci_lower", "ci_upper", "ci_type", "p_value", "n_obs"]
+        caus_df = caus_df.reindex(columns=SCHEMA)
+        hdrs = ["Method", "Estimand", "Estimate", "SE",
+                "95% CI Lower", "95% CI Upper", "CI Type", "p", "N"]
+        rows = []
+        for _, row in caus_df.iterrows():
+            rows.append([
+                str(row["method"]) if pd.notna(row.get("method")) else "—",
+                str(row["estimand"]) if pd.notna(row.get("estimand")) else "—",
+                _fmt(row.get("estimate"), 4),
+                _fmt(row.get("se"), 4),
+                _fmt(row.get("ci_lower"), 4),
+                _fmt(row.get("ci_upper"), 4),
+                str(row["ci_type"]) if pd.notna(row.get("ci_type")) else "—",
+                _fmt(row.get("p_value"), 4),
+                str(int(row["n_obs"])) if pd.notna(row.get("n_obs")) else "—",
+            ])
         _table(doc, hdrs, rows)
-        _note(doc, "Note. DiD = Difference-in-Differences; IV = Instrumental Variables (LATE); RDD = Regression Discontinuity.")
+        _note(doc,
+              "Note. DiD = Callaway & Sant-Anna (2021) staggered ATT(g,t) via differences; "
+              "IV = linearmodels IV2SLS (HC3 SEs; Anderson-Rubin CI reported when KP rk-F < 10); "
+              "RDD = rdrobust CCT MSE-optimal bandwidth with bias-corrected robust CI and "
+              "rddensity manipulation test. "
+              "CI Type: doubly_robust = doubly-robust bootstrap; "
+              "anderson_rubin = identification-robust CI; robust_bc = bias-corrected robust.")
 
     out_path = os.path.join(OUTPUT_DIR, "apa_report.docx")
     doc.save(out_path)

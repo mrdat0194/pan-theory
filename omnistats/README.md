@@ -7,7 +7,7 @@ into one orchestrated run:
 |---|---|---|
 | **1 — LPA** | Latent Profile Analysis (GMM), Welch ANOVA, Games-Howell, Chi-square, Cramér's V | `lpa_analysis/` |
 | **2 — A/B Testing** | Proportion z-test, Welch t-test, Distribution fit (χ²) | `Bayesian/abtesting/` |
-| **3 — Causal Inference** | Difference-in-Differences, IV/2SLS, Regression Discontinuity | `Bayesian/someMethod/` |
+| **3 — Causal Inference** | **Staggered DiD** (Callaway & Sant'Anna ATT(g,t)), **Robust IV/2SLS** (linearmodels + Anderson-Rubin), **RDD** (rdrobust CCT + rddensity) | `modules/causal/` |
 | **4 — APA Report** | APA 7th edition Word document (6 tables) | combined |
 
 ---
@@ -25,7 +25,11 @@ omnistats/
 │   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
 │   ├── chi_square.py       ← Chi-square independence test + Cramér's V
 │   ├── ab_testing.py       ← Proportion test, Welch t-test, dist. fit
-│   ├── causal_inference.py ← DiD, IV/2SLS, RDD estimators
+│   ├── causal/             ← Robust causal inference subpackage
+│   │   ├── __init__.py     ←   run_causal_suite() orchestrator
+│   │   ├── did.py          ←   Staggered DiD  (Callaway & Sant'Anna ATT(g,t))
+│   │   ├── iv.py           ←   Robust IV/2SLS (linearmodels + Anderson-Rubin)
+│   │   └── rdd.py          ←   CCT optimal-bandwidth RDD (rdrobust + rddensity)
 │   ├── visualisation.py    ← All plots (line, stacked bar, heatmap, mosaic)
 │   └── apa_report.py       ← APA 7th edition .docx generator
 └── outputs/                ← All CSVs, PNGs, and .docx created here
@@ -91,15 +95,40 @@ Runs automatically on your real data using `AB_GROUP_COL` and `AB_METRIC_COL`.
 
 ### Stage 3 — Causal Inference
 
-By default runs on **synthetic demo data** (set `CAUSAL_USE_SYNTHETIC = True` in `config.py`) to demonstrate each estimator:
+By default runs on **synthetic demo data** (`CAUSAL_USE_SYNTHETIC = True` in `config.py`). Each estimator uses a methodologically robust implementation replacing the legacy flat module:
 
-| Method | What it estimates | Key assumption |
-|---|---|---|
-| **DiD** | Average Treatment Effect (ATE) | Parallel trends pre-treatment |
-| **IV/2SLS** | Local Average Treatment Effect (LATE) | Strong, exogenous instrument |
-| **RDD** | Treatment effect at the cutoff | Continuity of potential outcomes |
+#### Why the new implementation is better
 
-To use your own data, set `CAUSAL_USE_SYNTHETIC = False` and configure the column names when calling each function directly.
+| Issue in the old `causal_inference.py` | Fix in `modules/causal/` |
+|---|---|
+| **DiD** used a plain 2×2 OLS interaction (`treated × post`). Under *staggered adoption* (different units treated at different times) this TWFE estimator is provably biased — treated-early units act as a "contaminated control" for treated-late units. | Replaced with **Callaway & Sant'Anna (2021)** ATT(g,t): estimates one treatment effect per cohort-period pair, then aggregates. Doubly-robust (IPW + outcome regression), so consistent if *either* the propensity or outcome model is correct. |
+| **IV** computed a raw numpy Wald ratio with homoscedastic OLS standard errors and no weak-instrument check, giving wrong SEs under heteroscedasticity and invalid inference when the instrument is weak. | Replaced with **`linearmodels` IV2SLS** (HC3 robust SEs). Reports the Kleibergen-Paap rk-F statistic. Automatically switches to an **Anderson-Rubin** identification-robust confidence interval when KP rk-F < 10 — valid even with a weak instrument. |
+| **RDD** used an arbitrary fixed bandwidth (`bandwidth=20`) with no principled selection, no manipulation test, and no bias-corrected CI. The fixed bandwidth inflates MSE and the conventional CI ignores the smoothing bias. | Replaced with **`rdrobust`** (Calonico, Cattaneo & Titiunik) MSE-optimal data-driven bandwidth, bias-corrected robust CI, and **`rddensity`** McCrary manipulation density test. Supports both sharp and fuzzy designs. |
+
+
+**Fallback behaviour:** all three estimators degrade gracefully if optional libraries are missing — they fall back to clean `statsmodels`/`numpy` implementations with clear `[WARNING]` messages and install hints.
+
+**To use your own data:** set `CAUSAL_USE_SYNTHETIC = False` and fill in the column names in `config.py` under the `CAUSAL_DID_*`, `CAUSAL_IV_*`, and `CAUSAL_RDD_*` settings.
+
+#### Standardised output schema
+
+All three estimators return the same dict structure for easy downstream comparison:
+
+```python
+{
+    "method":    str,    # estimator name
+    "estimand":  str,    # "ATT(g,t)" | "LATE" | "LATE_at_cutoff"
+    "estimate":  float,
+    "se":        float,
+    "ci_lower":  float,
+    "ci_upper":  float,
+    "ci_type":   str,    # "doubly_robust" | "anderson_rubin" | "robust_bc" | fallback
+    "p_value":   float,
+    "n_obs":     int,
+    "diagnostics": dict, # pre-trend p, KP rk-F, CCT bandwidth, manipulation p …
+    "warnings":  list,
+}
+```
 
 ### Stage 4 — APA Report
 
@@ -112,7 +141,9 @@ A single Word document (`outputs/apa_report.docx`) is created with:
 | 3 | Chi-square tests + Cramér's V for demographic variables |
 | 4 | Profile membership counts, percentages, mean max probability |
 | 5 | A/B test results (proportion, means, distribution fit) |
-| 6 | Causal inference results (DiD ATE, IV LATE, RDD estimate) |
+| 6 | Causal inference results — method, estimand, estimate, SE, 95% CI, CI type, p, N |
+
+Table 6 CI types: `doubly_robust` (DiD bootstrap), `anderson_rubin` (IV weak-instrument), `robust_bc` (RDD bias-corrected).
 
 Formatting follows **APA 7th edition**: no vertical borders, three horizontal rules, Times New Roman 12pt.
 
@@ -130,12 +161,17 @@ Formatting follows **APA 7th edition**: no vertical borders, three horizontal ru
 | `chi_square_results.csv` | χ², df, p, Cramér's V per demographic |
 | `chi_square_tables.csv` | Observed frequency crosstabs (long format) |
 | `ab_test_results.csv` | A/B test results summary |
-| `causal_results.csv` | DiD / IV / RDD causal estimates |
+| `causal_results.csv` | Standardised causal results (method, estimand, estimate, SE, CI, p, N) |
+| `did_attgt.csv` | Full ATT(g,t) table from Callaway & Sant'Anna |
+| `iv_estimates.csv` | IV 2SLS point estimate + diagnostics |
+| `rdd_results.csv` | RDD estimate + CCT bandwidth + manipulation p |
 | `profiles_lineplot.png` | LPA indicator means with 95% CI (publication quality) |
 | `demographics_plot.png` | Stacked bar charts of demographics by profile |
 | `posthoc_heatmap.png` | Games-Howell p-value heatmap (indicator × profile pair) |
 | `chi_square_mosaic.png` | Tile chart of demographic categories by profile |
-| `rdd_plot.png` | RDD scatter plot with local linear fits |
+| `did_event_study.png` | Pre/post event-study plot (Callaway & Sant'Anna) |
+| `rdd_plot.png` | RDD scatter plot with local polynomial fits |
+| `rdd_density.png` | Running variable density test for manipulation (rddensity) |
 | `dist_fit_*.png` | Distribution fit plots for each A/B group |
 | `apa_report.docx` | Full APA 7th edition Word document (6 tables) |
 
@@ -154,6 +190,17 @@ Formatting follows **APA 7th edition**: no vertical borders, three horizontal ru
 | `AB_METRIC_COL` | `"Fare"` | Continuous metric for A/B test |
 | `AB_CONVERSION_COL` | `"Survived"` | Binary conversion metric |
 | `CAUSAL_USE_SYNTHETIC` | `True` | Use synthetic demo data for causal methods |
+| `CAUSAL_DID_OUTCOME_COL` | `""` | DiD outcome column |
+| `CAUSAL_DID_UNIT_COL` | `""` | DiD unit/entity identifier |
+| `CAUSAL_DID_TIME_COL` | `""` | DiD integer time period |
+| `CAUSAL_DID_COHORT_COL` | `""` | First treatment period (NaN = never treated) |
+| `CAUSAL_IV_OUTCOME_COL` | `""` | IV dependent variable |
+| `CAUSAL_IV_TREATMENT_COL` | `""` | IV endogenous regressor |
+| `CAUSAL_IV_INSTRUMENT_COLS` | `[]` | IV excluded instruments (list) |
+| `CAUSAL_RDD_RUNNING_COL` | `""` | RDD running/forcing variable |
+| `CAUSAL_RDD_OUTCOME_COL` | `""` | RDD outcome variable |
+| `CAUSAL_RDD_CUTOFF` | `0.0` | RDD assignment threshold |
+| `CAUSAL_RDD_FUZZY_COL` | `None` | Fuzzy RDD treatment column (None = sharp) |
 | `MCMC_ITERATIONS` | `10000` | MCMC iterations (Bayesian module, future) |
 
 ---
@@ -161,6 +208,7 @@ Formatting follows **APA 7th edition**: no vertical borders, three horizontal ru
 ## Dependencies
 
 ```
+# Core
 scikit-learn >= 1.3.0
 scipy        >= 1.11.0
 pandas       >= 2.0.0
@@ -169,6 +217,13 @@ matplotlib   >= 3.7.0
 seaborn      >= 0.12.0
 python-docx  >= 1.1.0
 statsmodels  >= 0.14.0
+
+# Causal inference (Stage 3 — robust estimators)
+differences  >= 1.0.0    # Callaway & Sant'Anna staggered DiD
+linearmodels >= 6.0.0    # IV2SLS with KP rk-F and robust SEs
+ivmodels     >= 0.4.0    # Anderson-Rubin identification-robust CI (IV fallback)
+rdrobust     >= 1.2.0    # CCT optimal-bandwidth RDD
+rddensity    >= 2.4.0    # McCrary/Cattaneo manipulation density test
 ```
 
 ---
@@ -179,7 +234,7 @@ statsmodels  >= 0.14.0
 |---|---|
 | `lpa_analysis/` | Stage 1 — fully migrated into `modules/lpa.py`, `anova.py`, `chi_square.py`, `visualisation.py`, `apa_report.py` |
 | `Bayesian/abtesting/` | Stage 2 — core tests migrated into `modules/ab_testing.py` |
-| `Bayesian/someMethod/` | Stage 3 — DiD, IV, RDD migrated into `modules/causal_inference.py` |
+| `Bayesian/someMethod/` | Stage 3 — DiD, IV, RDD reimplemented as `modules/causal/` (Callaway & Sant'Anna, linearmodels, rdrobust) |
 | `Bayesian/` (root) | Theory reference — MCMC / Bayesian module planned for future Stage 5 |
 
 The legacy folders remain **unchanged** — OmniStats is a new, unified layer on top.

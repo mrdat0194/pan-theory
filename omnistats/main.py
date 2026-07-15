@@ -103,8 +103,8 @@ def main():
     # ─── STAGE 3: CAUSAL INFERENCE ────────────────────────────────────────────
     banner("STAGE 3 — Causal Inference (Synthetic Demo)")
 
-    step(7, "Run DiD, IV/2SLS, and RDD causal estimators")
-    from modules.causal_inference import run_causal_suite
+    step(7, "Run robust DiD (Callaway & Sant'Anna), IV/2SLS (linearmodels), RDD (rdrobust)")
+    from modules.causal import run_causal_suite
     causal_results = run_causal_suite()
 
     # ─── STAGE 4: APA REPORT ──────────────────────────────────────────────────
