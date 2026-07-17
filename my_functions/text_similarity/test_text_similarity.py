@@ -94,5 +94,16 @@ class TestTextSimilarity(unittest.TestCase):
         mock_fuzz.token_set_ratio.assert_called_once_with("", "")
         self.assertEqual(result, 0)
 
+    @patch('my_functions.text_similarity.text_similarity.unidecode.unidecode')
+    def test_get_token_set_ratio_integration(self, mock_uni):
+        """Test get_token_set_ratio with actual unmocked string_reformat functionality."""
+        mock_uni.side_effect = lambda x: x
+        mock_fuzz.token_set_ratio.return_value = 85
+
+        result = get_token_set_ratio("Hello World!", "hello world")
+
+        mock_fuzz.token_set_ratio.assert_called_once_with("hello world", "hello world")
+        self.assertEqual(result, 85)
+
 if __name__ == '__main__':
     unittest.main()
