@@ -23,6 +23,7 @@ def test_divide():
     assert divide(-1, 1) == -1
     assert divide(-1, -1) == 1
     assert divide(5, 2) == 2.5
+    assert divide(0, 10) == 0
 
 def test_divide_by_zero(caplog):
     assert divide(10, 0) is None
