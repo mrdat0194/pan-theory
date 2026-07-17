@@ -17,6 +17,8 @@ def test_multiply():
     assert multiply(-1, 1) == -1
     assert multiply(-1, -1) == 1
     assert multiply(10, 0) == 0
+    assert multiply(10.0, 5.0) == 50.0
+    assert multiply('a', 3) == 'aaa'
 
 def test_divide():
     assert divide(10, 5) == 2
