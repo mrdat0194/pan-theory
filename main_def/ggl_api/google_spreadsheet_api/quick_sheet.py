@@ -1,5 +1,4 @@
 from __future__ import print_function
-import pickle
 import os.path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -9,7 +8,7 @@ import numpy as np
 
 # https://developers.google.com/sheets/api/quickstart/python
 # https://gspread.readthedocs.io/en/latest/user-guide.html#using-gspread-with-pandas
-# If modifying these scopes, delete the file token.pickle.
+# If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 
@@ -18,12 +17,11 @@ def main():
     Prints values from a sample spreadsheet.80
     """
     creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
+    # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json')
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -33,8 +31,8 @@ def main():
                 'client_secrets.json', SCOPES)
             creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+        with open('token.json', 'w') as token:
+        token.write(creds.to_json())
 
     service = build('sheets', 'v4', credentials=creds)
 
@@ -94,12 +92,11 @@ def service():
     Prints values from a sample spreadsheet.
     """
     creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
+    # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json')
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -109,8 +106,8 @@ def service():
                 'client_secrets.json', SCOPES)
             creds = flow.run_local_server(port=8080)
         # Save the credentials for the next run
-        with open('token.pickle', 'wb') as token:
-            pickle.dump(creds, token)
+        with open('token.json', 'w') as token:
+        token.write(creds.to_json())
 
     service = build('sheets', 'v4', credentials=creds)
 
