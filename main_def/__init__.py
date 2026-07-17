@@ -1,3 +1,4 @@
+from google.oauth2.credentials import Credentials
 import os
 
 MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -5,7 +6,7 @@ query_path = os.path.join(MAIN_DIR, "info", "query.txt")
 data_trial = os.path.join(MAIN_DIR, "data", "Gonj")
 config_sql = os.path.join(MAIN_DIR, "sql_con", "database.json")
 credentials = os.path.join(MAIN_DIR, "ggl_api", "kasa", "GoogleAds", "credentials.json")
-tokens = os.path.join(MAIN_DIR, "ggl_api", "token.pickle")
+tokens = os.path.join(MAIN_DIR, "ggl_api", "token.json")
 
 # function_utils = os.path.join(MAIN_DIR,"Complete_Function.py")
 # exec(open(function_utils).read())
@@ -15,7 +16,7 @@ tokens = os.path.join(MAIN_DIR, "ggl_api", "token.pickle")
 # MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
 # credentials = os.path.join(MAIN_DIR, "ggl_api", "credentials.json")
 # client_secret_store = os.path.join(MAIN_DIR, "ggl_api", "client_secret_store.json")
-# tokens = os.path.join(MAIN_DIR, "ggl_api", "token.pickle")
+# tokens = os.path.join(MAIN_DIR, "ggl_api", "token.json")
 #
 # save_path_sheet = os.path.join(MAIN_DIR, "ggl_api", "Automate_data_model", "info", "to_sheet.csv")
 # get_url = os.path.join(MAIN_DIR, "ggl_api", "Automate_data_model", "info","url.csv")

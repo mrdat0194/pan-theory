@@ -3,10 +3,10 @@ from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from main_def import MAIN_DIR, credentials, tokens, FIX_SLIDE_ID,new_slide, target_folder_id, get_url, slide_image_path
 import csv
 
-import pickle
 import os.path
 import time
 import pandas as pd
@@ -120,18 +120,17 @@ def create_image(presentation_id, new_slide, target_folder_id):
     for guides on implementing OAuth2 for the application.
     """
 
-    # If modifying these scopes, delete the file token.pickle.
+    # If modifying these scopes, delete the file token.json.
     SCOPES = ['https://www.googleapis.com/auth/presentations.readonly', 'https://www.googleapis.com/auth/presentations', 'https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/drive.appdata','https://www.googleapis.com/auth/drive.file' ]
 
     # The ID of a sample presentation.
 
     creds = None
-    # The file token.pickle stores the user's access and refresh tokens, and is
+    # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists(tokens):
-        with open(tokens, 'rb') as token:
-            creds = pickle.load(token)
+        creds = Credentials.from_authorized_user_file(tokens)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -141,8 +140,8 @@ def create_image(presentation_id, new_slide, target_folder_id):
                 credentials, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open(tokens, 'wb') as token:
-            pickle.dump(creds, token)
+        with open(tokens, 'w') as token:
+        token.write(creds.to_json())
 
     try:
         service = build("slides", "v1", credentials=creds)
