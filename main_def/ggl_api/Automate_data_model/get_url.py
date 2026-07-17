@@ -1,5 +1,5 @@
 from __future__ import print_function
-import pickle
+from google.oauth2.credentials import Credentials
 import os.path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -20,8 +20,7 @@ creds = None
 # created automatically when the authorization flow completes for the first
 # time.
 if os.path.exists(tokens):
-    with open(tokens, 'rb') as token:
-        creds = pickle.load(token)
+    creds = Credentials.from_authorized_user_file(tokens, SCOPES)
 # If there are no (valid) credentials available, let the user log in.
 if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
@@ -31,8 +30,8 @@ if not creds or not creds.valid:
             credentials, SCOPES)
         creds = flow.run_local_server(port=8080)
     # Save the credentials for the next run
-    with open(tokens, 'wb') as token:
-        pickle.dump(creds, token)
+    with open(tokens, 'w') as token:
+            token.write(creds.to_json())
 
 service = build('sheets', 'v4', credentials=creds)
 
