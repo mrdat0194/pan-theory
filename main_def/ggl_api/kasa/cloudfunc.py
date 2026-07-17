@@ -16,7 +16,7 @@ from google.oauth2 import service_account
 
 # os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
 
-# If modifying these scopes, delete the file token.pickle.
+# If modifying these scopes, delete the file token.json.
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/drive.file']
