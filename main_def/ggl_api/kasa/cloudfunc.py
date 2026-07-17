@@ -16,7 +16,7 @@ from google.oauth2 import service_account
 
 # os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
 
-# If modifying these scopes, delete the file token.pickle.
+# If modifying these scopes, delete the file token.json.
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive',
           'https://www.googleapis.com/auth/drive.file']
@@ -69,8 +69,7 @@ def hello_bigquery(request):
     # Construct a BigQuery client object.
     client = bigquery.Client(project='shopkasatriavn')
 
-    # TODO(developer): Set table_id to the ID of the table to create.
-    table_id = "shopkasatriavn.cf_test.testing_upload"
+    table_id = os.environ.get("TABLE_ID", "shopkasatriavn.cf_test.testing_upload")
 
     job_config = bigquery.LoadJobConfig(
         schema=[
