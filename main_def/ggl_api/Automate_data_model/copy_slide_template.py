@@ -5,7 +5,7 @@ from google.auth.transport.requests import Request
 
 import os
 from main_def import MAIN_DIR, credentials, tokens
-import pickle
+from google.oauth2.credentials import Credentials
 
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive.file']
 
@@ -14,8 +14,7 @@ creds = None
 # created automatically when the authorization flow completes for the first
 # time.
 if os.path.exists(tokens):
-    with open(tokens, 'rb') as token:
-        creds = pickle.load(token)
+    creds = Credentials.from_authorized_user_file(tokens, SCOPES)
 # If there are no (valid) credentials available, let the user log in.
 if not creds or not creds.valid:
     if creds and creds.expired and creds.refresh_token:
@@ -25,8 +24,8 @@ if not creds or not creds.valid:
             credentials, SCOPES)
         creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
-    with open(tokens, 'wb') as token:
-        pickle.dump(creds, token)
+    with open(tokens, 'w') as token:
+        token.write(creds.to_json())
 def copy_presentation(presentation_id, copy_title):
     """
     Creates the copy Presentation the user has access to.
