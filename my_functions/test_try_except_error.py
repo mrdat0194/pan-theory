@@ -43,3 +43,9 @@ def test_elements_check_list_raises_typeerror():
     # Test with a regular list, which should raise a TypeError since it's not an iterator
     with pytest.raises(TypeError):
         elements_check([1, 1, 1])
+
+def test_func(capsys):
+    from my_functions.try_except_error import func
+    func()
+    captured = capsys.readouterr()
+    assert captured.out == "this is a func\n"
