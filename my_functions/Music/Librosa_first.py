@@ -1,5 +1,5 @@
-# Beat tracking example
 from __future__ import print_function
+# Beat tracking example
 import librosa
 
 # 1. Get the file path to the included audio example

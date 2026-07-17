@@ -1,10 +1,10 @@
+from google.oauth2.credentials import Credentials
 import os
-import pickle
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
 def main():
-    token_path = 'token.pickle'
+    token_path = 'token.json'
     
     if not os.path.exists(token_path):
         print(f"Error: {token_path} not found.")
@@ -13,8 +13,7 @@ def main():
 
     try:
         # 1. Load the existing credentials
-        with open(token_path, 'rb') as token:
-            creds = pickle.load(token)
+        creds = Credentials.from_authorized_user_file(token_path, scopes)
             
         print("--- Diagnostic: Using All Granted OAuth Permissions ---")
         
@@ -27,13 +26,13 @@ def main():
             print("\nToken expired. Attempting silent refresh...")
             try:
                 creds.refresh(Request())
-                with open(token_path, 'wb') as token:
-                    pickle.dump(creds, token)
+                with open(token_path, 'w') as token:
+                    token.write(creds.to_json())
                 print("Refresh Successful!")
             except Exception as e:
                 print(f"Refresh Failed: {e}")
                 print("TIP: This usually means the session has been revoked or expired permanently.")
-                print("Action: Delete 'token.pickle' and run a login script to re-authorize.")
+                print("Action: Delete 'token.json' and run a login script to re-authorize.")
                 return
 
         # 4. Use Drive Scope (list files)
@@ -73,8 +72,8 @@ def main():
     except Exception as e:
         print(f"\nExecution Error: {e}")
         if 'invalid_grant' in str(e):
-            print("\nCRITICAL: Your current 'token.pickle' is invalid or revoked.")
-            print("To fix this, you MUST delete 'token.pickle' and re-login.")
+            print("\nCRITICAL: Your current 'token.json' is invalid or revoked.")
+            print("To fix this, you MUST delete 'token.json' and re-login.")
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,5 @@
 from __future__ import print_function
-import pickle
+from google.oauth2.credentials import Credentials
 import os.path
 import sys
 from googleapiclient.discovery import build
@@ -35,7 +35,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 def get_credentials():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    token_path = os.path.join(BASE_DIR, 'token.pickle')
+    token_path = os.path.join(BASE_DIR, 'token.json')
     json_path = os.path.join(BASE_DIR, 'bubbly-cascade-398303-5f3dd0a21703.json')
 
     # Check if Gdrive_secrets.json is a service account
@@ -64,15 +64,14 @@ def get_credentials():
 
     creds = None
     if os.path.exists(token_path):
-        with open(token_path, 'rb') as token:
-            creds = pickle.load(token)
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
             
     # If there are no (valid) credentials available, refresh them or start new flow.
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
-            with open(token_path, 'wb') as token:
-                pickle.dump(creds, token)
+            with open(token_path, 'w') as token:
+                token.write(creds.to_json())
         except Exception as e:
             print(f"Warning: Could not refresh token: {e}")
             creds = None
@@ -83,8 +82,8 @@ def get_credentials():
             flow = InstalledAppFlow.from_client_secrets_file(json_path, SCOPES)
             creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
-            with open(token_path, 'wb') as token:
-                pickle.dump(creds, token)
+            with open(token_path, 'w') as token:
+                token.write(creds.to_json())
         else:
             print("CRITICAL ERROR: No valid token.pickle found and credentials.json is missing.")
             print(f"Please place a valid 'credentials.json' from your Google Cloud Project into: {BASE_DIR}")
