@@ -1,11 +1,11 @@
 import os
-import pickle
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
 def main():
     # Path to the token file from previous login
-    token_path = 'token.pickle'
+    token_path = 'token.json'
     
     if not os.path.exists(token_path):
         print(f"Error: {token_path} not found in this directory.")
@@ -13,16 +13,15 @@ def main():
 
     try:
         # Load the credentials
-        with open(token_path, 'rb') as token:
-            creds = pickle.load(token)
+        creds = Credentials.from_authorized_user_file(token_path)
             
         # Refresh the token if it has expired (silently, without browser)
         if creds and creds.expired and creds.refresh_token:
             print("Access token expired. Refreshing using the saved refresh token...")
             creds.refresh(Request())
             # Save the refreshed credentials back to the pickle file
-            with open(token_path, 'wb') as token:
-                pickle.dump(creds, token)
+            with open(token_path, 'w') as token:
+                token.write(creds.to_json())
 
         # Build the Drive service
         service = build('drive', 'v3', credentials=creds)
