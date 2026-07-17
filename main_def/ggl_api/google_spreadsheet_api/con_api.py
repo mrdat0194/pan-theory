@@ -2,8 +2,8 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import os.path
-import pickle
 import pandas as pd
+from google.oauth2.credentials import Credentials
 from main_def import credentials, tokens
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -17,8 +17,10 @@ def service():
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists(tokens):
-        with open(tokens, 'rb') as token:
-            creds = pickle.load(token)
+        try:
+            creds = Credentials.from_authorized_user_file(tokens, SCOPES)
+        except Exception:
+            creds = None
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -28,8 +30,8 @@ def service():
                 credentials, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open(tokens, 'wb') as token:
-            pickle.dump(creds, token)
+        with open(tokens, 'w') as token:
+            token.write(creds.to_json())
 
     service = build('sheets', 'v4', credentials=creds)
 
