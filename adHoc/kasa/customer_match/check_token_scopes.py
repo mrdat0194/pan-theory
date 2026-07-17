@@ -1,9 +1,9 @@
+from google.oauth2.credentials import Credentials
 import os
-import pickle
 
 def main():
     # Path to the token file generated from a previous login
-    token_path = 'token.pickle'
+    token_path = 'token.json'
     
     if not os.path.exists(token_path):
         print(f"Error: {token_path} not found in this directory.")
@@ -12,8 +12,7 @@ def main():
 
     try:
         # Load the credentials from the pickle file
-        with open(token_path, 'rb') as token:
-            creds = pickle.load(token)
+        creds = Credentials.from_authorized_user_file(token_path, None)
             
         print("--- OAuth Token Diagnostic ---")
         
