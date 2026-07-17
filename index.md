@@ -45,8 +45,14 @@ within the project
 - `adHoc` &mdash; As an analyst, there is always adhoc.
     - For reproducible result, adHoc can use notebook to test and implement beforehand (Eg. SQL flow).
 
-- `Bayesian` &mdash; 
-    - Fundamental usage of Bayesian
+- `Bayesian` &mdash; Reference archive of Bayesian tools. The direct migration source for OmniStats.
+- `omnistats` &mdash; Unified Statistical Analysis Pipeline [Stage 1-5]
+    - Stage 1: Latent Profile Analysis (LPA) via Gaussian Mixture Models (GMM)
+    - Stage 2: A/B Testing (z-test, Welch t-test, and Sequential Bayesian PyMC NUTS / Importance Sampling)
+    - Stage 3: CUPED Variance Reduction (monotonic CatBoost / DecisionTree on profile scores)
+    - Stage 4: Causal Inference (DiD Callaway & Sant'Anna, IV 2SLS, RDD rdrobust, Synthetic Control SCM, Matrix Completion, and Google CausalImpact BSTS)
+    - Stage 5: APA Report consolidation (builds Tables 1–8 in an APA 7th edition Word document)
+    - See the detailed execution guide in [omnistats/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/omnistats/README.md) for Explainable AI (XAI) mapping and future JEPA / Reinforcement Learning roadmap connection.
   
 - `main_def` &mdash; The definition that controls all the connection-wide
     - aws: working with aws

@@ -1,14 +1,15 @@
 # OmniStats — Unified Statistical Analysis Pipeline
 
-A single, **100 % Python** pipeline that combines four statistical workflows
-into one orchestrated run:
+A single, **100 % Python** pipeline that combines five statistical stages
+into one orchestrated run, generating an APA 7th edition Word report.
 
-| Stage | Methods | Source |
+| Stage | Purpose | Methods |
 |---|---|---|
-| **1 — LPA** | Latent Profile Analysis (GMM), Welch ANOVA, Games-Howell, Chi-square, Cramér's V | `lpa_analysis/` |
-| **2 — A/B Testing** | Proportion z-test, Welch t-test, Distribution fit (χ²) | `Bayesian/abtesting/` |
-| **3 — Causal Inference** | **Staggered DiD** (Callaway & Sant'Anna ATT(g,t)), **Robust IV/2SLS** (linearmodels + Anderson-Rubin), **RDD** (rdrobust CCT + rddensity) | `modules/causal/` |
-| **4 — APA Report** | APA 7th edition Word document (6 tables) | combined |
+| **1 — LPA** | **DESCRIBE** — segment users | GMM, Welch ANOVA, Games-Howell, Chi-square, Cramér's V |
+| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test; Bayesian Sequential: Beta-Binomial (PyMC / IS), StudentT (PyMC NUTS), Expected Loss |
+| **3 — CUPED** | **SHARPEN** — reduce variance before causal attribution | Monotonic CatBoost / DT regression on LPA profile score |
+| **4 — Causal** | **ATTRIBUTE** — explain *why* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM, Matrix Completion, BMA (HTE) |
+| **5 — Time-Series + APA** | **PROJECT + CONSOLIDATE** | CausalImpact (BSTS + spike-and-slab); APA 7th edition Word document (Tables 1–8) |
 
 ---
 
@@ -24,16 +25,44 @@ omnistats/
 │   ├── lpa.py              ← Gaussian Mixture Model (LPA) fitting
 │   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
 │   ├── chi_square.py       ← Chi-square independence test + Cramér's V
-│   ├── ab_testing.py       ← Proportion test, Welch t-test, dist. fit
-│   ├── causal/             ← Robust causal inference subpackage
+│   ├── ab_testing.py       ← Frequentist: proportion z-test, Welch t-test, dist. fit
+│   ├── bayesian/           ← Bayesian Sequential A/B subpackage [Stage 2]
+│   │   ├── __init__.py     ←   run_bayesian_ab_tests() orchestrator
+│   │   ├── beta_binomial.py←   Beta-Binomial conjugate + IS fallback
+│   │   ├── normal_model.py ←   PyMC NUTS StudentT (IS fallback)
+│   │   └── sequential.py   ←   SIR batch stopping rule + Expected Loss
+│   ├── cuped.py            ← CUPED variance reduction (CatBoost monotonic) [Stage 3]
+│   ├── causal/             ← Robust causal inference subpackage [Stage 4]
 │   │   ├── __init__.py     ←   run_causal_suite() orchestrator
-│   │   ├── did.py          ←   Staggered DiD  (Callaway & Sant'Anna ATT(g,t))
+│   │   ├── did.py          ←   Staggered DiD (Callaway & Sant'Anna ATT(g,t))
 │   │   ├── iv.py           ←   Robust IV/2SLS (linearmodels + Anderson-Rubin)
-│   │   └── rdd.py          ←   CCT optimal-bandwidth RDD (rdrobust + rddensity)
+│   │   ├── rdd.py          ←   CCT optimal-bandwidth RDD (rdrobust + rddensity)
+│   │   ├── scm.py          ←   Synthetic Control Method (cvxpy convex opt.)
+│   │   └── matrix_completion.py ← Matrix Completion (SoftImpute / ALS)
+│   ├── timeseries/         ← Bayesian time-series causal subpackage [Stage 5]
+│   │   ├── __init__.py     ←   run_timeseries_suite() orchestrator
+│   │   └── causal_impact.py←   CausalImpact BSTS + Prophet fallback
 │   ├── visualisation.py    ← All plots (line, stacked bar, heatmap, mosaic)
-│   └── apa_report.py       ← APA 7th edition .docx generator
+│   └── apa_report.py       ← APA 7th edition .docx generator (Tables 1–8)
 └── outputs/                ← All CSVs, PNGs, and .docx created here
 ```
+
+---
+
+## Relationship to `Bayesian/` — Migration Source
+
+`C:\Users\mrdat\PycharmProjects\pan-theory\Bayesian\` is the **direct migration source** for all advanced methods. The mapping is:
+
+| `Bayesian/` asset | Migrated to `omnistats/modules/` |
+|---|---|
+| `abtesting/abtesting_suite.py` | `bayesian/beta_binomial.py` (Beta-Binomial logic + simulation fixtures) |
+| `importance_sampling_bayesian.py` | Archive/reference (unused fallback logic removed from `bayesian/beta_binomial.py`) |
+| `mcmc_bayesian.py` | Archive/reference — role superseded by PyMC NUTS |
+| `mono_casual.ipynb` | `cuped.py` (CatBoost monotonic regression → Stage 3 CUPED) |
+| `prophet.ipynb` | `timeseries/causal_impact.py` (Prophet fallback; primary = CausalImpact BSTS in Stage 5) |
+| `BMA.ipynb` | `causal/bma.py` — **Stage 4 migration target** for Heterogeneous Treatment Effects (HTE) / subgroup analysis via Bayesian Model Averaging. BMA models `Treatment × Demographic` interactions and outputs Posterior Inclusion Probabilities (PIPs). This is distinct from CUPED (which reduces variance); BMA *explains* who benefits from treatment. |
+
+The `Bayesian/` directory remains **unchanged** as a reference archive.
 
 ---
 
@@ -43,6 +72,8 @@ omnistats/
 
 ```powershell
 pip install -r requirements.txt
+# For CausalImpact (Stage 5 primary):
+pip install tfcausalimpact
 ```
 
 ### 2. Point to your data
@@ -66,73 +97,162 @@ python -X utf8 main.py
 
 ---
 
-## Workflow
+## Stage Explanations — Why Each Exists
 
-### Stage 1 — Latent Profile Analysis
+These are five **distinct inferential modes** following a strict dependency chain.
+The output of each stage is the direct input to the next.
 
-The pipeline fits **Gaussian Mixture Models** for K = 1 … 6 profiles (configurable via `K_MIN` / `K_MAX`) using diagonal covariance — mathematically equivalent to LPA in Mplus / tidySEM.
+```
+Stage 1 (LPA)
+  └─ outputs profile_prob_max
+       │
+       ▼
+Stage 2 (A/B Testing)
+  └─ outputs bayesian_ab_results (comparison: did B beat A?)
+       │
+       ▼
+Stage 3 (CUPED) ← uses profile_prob_max from Stage 1
+  └─ outputs df_cuped
+       │
+       ▼
+Stage 4 (Causal Inference) ← operates on df_cuped
+  └─ outputs causal_results.csv (DiD, IV, RDD, SCM, MC, BMA)
+       │
+       ▼
+Stage 5 (Time-Series + APA Report)
+  └─ outputs apa_report.docx (Tables 1–8)
+```
 
-**After Step 2**, inspect `outputs/lpa_fit_stats.csv`:
+### Stage 1 — Latent Profile Analysis `[DESCRIBE]`
 
-| K | BIC | Entropy | LMR-LRT p | Decision |
-|---|---|---|---|---|
-| 1 | Highest | — | — | Baseline |
-| 2 | Lower | 0.99 | < .001 | ✓ Better |
-| **3** | **Lowest** | **0.96** | **< .001** | **✓ Selected** |
+Fits **Gaussian Mixture Models** for K = 1 … 6 profiles. Mathematically equivalent to LPA in Mplus / tidySEM.
 
-Choose the K where BIC stops decreasing significantly AND entropy > 0.80.
-Then set `N_PROFILES = K` in `config.py` and re-run.
+After Step 2, inspect `outputs/lpa_fit_stats.csv`. Choose K where BIC stops decreasing AND entropy > 0.80.
 
-### Stage 2 — A/B Testing
+**Key output feeding Stage 3:** `profile_prob_max` — the posterior probability of profile membership. This is the CUPED covariate in Stage 3.
 
-Runs automatically on your real data using `AB_GROUP_COL` and `AB_METRIC_COL`.
+### Stage 2 — A/B Testing `[COMPARE]`
+
+Runs both frequentist and Bayesian tests in parallel.
+
+**Frequentist (backward-compatible):**
 
 | Test | When to use |
 |---|---|
-| `proportion_test()` | Binary conversion rates (click-through, sign-ups) |
-| `means_test()` | Continuous metrics (revenue, time on page, age) |
-| `distribution_fit_test()` | Verify normality assumption of each group |
+| `proportion_test()` | Binary conversion rates |
+| `means_test()` | Continuous metrics |
+| `distribution_fit_test()` | Verify normality |
 
-### Stage 3 — Causal Inference
+**Bayesian Sequential — solving the peaking problem:**
 
-By default runs on **synthetic demo data** (`CAUSAL_USE_SYNTHETIC = True` in `config.py`). Each estimator uses a methodologically robust implementation replacing the legacy flat module:
+Traditional A/B tests suffer from inflated Type-I error when p-values are checked before the pre-specified sample size is reached. The Bayesian framework solves this:
 
-#### Why the new implementation is better
+| Test | Method | Engine |
+|---|---|---|
+| `bayesian_proportion_test()` | Beta-Binomial conjugate | Analytic + IS fallback |
+| `bayesian_means_test()` | StudentT likelihood | PyMC NUTS (auto-tuned MCMC) |
+| `sequential_monitor()` | Batch SIR stopping rule | Sequential Importance Resampling |
 
-| Issue in the old `causal_inference.py` | Fix in `modules/causal/` |
+**Decision rule:** Stop when P(B > A) ≥ 0.95 AND Expected Loss ≤ 0.01.
+
+### Stage 3 — CUPED Variance Reduction `[SHARPEN]`
+
+**CUPED** (Controlled-experiment Using Pre-Experiment Data) adjusts the outcome
+before passing it to Stage 4 Causal Inference:
+
+$$Y_i^{\text{adj}} = Y_i - \hat\theta (X_i - \bar X)$$
+
+**Why `profile_prob_max` is the covariate** (not `AB_METRIC_COL`):
+- `profile_prob_max` is measured *before* any treatment (pre-experiment)
+- It correlates with the outcome (high-profile users have higher metrics)
+- Using `AB_METRIC_COL` itself would be circular
+
+**Why monotonic constraints:** The profile→outcome relationship is monotone by construction. `CatBoostRegressor(monotone_constraints=[+1])` enforces this, preventing overfitting of the hat matrix.
+
+### Stage 4 — Causal Inference `[ATTRIBUTE]`
+
+Five core estimators plus BMA for HTE, all operating on `df_cuped` from Stage 3:
+
+| Estimator | Identification strategy | Estimand | Key assumption |
+|---|---|---|---|
+| **DiD** (Callaway & Sant'Anna) | Staggered parallel trends | ATT(g,t) | Parallel trends + no anticipation |
+| **IV/2SLS** (linearmodels) | Exclusion restriction | LATE | Instrument relevance + exclusion |
+| **RDD** (rdrobust CCT) | Continuity at cutoff | LATE at cutoff | Continuity of potential outcomes |
+| **SCM** (cvxpy) | Convex donor matching | ATT treated unit | Pre-period fit quality |
+| **Matrix Completion** (SoftImpute) | Missing data / nuclear norm | ATT staggered panel | Low-rank latent factor structure |
+| **BMA** | Model averaging over subgroup interactions | HTE / PIP per subgroup | Prior on covariate inclusion |
+
+**Why BMA belongs in Stage 4:**
+BMA models `Treatment × Demographic` interaction effects across all plausible covariate structures and outputs **Posterior Inclusion Probabilities (PIPs)** — the probability that each subgroup has a true heterogeneous treatment effect.
+
+### Stage 5 — Bayesian Time-Series Causal + APA Report `[PROJECT + CONSOLIDATE]`
+
+**CausalImpact (BSTS)** vs. Prophet:
+
+| | Prophet | CausalImpact (BSTS) |
+|---|---|---|
+| Counterfactual source | Historical trend of *treated* series only | Weighted blend of *untreated control* series |
+| Shock handling | Cannot separate macro shocks from treatment | Spike-and-slab separates shared shocks |
+| Explainability | Trend + seasonality components | Posterior Inclusion Probabilities per control series |
+
+**Relationship to Stage 4 DiD:** CausalImpact is DiD generalised to continuous time. Instead of a binary pre/post comparison with parallel trends, BSTS models the full counterfactual trajectory.
+
+The APA Report (`apa_report.docx`) is generated at the end of Stage 5, after all results are available, producing **Tables 1–8** in a single pass.
+
+---
+
+## Explainable AI (XAI) in OmniStats
+
+This pipeline is designed as an **Explainable AI system** for causal inference. Every result is directly interpretable. No black boxes. Every number in the APA report has a mathematical interpretation expressible in plain language for non-statistician reviewers.
+
+---
+
+## Advanced Experimentation Roadmap
+
+### 1. Bayesian Model Averaging (BMA)
+*   **Asset:** `causal/bma.py`
+*   **Advanced Tactic:** Subgroup Analysis & Heterogeneous Treatment Effects (HTE) under model uncertainty.
+
+### 2. MCMC & Importance Sampling (Reference Engines)
+*   **Role in OmniStats:** The mathematical foundations that PyMC NUTS (Stage 2) and IS fallbacks directly implement at a higher level.
+
+### 3. CUPED via Monotonic Regression
+*   **Asset:** `modules/cuped.py`
+*   **Status:** Implemented in **Stage 3**.
+
+---
+
+## Future Roadmap — JEPA & Deep Learning Counterfactuals
+
+> **Research direction — significant work required before integration.**
+
+### Why JEPA Is Not in the Current Pipeline
+
+Meta's **Joint Embedding Predictive Architecture (JEPA)** predicts causal dynamics in an *abstract latent space* rather than predicting the raw metric value. While this makes JEPA extremely efficient and generalisable, it is currently incompatible with an APA reporting pipeline for two reasons:
+
+1. **No interpretable effect size:** JEPA predicts that a user's latent state vector shifts from `[0.2, -1.4]` to `[0.5, -0.9]`. This cannot be placed in an APA table — reviewers require dollar amounts, conversion rates, or other real-world quantities.
+2. **No standard errors:** Translating a JEPA latent shift back into a real metric with a valid standard error is an unsolved, actively researched problem.
+
+### How OmniStats Enables Future JEPA Integration
+
+By producing **highly interpretable, mathematically proven causal counterfactuals** (SCM weights, BSTS posterior intervals, doubly-robust ATT, BMA PIPs), this pipeline generates **ground-truth training signal** for future latent-space causal models.
+
+A future JEPA architecture for causal inference could be trained using OmniStats as the teacher: JEPA learns to align its abstract latent state transitions with the explainable causal effects calculated by the econometric estimators in Stage 4 and Stage 5. The pipeline is thus the necessary rigorous foundation before deploying opaque latent-space causal models.
+
+### Reinforcement Learning Connection
+
+
+| OmniStats component | RL equivalent |
 |---|---|
-| **DiD** used a plain 2×2 OLS interaction (`treated × post`). Under *staggered adoption* (different units treated at different times) this TWFE estimator is provably biased — treated-early units act as a "contaminated control" for treated-late units. | Replaced with **Callaway & Sant'Anna (2021)** ATT(g,t): estimates one treatment effect per cohort-period pair, then aggregates. Doubly-robust (IPW + outcome regression), so consistent if *either* the propensity or outcome model is correct. |
-| **IV** computed a raw numpy Wald ratio with homoscedastic OLS standard errors and no weak-instrument check, giving wrong SEs under heteroscedasticity and invalid inference when the instrument is weak. | Replaced with **`linearmodels` IV2SLS** (HC3 robust SEs). Reports the Kleibergen-Paap rk-F statistic. Automatically switches to an **Anderson-Rubin** identification-robust confidence interval when KP rk-F < 10 — valid even with a weak instrument. |
-| **RDD** used an arbitrary fixed bandwidth (`bandwidth=20`) with no principled selection, no manipulation test, and no bias-corrected CI. The fixed bandwidth inflates MSE and the conventional CI ignores the smoothing bias. | Replaced with **`rdrobust`** (Calonico, Cattaneo & Titiunik) MSE-optimal data-driven bandwidth, bias-corrected robust CI, and **`rddensity`** McCrary manipulation density test. Supports both sharp and fuzzy designs. |
+| Bayesian Sequential A/B (Stage 2) | Thompson Sampling — Multi-Armed Bandit (Exploration vs. Exploitation) |
+| Doubly Robust DiD / IV (Stage 4) | Off-Policy Evaluation (OPE) for safe agent policy comparison |
+| CausalImpact BSTS / Kalman Filter (Stage 5) | Belief-state updating in POMDPs (Partially Observable MDPs) |
 
+By building OmniStats, you are constructing the **critic (evaluator) network** for a future Reinforcement Learning agent that automatically allocates user traffic to optimal treatments.
 
-**Fallback behaviour:** all three estimators degrade gracefully if optional libraries are missing — they fall back to clean `statsmodels`/`numpy` implementations with clear `[WARNING]` messages and install hints.
+---
 
-**To use your own data:** set `CAUSAL_USE_SYNTHETIC = False` and fill in the column names in `config.py` under the `CAUSAL_DID_*`, `CAUSAL_IV_*`, and `CAUSAL_RDD_*` settings.
-
-#### Standardised output schema
-
-All three estimators return the same dict structure for easy downstream comparison:
-
-```python
-{
-    "method":    str,    # estimator name
-    "estimand":  str,    # "ATT(g,t)" | "LATE" | "LATE_at_cutoff"
-    "estimate":  float,
-    "se":        float,
-    "ci_lower":  float,
-    "ci_upper":  float,
-    "ci_type":   str,    # "doubly_robust" | "anderson_rubin" | "robust_bc" | fallback
-    "p_value":   float,
-    "n_obs":     int,
-    "diagnostics": dict, # pre-trend p, KP rk-F, CCT bandwidth, manipulation p …
-    "warnings":  list,
-}
-```
-
-### Stage 4 — APA Report
-
-A single Word document (`outputs/apa_report.docx`) is created with:
+## APA Report — Table Summary
 
 | Table | Content |
 |---|---|
@@ -140,10 +260,10 @@ A single Word document (`outputs/apa_report.docx`) is created with:
 | 2 | Profile indicator means (SD) + Welch ANOVA + η² |
 | 3 | Chi-square tests + Cramér's V for demographic variables |
 | 4 | Profile membership counts, percentages, mean max probability |
-| 5 | A/B test results (proportion, means, distribution fit) |
-| 6 | Causal inference results — method, estimand, estimate, SE, 95% CI, CI type, p, N |
-
-Table 6 CI types: `doubly_robust` (DiD bootstrap), `anderson_rubin` (IV weak-instrument), `robust_bc` (RDD bias-corrected).
+| 5 | Frequentist A/B test results (proportion, means, distribution fit) |
+| 6 | Causal inference results — DiD, IV, RDD, SCM (weights), Matrix Completion |
+| 7 | Time-Series Causal — CausalImpact BSTS lift, MCMC credible interval |
+| 8 | Bayesian A/B — P(B>A), Expected Loss, ESS, R-hat, decision |
 
 Formatting follows **APA 7th edition**: no vertical borders, three horizontal rules, Times New Roman 12pt.
 
@@ -151,29 +271,29 @@ Formatting follows **APA 7th edition**: no vertical borders, three horizontal ru
 
 ## All Outputs
 
-| File | Description |
-|---|---|
-| `prepared_data.csv` | Cleaned dataset with z-scored indicator columns |
-| `lpa_fit_stats.csv` | Model fit statistics for K = 1 … K_MAX |
-| `lpa_profiles.csv` | Dataset with profile labels and posterior probabilities |
-| `anova_results.csv` | Welch ANOVA F, df, p, η² per indicator |
-| `anova_posthoc.csv` | Games-Howell pairwise comparisons (t, p, Cohen's d) |
-| `chi_square_results.csv` | χ², df, p, Cramér's V per demographic |
-| `chi_square_tables.csv` | Observed frequency crosstabs (long format) |
-| `ab_test_results.csv` | A/B test results summary |
-| `causal_results.csv` | Standardised causal results (method, estimand, estimate, SE, CI, p, N) |
-| `did_attgt.csv` | Full ATT(g,t) table from Callaway & Sant'Anna |
-| `iv_estimates.csv` | IV 2SLS point estimate + diagnostics |
-| `rdd_results.csv` | RDD estimate + CCT bandwidth + manipulation p |
-| `profiles_lineplot.png` | LPA indicator means with 95% CI (publication quality) |
-| `demographics_plot.png` | Stacked bar charts of demographics by profile |
-| `posthoc_heatmap.png` | Games-Howell p-value heatmap (indicator × profile pair) |
-| `chi_square_mosaic.png` | Tile chart of demographic categories by profile |
-| `did_event_study.png` | Pre/post event-study plot (Callaway & Sant'Anna) |
-| `rdd_plot.png` | RDD scatter plot with local polynomial fits |
-| `rdd_density.png` | Running variable density test for manipulation (rddensity) |
-| `dist_fit_*.png` | Distribution fit plots for each A/B group |
-| `apa_report.docx` | Full APA 7th edition Word document (6 tables) |
+| File | Stage | Description |
+|---|---|---|
+| `prepared_data.csv` | 1 | Cleaned dataset with z-scored indicators |
+| `lpa_fit_stats.csv` | 1 | Model fit for K = 1 … K_MAX |
+| `lpa_profiles.csv` | 1 | Dataset with profile labels and posteriors |
+| `anova_results.csv` | 1 | Welch ANOVA F, df, p, η² |
+| `anova_posthoc.csv` | 1 | Games-Howell comparisons (t, p, Cohen's d) |
+| `chi_square_results.csv` | 1 | χ², df, p, Cramér's V |
+| `ab_test_results.csv` | 2 | Frequentist A/B summary |
+| `bayesian_ab_results.csv` | 2 | P(B>A), Expected Loss, ESS, decision |
+| `cuped_variance_reduction.csv` | 3 | θ̂, variance reduction %, backend |
+| `causal_results.csv` | 4 | DiD / IV / RDD / SCM / MC standardised schema |
+| `did_attgt.csv` | 4 | Full ATT(g,t) table |
+| `iv_estimates.csv` | 4 | IV 2SLS estimate + diagnostics |
+| `rdd_results.csv` | 4 | RDD estimate + CCT bandwidth |
+| `scm_weights.csv` | 4 | SCM donor unit weights |
+| `scm_gaps.csv` | 4 | SCM gap series (treated − synthetic) |
+| `mc_gaps.csv` | 4 | Matrix Completion counterfactual gaps |
+| `timeseries_causal_results.csv` | 5 | CausalImpact / BSTS lift + credible band |
+| `ts_causalimpact.png` | 5 | CausalImpact summary plot |
+| `ts_counterfactual.png` | 5 | Prophet fallback counterfactual plot |
+| `ts_lift.csv` | 5 | Pointwise lift (observed − counterfactual) |
+| `apa_report.docx` | 5 | Full APA 7th edition Word document (Tables 1–8) |
 
 ---
 
@@ -182,26 +302,23 @@ Formatting follows **APA 7th edition**: no vertical borders, three horizontal ru
 | Setting | Default | Description |
 |---|---|---|
 | `DATA_PATH` | `../adHoc/titanic.csv` | Path to your dataset |
-| `N_PROFILES` | `3` | Number of LPA profiles — **review lpa_fit_stats.csv first** |
-| `K_MIN` / `K_MAX` | `1` / `6` | Range of K values to fit |
-| `INDICATOR_COLS` | `["Age", "Fare", "SibSp", "Parch"]` | Continuous variables for LPA |
-| `DEMOGRAPHIC_COLS` | `["Sex", "Pclass", "Embarked"]` | Categorical variables for chi-square |
-| `AB_GROUP_COL` | `"Sex"` | Column with A/B group labels |
-| `AB_METRIC_COL` | `"Fare"` | Continuous metric for A/B test |
+| `N_PROFILES` | `3` | Number of LPA profiles |
+| `INDICATOR_COLS` | `["Age","Fare","SibSp","Parch"]` | Continuous vars for LPA |
+| `AB_GROUP_COL` | `"Sex"` | A/B group column |
+| `AB_METRIC_COL` | `"Fare"` | Continuous outcome metric |
 | `AB_CONVERSION_COL` | `"Survived"` | Binary conversion metric |
-| `CAUSAL_USE_SYNTHETIC` | `True` | Use synthetic demo data for causal methods |
-| `CAUSAL_DID_OUTCOME_COL` | `""` | DiD outcome column |
-| `CAUSAL_DID_UNIT_COL` | `""` | DiD unit/entity identifier |
-| `CAUSAL_DID_TIME_COL` | `""` | DiD integer time period |
-| `CAUSAL_DID_COHORT_COL` | `""` | First treatment period (NaN = never treated) |
-| `CAUSAL_IV_OUTCOME_COL` | `""` | IV dependent variable |
-| `CAUSAL_IV_TREATMENT_COL` | `""` | IV endogenous regressor |
-| `CAUSAL_IV_INSTRUMENT_COLS` | `[]` | IV excluded instruments (list) |
-| `CAUSAL_RDD_RUNNING_COL` | `""` | RDD running/forcing variable |
-| `CAUSAL_RDD_OUTCOME_COL` | `""` | RDD outcome variable |
-| `CAUSAL_RDD_CUTOFF` | `0.0` | RDD assignment threshold |
-| `CAUSAL_RDD_FUZZY_COL` | `None` | Fuzzy RDD treatment column (None = sharp) |
-| `MCMC_ITERATIONS` | `10000` | MCMC iterations (Bayesian module, future) |
+| `CUPED_ENABLED` | `True` | Enable CUPED Stage 2.5 |
+| `CUPED_COVARIATE_COL` | `"profile_prob_max"` | LPA Stage 1 posterior probability |
+| `CUPED_USE_CATBOOST` | `True` | False = sklearn DT / OLS fallback |
+| `BAYES_AB_THRESHOLD` | `0.95` | P(B>A) stopping threshold |
+| `BAYES_AB_LOSS_THRESH` | `0.01` | Expected Loss stopping threshold |
+| `BAYES_AB_N_SAMPLES` | `2000` | PyMC NUTS posterior draws |
+| `CAUSAL_USE_SYNTHETIC` | `True` | Use built-in demo data for causal |
+| `CAUSAL_SCM_ENABLED` | `True` | Include Synthetic Control in suite |
+| `CAUSAL_MATRIX_COMP_ENABLED` | `True` | Include Matrix Completion in suite |
+| `TS_CAUSALIMPACT_ENABLED` | `False` | Enable Stage 4 with real data |
+| `TS_INTERVENTION_DATE` | `""` | `"YYYY-MM-DD"` treatment start |
+| `TS_CONTROL_COLS` | `[]` | Control series for BSTS spike-and-slab |
 
 ---
 
@@ -218,49 +335,27 @@ seaborn      >= 0.12.0
 python-docx  >= 1.1.0
 statsmodels  >= 0.14.0
 
-# Causal inference (Stage 3 — robust estimators)
+# Causal Inference Stage 3 — core estimators
 differences  >= 1.0.0    # Callaway & Sant'Anna staggered DiD
 linearmodels >= 6.0.0    # IV2SLS with KP rk-F and robust SEs
-ivmodels     >= 0.4.0    # Anderson-Rubin identification-robust CI (IV fallback)
+ivmodels     >= 0.4.0    # Anderson-Rubin identification-robust CI
 rdrobust     >= 1.2.0    # CCT optimal-bandwidth RDD
 rddensity    >= 2.4.0    # McCrary/Cattaneo manipulation density test
+
+# Causal Inference Stage 3 — advanced panel data
+cvxpy        >= 1.3.0    # Synthetic Control Method convex optimisation
+fancyimpute  >= 0.7.0    # Matrix Completion (SoftImpute)
+
+# Bayesian A/B Testing Stage 2
+pymc         >= 5.0.0    # NUTS sampler (primary Bayesian backend)
+arviz        >= 0.17.0   # PyMC diagnostics (R-hat, ESS)
+
+# CUPED Variance Reduction Stage 2.5
+catboost     >= 1.2.0    # Monotonic regression (fallback: sklearn DT)
+
+# Stage 4 Time-Series Causal
+# Install one:
+# pip install tfcausalimpact   # CausalImpact primary (recommended)
+# pip install pycausalimpact   # Alternative port
+prophet      >= 1.1.0    # Fallback if CausalImpact unavailable
 ```
-
----
-
-## Relationship to Legacy Codebases
-
-| Legacy folder | Role in OmniStats |
-|---|---|
-| `lpa_analysis/` | Stage 1 — fully migrated into `modules/lpa.py`, `anova.py`, `chi_square.py`, `visualisation.py`, `apa_report.py` |
-| `Bayesian/abtesting/` | Stage 2 — core tests migrated into `modules/ab_testing.py` |
-| `Bayesian/someMethod/` | Stage 3 — DiD, IV, RDD reimplemented as `modules/causal/` (Callaway & Sant'Anna, linearmodels, rdrobust) |
-| `Bayesian/` (root) | Theory reference — MCMC / Bayesian module planned for future Stage 5 |
-
-The legacy folders remain **unchanged** — OmniStats is a new, unified layer on top.
-
----
-
-## Advanced Experimentation Roadmap & Bayesian Integration
-
-To move the current experimentation framework (`modules/ab_testing.py`) from basic statistical tests (Welch's t-test and two-proportion z-tests) toward advanced industry standards (Statsig / Netflix / Stats-tech), the local files in the `Bayesian/` directory serve as a direct integration roadmap:
-
-### 1. Bayesian Model Averaging (BMA)
-*   **Asset:** [BMA.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/BMA.ipynb)
-*   **Advanced Tactic:** Subgroup Analysis & Heterogeneous Treatment Effects (HTE) under uncertainty.
-*   **Integration:** Instead of running isolated sub-group tests (which inflates the false-positive rate), integrate the BMA class to model interaction effects (e.g., `Treatment * Demographic`). BMA averages over all plausible covariate structures to output **Posterior Inclusion Probabilities (PIPs)** representing the exact probability that a subgroup response is a true treatment effect.
-
-### 2. MCMC & Importance Sampling
-*   **Assets:** [mcmc_bayesian.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/mcmc_bayesian.py) and [importance_sampling_bayesian.py](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/importance_sampling_bayesian.py)
-*   **Advanced Tactic:** Sequential Bayesian A/B Testing (continuous monitoring without peaking inflation).
-*   **Integration:** Traditional A/B testing suffers from the "peaking problem" (inflated error rates when checking p-values early). Integrate the Importance Sampling and Metropolis-Hastings MCMC engines to numerically calculate the posterior probability $P(\text{Treatment} > \text{Control} \mid \text{Data})$ dynamically as data streams in. This allows tests to be safely terminated early once a posterior threshold (e.g., 95% probability of improvement) is reached.
-
-### 3. Non-Linear Variance Reduction (CUPED)
-*   **Asset:** [mono_casual.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/mono_casual.ipynb)
-*   **Advanced Tactic:** Covariate-Adjusted Experimentation (variance reduction via machine learning).
-*   **Integration:** CUPED reduces variance by regressing out pre-experiment covariates. For complex, non-linear but monotonic relationships (e.g., historical user engagement), integrate the monotonic constraints (e.g. `CatBoostRegressor` or `DecisionTreeRegressor` with `monotone_constraints`) from `mono_casual.ipynb` to predict and adjust post-experiment metrics. This significantly lowers required sample sizes and speeds up test convergence.
-
-### 4. Bayesian Counterfactual Time-Series
-*   **Asset:** [prophet.ipynb](file:///C:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/prophet.ipynb)
-*   **Advanced Tactic:** Switchback Experiments & Geo-Testing.
-*   **Integration:** When network effects prevent 50/50 allocation (e.g., matching algorithms or platform pricing), users are exposed to time-blocked treatments (switchbacks). Integrate `Prophet` to model the historical time-series baseline. This generates the counterfactual control prediction for treatment windows, allowing evaluation of treatment lift where concurrent controls are impossible.

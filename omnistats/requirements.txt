@@ -1,3 +1,4 @@
+# ── Core ──────────────────────────────────────────────────────────────────────
 scikit-learn>=1.3.0
 scipy>=1.11.0
 pandas>=2.0.0
@@ -6,8 +7,27 @@ matplotlib>=3.7.0
 seaborn>=0.12.0
 python-docx>=1.1.0
 statsmodels>=0.14.0
-differences>=1.0.0
-linearmodels>=6.0.0
-ivmodels>=0.4.0
-rdrobust>=1.2.0
-rddensity>=2.4.0
+
+# ── Causal Inference Stage 3 — robust estimators ─────────────────────────────
+differences>=1.0.0      # Callaway & Sant'Anna staggered DiD
+linearmodels>=6.0.0     # IV2SLS with KP rk-F and robust SEs
+ivmodels>=0.4.0         # Anderson-Rubin identification-robust CI (IV fallback)
+rdrobust>=1.2.0         # CCT optimal-bandwidth RDD
+rddensity>=2.4.0        # McCrary/Cattaneo manipulation density test
+
+# ── Causal Inference Stage 3 — advanced panel data ───────────────────────────
+cvxpy>=1.3.0            # Synthetic Control Method convex optimisation
+fancyimpute>=0.7.0      # Matrix Completion (SoftImpute / NuclearNorm)
+
+# ── Bayesian A/B Testing Stage 2 ─────────────────────────────────────────────
+pymc>=5.0.0             # NUTS sampler — primary backend for bayesian_means_test
+arviz>=0.17.0           # PyMC diagnostics (R-hat, ESS)
+
+# ── CUPED Variance Reduction Stage 2.5 ───────────────────────────────────────
+catboost>=1.2.0         # Monotonic regression (fallback: sklearn DecisionTree)
+
+# ── Stage 4 Time-Series Causal (CausalImpact / BSTS) ────────────────────────
+# Install one of the following; Prophet is the auto-fallback if neither available
+# pip install tfcausalimpact    # Google CausalImpact (recommended primary)
+# pip install pycausalimpact    # Alternative CausalImpact port
+prophet>=1.1.0          # Prophet fallback (also used if CausalImpact unavailable)

@@ -2,15 +2,18 @@
 omnistats/modules/apa_report.py
 ────────────────────────────────
 APA 7th Edition Word document report generator.
-Migrated & extended from lpa_analysis/step6_apa_tables.py.
+Stage 5 (CONSOLIDATE): reads output CSVs from all prior stages.
 
-Generates a single Word document containing:
-  Table 1 — LPA Model Fit Statistics
-  Table 2 — Profile Means, SDs, Welch ANOVA
-  Table 3 — Chi-Square Tests for Demographics
-  Table 4 — Profile Membership Summary
-  Table 5 — A/B Test Results (if available)
-  Table 6 — Causal Inference Results (if available)
+Table order follows pipeline chronology exactly:
+  Table 1 — LPA Model Fit Statistics                    (Stage 1)
+  Table 2 — Profile Means, SDs, Welch ANOVA             (Stage 1)
+  Table 3 — Chi-Square Tests for Demographics           (Stage 1)
+  Table 4 — Profile Membership Summary                  (Stage 1)
+  Table 5 — Frequentist A/B Test Results                (Stage 2)
+  Table 6 — Sequential Bayesian A/B Results             (Stage 2)
+  Table 7 — CUPED Variance Reduction                    (Stage 3)
+  Table 8 — Full Causal Suite (DiD, IV, RDD, SCM, MC,
+             BMA, CausalImpact/BSTS)                     (Stage 4)
 """
 import os
 import sys
@@ -240,22 +243,93 @@ def build_report(verbose: bool = True) -> None:
         _note(doc, "Note. Significance at alpha = .05. Cohen's d and lift % reported where applicable.")
         doc.add_page_break()
 
-    # ── Table 6: Causal Inference Results ─────────────────────────────────────
+    # ── Table 6: Bayesian A/B Results (Stage 2) ───────────────────────────────
+    # Placed immediately after Frequentist A/B (Table 5):
+    # both are Stage 2 — frequentist first, Bayesian second.
+    bayes_path = os.path.join(OUTPUT_DIR, "bayesian_ab_results.csv")
+    bayes_df   = pd.read_csv(bayes_path) if os.path.exists(bayes_path) else pd.DataFrame()
+    if not bayes_df.empty:
+        _title(doc, "Sequential Bayesian A/B Test Results", tbl_num); tbl_num += 1
+        hdrs = ["Test", "Method", "P(B > A)", "Expected Loss",
+                "95% Credible Lower", "95% Credible Upper", "ESS", "Decision"]
+        rows = []
+        for _, row in bayes_df.iterrows():
+            rows.append([
+                str(row.get("test", "—")),
+                str(row.get("method", "—")),
+                _fmt(row.get("p_b_beats_a"),   4),
+                _fmt(row.get("expected_loss"),  6),
+                _fmt(row.get("ci_lower"),        4),
+                _fmt(row.get("ci_upper"),        4),
+                _fmt(row.get("ess"),             1),
+                str(row.get("decision", "—")),
+            ])
+        _table(doc, hdrs, rows)
+        _note(doc,
+              "Note. P(B > A) = posterior probability that Treatment exceeds Control. "
+              "Expected Loss = E[max(0, θ_A − θ_B) | Data] (EVSI decision criterion). "
+              "ESS = Effective Sample Size of posterior draws. "
+              "Method: conjugate_beta_binomial = exact Beta-Binomial conjugate update; "
+              "pymc_nuts_studentt = PyMC No-U-Turn Sampler with StudentT likelihood "
+              "(robust to outliers); importance_sampling = IS fallback when PyMC unavailable. "
+              "Decision threshold: P(B > A) ≥ 0.95 and Expected Loss ≤ 0.01.")
+        doc.add_page_break()
+
+    # ── Table 7: CUPED Variance Reduction (Stage 3) ─────────────────────────
+    # CUPED output feeds Stage 4 Causal Inference as the adjusted outcome.
+    cuped_path = os.path.join(OUTPUT_DIR, "cuped_variance_reduction.csv")
+    cuped_df   = pd.read_csv(cuped_path) if os.path.exists(cuped_path) else pd.DataFrame()
+    if not cuped_df.empty:
+        _title(doc, "CUPED Variance Reduction (Stage 3 Pre-processing)", tbl_num); tbl_num += 1
+        hdrs = ["Outcome", "Covariate", "Monotone Dir",
+                "\u03b8\u0302 (slope)", "Var(Y_raw)", "Var(Y_cuped)",
+                "Variance Reduction %", "Backend", "N"]
+        rows = []
+        for _, row in cuped_df.iterrows():
+            rows.append([
+                str(row.get("outcome_col",   "—")),
+                str(row.get("covariate_col", "—")),
+                str(row.get("monotone_dir",  "—")),
+                _fmt(row.get("theta_hat"),            6),
+                _fmt(row.get("var_raw"),              4),
+                _fmt(row.get("var_cuped"),            4),
+                _fmt(row.get("variance_reduction_pct"), 2) + "%",
+                str(row.get("backend", "—")),
+                str(int(row["n_obs"])) if pd.notna(row.get("n_obs")) else "—",
+            ])
+        _table(doc, hdrs, rows)
+        _note(doc,
+              "Note. CUPED (Controlled-experiment Using Pre-Experiment Data) adjusts the outcome "
+              "Y_cuped = Y − θ̂(X − X̅), where X = profile_prob_max (LPA Stage 1 posterior "
+              "probability of profile membership — pre-experiment, not the outcome metric itself). "
+              "Monotone Dir +1 = non-decreasing profile→outcome relationship. "
+              "All Stage 4 causal estimators operate on Y_cuped.")
+        doc.add_page_break()
+
+    # ── Table 8: Full Causal Suite (Stage 4) ──────────────────────────────
+    # Consolidates ALL Stage 4 causal estimators (panel data + time-series)
+    # into one table using the shared standardised schema.
+    # Sources: causal_results.csv (DiD, IV, RDD, SCM, MC, BMA)
+    #          + causal_results.csv rows from CausalImpact (appended by run_causal_suite)
+    SCHEMA = ["method", "estimand", "estimate", "se",
+              "ci_lower", "ci_upper", "ci_type", "p_value", "n_obs"]
+
     if not caus_df.empty:
-        _title(doc, "Causal Inference Results Summary", tbl_num); tbl_num += 1
-        # Standardised schema columns (new modules/causal/ subpackage)
-        SCHEMA = ["method", "estimand", "estimate", "se",
-                  "ci_lower", "ci_upper", "ci_type", "p_value", "n_obs"]
+        # Reload to pick up any CausalImpact rows appended by run_causal_suite
+        caus_path2 = os.path.join(OUTPUT_DIR, "causal_results.csv")
+        caus_df = pd.read_csv(caus_path2) if os.path.exists(caus_path2) else caus_df
         caus_df = caus_df.reindex(columns=SCHEMA)
+
+        _title(doc, "Causal Inference Results Summary (Stage 4)", tbl_num); tbl_num += 1
         hdrs = ["Method", "Estimand", "Estimate", "SE",
                 "95% CI Lower", "95% CI Upper", "CI Type", "p", "N"]
         rows = []
         for _, row in caus_df.iterrows():
             rows.append([
-                str(row["method"]) if pd.notna(row.get("method")) else "—",
+                str(row["method"])   if pd.notna(row.get("method"))   else "—",
                 str(row["estimand"]) if pd.notna(row.get("estimand")) else "—",
                 _fmt(row.get("estimate"), 4),
-                _fmt(row.get("se"), 4),
+                _fmt(row.get("se"),       4),
                 _fmt(row.get("ci_lower"), 4),
                 _fmt(row.get("ci_upper"), 4),
                 str(row["ci_type"]) if pd.notna(row.get("ci_type")) else "—",
@@ -264,14 +338,25 @@ def build_report(verbose: bool = True) -> None:
             ])
         _table(doc, hdrs, rows)
         _note(doc,
-              "Note. DiD = Callaway & Sant-Anna (2021) staggered ATT(g,t) via differences; "
-              "IV = linearmodels IV2SLS (HC3 SEs; Anderson-Rubin CI reported when KP rk-F < 10); "
-              "RDD = rdrobust CCT MSE-optimal bandwidth with bias-corrected robust CI and "
-              "rddensity manipulation test. "
-              "CI Type: doubly_robust = doubly-robust bootstrap; "
-              "anderson_rubin = identification-robust CI; robust_bc = bias-corrected robust.")
+              "Note. All estimators operate on CUPED-adjusted outcome Y_cuped (Table 7). "
+              "DiD = Callaway & Sant-Anna (2021) staggered ATT(g,t) via differences; "
+              "IV = linearmodels IV2SLS (HC3 SEs; Anderson-Rubin CI when KP rk-F < 10); "
+              "RDD = rdrobust CCT MSE-optimal bandwidth, bias-corrected robust CI, "
+              "rddensity manipulation test; "
+              "SCM = Synthetic Control Method (Abadie et al.), placebo-in-space CI; "
+              "MC = Matrix Completion (Athey et al.) nuclear norm, bootstrap CI; "
+              "BMA = Bayesian Model Averaging, Posterior Inclusion Probabilities for HTE; "
+              "CausalImpact = Bayesian Structural Time Series (BSTS) with spike-and-slab "
+              "control series selection, MCMC credible interval. "
+              "CI types: doubly_robust / anderson_rubin / robust_bc / placebo_in_space / "
+              "bootstrap_nuclear_norm / bsts_mcmc_credible / prophet_mcmc_credible.")
 
     out_path = os.path.join(OUTPUT_DIR, "apa_report.docx")
     doc.save(out_path)
     if verbose:
-        print(f"[Report] APA Word document saved -> {out_path}")
+        print(f"[Report] APA Word document saved -> {out_path} (Tables 1–8)")
+        print(f"  Table order: 1–4 = LPA | 5 = Frequentist A/B | 6 = Bayesian A/B "
+              f"| 7 = CUPED | 8 = Full Causal Suite")
+
+
+

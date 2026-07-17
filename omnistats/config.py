@@ -51,7 +51,37 @@ CAUSAL_RDD_OUTCOME_COL = ""        # outcome variable
 CAUSAL_RDD_CUTOFF      = 0.0       # assignment cutoff value
 CAUSAL_RDD_FUZZY_COL   = None      # treatment column for fuzzy RDD; None = sharp
 
-# ─── BAYESIAN SETTINGS ────────────────────────────────────────────────────────
-MCMC_ITERATIONS = 10_000
-MCMC_BURNIN     = 2_000
-MCMC_SEED       = 42
+# ─── CUPED SETTINGS ──────────────────────────────────────────────────────────
+# Stage 2.5: variance reduction using LPA profile score as pre-experiment covariate.
+# profile_prob_max is the posterior probability from Stage 1 LPA — pre-experiment
+# and correlated with outcome; using AB_METRIC_COL itself would be circular.
+CUPED_ENABLED        = True
+CUPED_COVARIATE_COL  = "profile_prob_max"  # LPA Stage 1 posterior probability output
+CUPED_MONOTONE_DIR   = 1                   # +1 non-decreasing, -1 non-increasing
+CUPED_USE_CATBOOST   = True                # False = sklearn DecisionTree / OLS fallback
+
+# ─── BAYESIAN A/B SETTINGS ────────────────────────────────────────────────────
+# Stage 2: Sequential Bayesian A/B testing.
+# Primary: PyMC NUTS (No-U-Turn Sampler).  Fallback: Importance Sampling.
+BAYES_AB_PRIOR_ALPHA  = 1.0       # Beta prior α (conversion tests; 1.0 = uniform)
+BAYES_AB_PRIOR_BETA   = 1.0       # Beta prior β
+BAYES_AB_THRESHOLD    = 0.95      # P(B > A) threshold to declare a winner
+BAYES_AB_LOSS_THRESH  = 0.01      # Expected loss threshold (1% of baseline)
+BAYES_AB_N_SAMPLES    = 2_000     # PyMC posterior draws (NUTS)
+BAYES_AB_TUNE         = 1_000     # PyMC tuning draws (discarded)
+BAYES_AB_SEED         = 42
+
+# ─── CAUSAL STAGE 3 EXTENSIONS ────────────────────────────────────────────────
+# Synthetic Control Method and Matrix Completion extend the causal suite.
+CAUSAL_SCM_ENABLED         = True
+CAUSAL_MATRIX_COMP_ENABLED = True
+
+# ─── TIME-SERIES CAUSAL SETTINGS (Stage 4) ────────────────────────────────────
+# CausalImpact: Bayesian Structural Time Series with spike-and-slab control selection.
+# Primary: tfcausalimpact/pycausalimpact.  Fallback: Prophet trend extrapolation.
+TS_CAUSALIMPACT_ENABLED  = False        # Set True with real intervention data
+TS_DATE_COL              = ""           # Date column (parseable by pd.to_datetime)
+TS_METRIC_COL            = ""           # Outcome metric column
+TS_INTERVENTION_DATE     = ""           # "YYYY-MM-DD" — treatment start date
+TS_CONTROL_COLS          = []           # Control series for BSTS spike-and-slab
+TS_SEASONALITY_MODE      = "multiplicative"  # "additive" for roughly-constant amplitude
