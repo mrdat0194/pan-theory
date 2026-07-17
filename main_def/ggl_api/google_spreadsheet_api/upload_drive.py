@@ -67,6 +67,6 @@ drive = GoogleDrive(gauth)
 #     # time.
 #     if os.path.exists(token_path):
 #         with open(token_path, 'rb') as token:
-#             creds = pickle.load(token)
+#             creds = Credentials.from_authorized_user_file(token_path, SCOPES)
 
 
