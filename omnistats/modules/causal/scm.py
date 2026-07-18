@@ -6,14 +6,82 @@ Synthetic Control Method (SCM) — Abadie, Diamond & Hainmueller (2010).
 Constructs a "synthetic" control unit as a convex combination of donor
 (untreated) units that minimises pre-treatment outcome divergence.
 
-Why SCM instead of basic DiD
-------------------------------
-  Standard DiD assumes "parallel trends" — that treated and control units
-  would have moved in parallel without treatment. SCM drops this assumption.
-  Instead, it finds the optimal weighted blend of control units that
-  PERFECTLY matches the treated unit's pre-intervention trajectory.
-  By matching the full pre-period curve, SCM implicitly controls for
-  time-varying unobserved confounders that DiD cannot handle.
+SCM vs. Difference-in-Differences (DiD)
+-----------------------------------------
+  **DiD is still fully available in** `modules/causal/did.py` and remains the
+  right choice for many settings. This section explains when and why SCM is
+  preferred instead.
+
+  DiD — what it assumes
+  ~~~~~~~~~~~~~~~~~~~~~~
+  DiD compares the change in outcomes for a treated group vs. a control group
+  across two time periods:
+
+    ATT_DiD = (Ȳ_treat,post − Ȳ_treat,pre) − (Ȳ_ctrl,post − Ȳ_ctrl,pre)
+
+  This estimator is unbiased only under the **parallel trends assumption (PTA)**:
+    "Absent treatment, the average outcome for treated and control units would
+    have followed the same trend over time."
+
+  PTA is untestable in the post-period. In practice it can fail when:
+    · Treated units were selected because of pre-existing upward/downward trends
+      (Ashenfelter's Dip — Ashenfelter & Card 1985).
+    · Macroeconomic shocks affect treated and control regions differently.
+    · Only a single treated unit exists (e.g. one country, one city), making
+      standard DiD standard errors unreliable (Bertrand et al. 2004).
+
+  SCM — what it does differently
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  SCM drops the parallel-trends assumption entirely.
+  Instead, it constructs a "synthetic" version of the treated unit by finding
+  a convex combination of donor (untreated) units:
+
+    Ŷ_0(t) = Σ_j  W*_j · Y_j(t),   W*_j ≥ 0,  Σ W*_j = 1
+
+  where W* is chosen to minimise pre-treatment outcome divergence:
+
+    W* = argmin  ||Y_treated,pre − Y_donors,pre · W||²
+
+  By construction the synthetic unit PERFECTLY tracks the treated unit's entire
+  pre-intervention trajectory — not just its level at one point in time.
+  This makes W* a credible counterfactual even when trends differ across units,
+  because the match is on the full outcome path, not just a slope assumption.
+
+  The ATT is then the post-period gap:
+
+    ATT(t) = Y_treated(t) − Ŷ_synthetic(t),   t > T_treat
+
+  Key differences from DiD
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  ┌──────────────────────────────┬──────────────────┬──────────────────────┐
+  │ Property                     │ DiD              │ SCM                  │
+  ├──────────────────────────────┼──────────────────┼──────────────────────┤
+  │ Core assumption              │ Parallel trends  │ Good pre-period fit  │
+  │ Number of treated units      │ Many (panel)     │ Typically one        │
+  │ Number of donors needed      │ Few controls OK  │ Multiple donors      │
+  │ Handles time-varying shocks  │ ✗                │ ✓ (via matching)     │
+  │ Inference method             │ Cluster-robust SE│ Placebo permutation  │
+  │ Interpretability             │ Δ in group means │ Transparent weights  │
+  └──────────────────────────────┴──────────────────┴──────────────────────┘
+
+  When to prefer SCM over DiD
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  · You have **one (or very few) treated units** — e.g. a single country,
+    region, or product that received the intervention.
+  · Pre-treatment trends differ between treated and control units, making
+    the parallel-trends test suspect.
+  · You want a fully interpretable weight table for an APA report
+    (e.g. "40% Unit A, 35% Unit C, 25% Unit D").
+  · You have a rich set of potential donor units and a long pre-period
+    to achieve a good synthetic fit.
+
+  When to prefer DiD instead (use `did.py`)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  · Many treated units are available and parallel trends is defensible.
+  · Staggered rollout across cohorts (use Callaway & Sant'Anna DiD in
+    `did.py` which handles heterogeneous treatment timing).
+  · Very short pre-treatment window — SCM needs sufficient pre-period
+    data to fit W* reliably (rule of thumb: ≥ 10 pre-periods).
 
 APA Explainability
 ------------------

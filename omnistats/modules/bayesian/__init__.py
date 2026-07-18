@@ -11,7 +11,7 @@ Migrated and adapted from:
 Exports
 -------
 bayesian_proportion_test()  — Beta-Binomial conjugate
-bayesian_means_test()       — PyMC NUTS StudentT (IS fallback)
+bayesian_means_test()       — PyMC NUTS StudentT (Mandatory)
 sequential_monitor()        — Batch-by-batch SIR stopping rule
 expected_loss()             — EVSI decision criterion
 run_bayesian_ab_tests()     — Unified DataFrame-based orchestrator

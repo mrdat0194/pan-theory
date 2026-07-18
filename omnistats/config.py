@@ -62,7 +62,7 @@ CUPED_USE_CATBOOST   = True                # False = sklearn DecisionTree / OLS 
 
 # ─── BAYESIAN A/B SETTINGS ────────────────────────────────────────────────────
 # Stage 2: Sequential Bayesian A/B testing.
-# Primary: PyMC NUTS (No-U-Turn Sampler).  Fallback: Importance Sampling.
+# Primary: PyMC NUTS (No-U-Turn Sampler).
 BAYES_AB_PRIOR_ALPHA  = 1.0       # Beta prior α (conversion tests; 1.0 = uniform)
 BAYES_AB_PRIOR_BETA   = 1.0       # Beta prior β
 BAYES_AB_THRESHOLD    = 0.95      # P(B > A) threshold to declare a winner

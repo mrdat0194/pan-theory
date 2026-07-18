@@ -6,7 +6,7 @@ into one orchestrated run, generating an APA 7th edition Word report.
 | Stage | Purpose | Methods |
 |---|---|---|
 | **1 — LPA** | **DESCRIBE** — segment users | GMM, Welch ANOVA, Games-Howell, Chi-square, Cramér's V |
-| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test; Bayesian Sequential: Beta-Binomial (PyMC / IS), StudentT (PyMC NUTS), Expected Loss |
+| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test; Bayesian Sequential: Beta-Binomial (Conjugate), StudentT (PyMC NUTS), Expected Loss |
 | **3 — CUPED** | **SHARPEN** — reduce variance before causal attribution | Monotonic CatBoost / DT regression on LPA profile score |
 | **4 — Causal** | **ATTRIBUTE** — explain *why* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM, Matrix Completion, BMA (HTE) |
 | **5 — Time-Series + APA** | **PROJECT + CONSOLIDATE** | CausalImpact (BSTS + spike-and-slab); APA 7th edition Word document (Tables 1–8) |
@@ -28,8 +28,8 @@ omnistats/
 │   ├── ab_testing.py       ← Frequentist: proportion z-test, Welch t-test, dist. fit
 │   ├── bayesian/           ← Bayesian Sequential A/B subpackage [Stage 2]
 │   │   ├── __init__.py     ←   run_bayesian_ab_tests() orchestrator
-│   │   ├── beta_binomial.py←   Beta-Binomial conjugate + IS fallback
-│   │   ├── normal_model.py ←   PyMC NUTS StudentT (IS fallback)
+│   │   ├── beta_binomial.py←   Beta-Binomial conjugate update
+│   │   ├── normal_model.py ←   PyMC NUTS StudentT (Mandatory)
 │   │   └── sequential.py   ←   SIR batch stopping rule + Expected Loss
 │   ├── cuped.py            ← CUPED variance reduction (CatBoost monotonic) [Stage 3]
 │   ├── causal/             ← Robust causal inference subpackage [Stage 4]
