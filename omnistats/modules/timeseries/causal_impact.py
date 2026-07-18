@@ -32,12 +32,7 @@ from config import (OUTPUT_DIR, CAUSAL_USE_SYNTHETIC,
                     TS_METRIC_COL, TS_INTERVENTION_DATE,
                     TS_CONTROL_COLS)
 
-# ── Prophet approximate fallback (retained for fallback comparisons) ───────────
-try:
-    from prophet import Prophet as _Prophet
-    _HAS_PROPHET = True
-except ImportError:
-    _HAS_PROPHET = False
+
 
 
 # ── Synthetic data generator ───────────────────────────────────────────────────
@@ -145,14 +140,14 @@ def _run_pyro_causalimpact(df: pd.DataFrame, T_treat: int, verbose: bool) -> dic
     predictive = Predictive(guide, num_samples=num_samples)
     posterior_samples = predictive(y_pre_tensor, X_pre_tensor)
     
-    # Reconstruct parameters
-    sigma_level_s = posterior_samples["sigma_level"].squeeze()
-    sigma_obs_s = posterior_samples["sigma_obs"].squeeze()
-    level_0_s = posterior_samples["level_0"].squeeze()
-    level_steps_s = posterior_samples["level_steps"]
+    # Reconstruct parameters with explicit reshaping to avoid squeezing J=1 or T_pre=2 dimensions
+    sigma_level_s = posterior_samples["sigma_level"].reshape(num_samples)
+    sigma_obs_s = posterior_samples["sigma_obs"].reshape(num_samples)
+    level_0_s = posterior_samples["level_0"].reshape(num_samples)
+    level_steps_s = posterior_samples["level_steps"].reshape(num_samples, T_treat - 1)
     
     if X is not None and "beta" in posterior_samples:
-        beta_s = posterior_samples["beta"].squeeze()
+        beta_s = posterior_samples["beta"].reshape(num_samples, len(control_cols))
     else:
         beta_s = None
         
@@ -283,89 +278,10 @@ def _run_pyro_causalimpact(df: pd.DataFrame, T_treat: int, verbose: bool) -> dic
     }
 
 
-# ── Prophet approximate fallback ───────────────────────────────────────────────
-def _run_prophet_fallback(df: pd.DataFrame, T_treat: int, verbose: bool) -> dict:
-    """
-    Approximate BSTS using Prophet when Pyro is unavailable.
-    Fits Prophet on pre-intervention period, extrapolates counterfactual.
-    """
-    warns = ["[WARNING] Pyro BSTS failed or unavailable. Using Prophet approximate fallback."]
-
-    pre_df = df.iloc[:T_treat][["ds", "y"]].rename(columns={"y": "y"})
-    post_df = df.iloc[T_treat:][["ds", "y"]].copy()
-
-    model = _Prophet(
-        seasonality_mode="multiplicative",
-        yearly_seasonality=False,
-        weekly_seasonality=True,
-    )
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        model.fit(pre_df)
-
-    future = model.make_future_dataframe(periods=len(post_df), freq="W")
-    forecast = model.predict(future)
-
-    post_forecast = forecast.iloc[T_treat:]
-    lift = post_df["y"].values - post_forecast["yhat"].values
-
-    att     = float(np.mean(lift))
-    ci_lo   = float(np.mean(post_forecast["yhat_lower"].values))
-    ci_hi   = float(np.mean(post_forecast["yhat_upper"].values))
-    se      = float(np.std(lift, ddof=1) / np.sqrt(len(lift)))
-
-    # Plot
-    periods = np.arange(len(df))
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    ax = axes[0]
-    ax.plot(periods, df["y"].values, "k-", label="Observed", linewidth=2)
-    ax.plot(periods[T_treat:], post_forecast["yhat"].values, "r--",
-            label="Counterfactual (Prophet)", linewidth=2)
-    ax.fill_between(periods[T_treat:],
-                    post_forecast["yhat_lower"].values,
-                    post_forecast["yhat_upper"].values,
-                    alpha=0.2, color="red", label="95% Credible Band")
-    ax.axvline(T_treat, color="grey", linestyle=":", linewidth=1.5,
-               label="Intervention")
-    ax.set_title("Counterfactual (Prophet Fallback)", fontweight="bold")
-    ax.set_xlabel("Period"); ax.set_ylabel("Metric")
-    ax.legend(); ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-
-    ax = axes[1]
-    ax.bar(periods[T_treat:], lift, color="#E84855", alpha=0.8, label="Lift")
-    ax.axhline(att, color="black", linestyle="--", label=f"Mean ATT={att:.3f}")
-    ax.axhline(0,   color="grey",  linewidth=0.8)
-    ax.set_title("Pointwise Treatment Lift", fontweight="bold")
-    ax.set_xlabel("Period"); ax.set_ylabel("Lift (Observed − Counterfactual)")
-    ax.legend(); ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
-
-    fig.tight_layout()
-    fig.savefig(os.path.join(OUTPUT_DIR, "ts_counterfactual.png"), dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-    return {
-        "method":    "Counterfactual Time-Series (Prophet fallback)",
-        "estimand":  "Average Switchback Lift",
-        "estimate":  round(att, 4),
-        "se":        round(se, 4),
-        "ci_lower":  round(ci_lo, 4),
-        "ci_upper":  round(ci_hi, 4),
-        "ci_type":   "prophet_mcmc_credible",
-        "p_value":   float("nan"),
-        "n_obs":     len(df),
-        "diagnostics": {"backend": "prophet_fallback",
-                        "n_post_periods": len(post_df)},
-        "warnings":  warns,
-    }
-
-
 # ── Main function ──────────────────────────────────────────────────────────────
 def run_causalimpact(verbose: bool = True) -> dict:
     """
-    Bayesian Structural Time Series counterfactual.
-
-    Uses Pyro BSTS model on CPU as primary.
-    Falls back to Prophet trend extrapolation if Pyro model fails.
+    Bayesian Structural Time Series counterfactual using Pyro BSTS model on CPU.
 
     Returns standardised result dict.
     """
@@ -400,25 +316,20 @@ def run_causalimpact(verbose: bool = True) -> dict:
         result = _run_pyro_causalimpact(df, T_treat, verbose)
         result["warnings"] = warns + result.get("warnings", [])
     except Exception as e:
-        warns.append(f"[WARNING] Pyro BSTS failed: {str(e)}")
-        if _HAS_PROPHET:
-            result = _run_prophet_fallback(df, T_treat, verbose)
-            result["warnings"] = warns + result.get("warnings", [])
-        else:
-            warns.append("[ERROR] Neither Pyro nor Prophet installed / succeeded.")
-            result = {
-                "method":    "CausalImpact (BSTS)",
-                "estimand":  "Average ATT post-intervention",
-                "estimate":  float("nan"),
-                "se":        float("nan"),
-                "ci_lower":  float("nan"),
-                "ci_upper":  float("nan"),
-                "ci_type":   "not_available",
-                "p_value":   float("nan"),
-                "n_obs":     len(df),
-                "diagnostics": {},
-                "warnings":  warns,
-            }
+        warns.append(f"[ERROR] Pyro BSTS failed: {str(e)}")
+        result = {
+            "method":    "CausalImpact (Pyro BSTS)",
+            "estimand":  "Average ATT post-intervention",
+            "estimate":  float("nan"),
+            "se":        float("nan"),
+            "ci_lower":  float("nan"),
+            "ci_upper":  float("nan"),
+            "ci_type":   "not_available",
+            "p_value":   float("nan"),
+            "n_obs":     len(df),
+            "diagnostics": {},
+            "warnings":  warns,
+        }
 
     if verbose:
         print(f"  Estimate (ATT):  {result['estimate']}")

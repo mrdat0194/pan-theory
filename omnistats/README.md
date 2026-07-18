@@ -41,7 +41,7 @@ omnistats/
 │   │   └── matrix_completion.py ← Matrix Completion (SoftImpute / ALS)
 │   ├── timeseries/         ← Bayesian time-series causal subpackage [Stage 5]
 │   │   ├── __init__.py     ←   run_timeseries_suite() orchestrator
-│   │   └── causal_impact.py←   Pyro BSTS CausalImpact + Prophet fallback
+│   │   └── causal_impact.py←   Pyro BSTS CausalImpact
 │   ├── visualisation.py    ← All plots (line, stacked bar, heatmap, mosaic)
 │   └── apa_report.py       ← APA 7th edition .docx generator (Tables 1–8)
 └── outputs/                ← All CSVs, PNGs, and .docx created here
@@ -59,7 +59,7 @@ omnistats/
 | `importance_sampling_bayesian.py` | Archive/reference (unused fallback logic removed from `bayesian/beta_binomial.py`) |
 | `mcmc_bayesian.py` | Archive/reference — role superseded by PyMC NUTS |
 | `mono_casual.ipynb` | `cuped.py` (CatBoost monotonic regression → Stage 3 CUPED) |
-| `prophet.ipynb` | `timeseries/causal_impact.py` (Prophet fallback; primary = Pyro BSTS CausalImpact in Stage 5) |
+| `prophet.ipynb` | `timeseries/causal_impact.py` (Archive reference; superseded by Pyro BSTS CausalImpact in Stage 5) |
 | `BMA.ipynb` | `causal/bma.py` — **Stage 4 migration target** for Heterogeneous Treatment Effects (HTE) / subgroup analysis via Bayesian Model Averaging. BMA models `Treatment × Demographic` interactions and outputs Posterior Inclusion Probabilities (PIPs). This is distinct from CUPED (which reduces variance); BMA *explains* who benefits from treatment. |
 
 The `Bayesian/` directory remains **unchanged** as a reference archive.

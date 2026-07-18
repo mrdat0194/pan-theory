@@ -7,7 +7,7 @@ Migrated from:  Bayesian/prophet.ipynb  (conceptual space)
 Upgraded to:    Google CausalImpact (Bayesian Structural Time Series)
 
 Exports:
-  run_causalimpact()        — BSTS counterfactual with spike-and-slab control selection
+  run_causalimpact()        — BSTS counterfactual with control selection
   run_timeseries_suite()    — orchestrator, saves timeseries_causal_results.csv
 
 Why CausalImpact over Prophet
@@ -27,12 +27,11 @@ Relation to Stage 3 DiD
   binary pre/post comparison with parallel trends, BSTS models the full
   counterfactual trajectory with credible uncertainty bands.
 
-MCMC connection
----------------
-  Prophet (internally) and CausalImpact (via Stan / PyMC) both use
-  Hamiltonian Monte Carlo (HMC) to generate posterior samples —
-  the same gradient-based sampler as mcmc_mirror_hmc in mcmc_bayesian.py.
-  The credible intervals in the output are MCMC-derived, not frequentist.
+Pyro SVI connection
+-------------------
+  BSTS uses Stochastic Variational Inference (SVI) to approximate the posterior
+  distribution of the latent components and control coefficients.
+  The credible intervals in the output are SVI-derived.
 """
 
 from .causal_impact import run_causalimpact

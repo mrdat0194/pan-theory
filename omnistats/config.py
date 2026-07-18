@@ -78,7 +78,7 @@ CAUSAL_MATRIX_COMP_ENABLED = True
 
 # ─── TIME-SERIES CAUSAL SETTINGS (Stage 4) ────────────────────────────────────
 # CausalImpact: Bayesian Structural Time Series with control series forecasting.
-# Primary: Pyro BSTS (on PyTorch).  Fallback: Prophet trend extrapolation.
+# Primary: Pyro BSTS (on PyTorch).
 TS_CAUSALIMPACT_ENABLED  = False        # Set True with real intervention data
 TS_DATE_COL              = ""           # Date column (parseable by pd.to_datetime)
 TS_METRIC_COL            = ""           # Outcome metric column
