@@ -27,7 +27,6 @@ arviz>=0.17.0           # PyMC diagnostics (R-hat, ESS)
 catboost>=1.2.0         # Monotonic regression (fallback: sklearn DecisionTree)
 
 # ── Stage 4 Time-Series Causal (CausalImpact / BSTS) ────────────────────────
-# Install one of the following; Prophet is the auto-fallback if neither available
-# pip install tfcausalimpact    # Google CausalImpact (recommended primary)
-# pip install pycausalimpact    # Alternative CausalImpact port
+torch>=2.1.0            # Core tensor computations for Pyro
+pyro-ppl>=1.8.6         # Pyro probabilistic programming library for BSTS
 prophet>=1.1.0          # Prophet fallback (also used if CausalImpact unavailable)
