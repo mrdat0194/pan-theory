@@ -1,6 +1,6 @@
 Cryptodome
 GA4_CoreEngine
-Pillow==8.0.1
+Pillow==12.3.0
 aiohttp==3.7.1
 beautifulsoup4
 fastapi
