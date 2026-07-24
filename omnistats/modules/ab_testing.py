@@ -242,12 +242,21 @@ def run_ab_tests(df: pd.DataFrame,
         results["proportion"] = proportion_test(n_a, conv_a, n_b, conv_b,
                                                 alpha=alpha, verbose=verbose)
 
+    # Non-parametric MMD Test (Gretton et al., 2008 / arXiv:0805.2368)
+    from modules.diagnostics import compute_rbf_mmd
+    mmd_val = compute_rbf_mmd(ctrl.reshape(-1, 1), trt.reshape(-1, 1))
+    results["mmd_rkhs"] = {
+        "mmd_sq": round(mmd_val, 6),
+        "significant": mmd_val > 1e-4
+    }
+
     # Save summary CSV
     rows = []
     for test_name, res in results.items():
         rows.append({"test": test_name, **res})
     pd.DataFrame(rows).to_csv(os.path.join(OUTPUT_DIR, "ab_test_results.csv"), index=False)
     if verbose:
+        print(f"[A/B] MMD (RKHS) Discrepancy: {mmd_val:.6f}")
         print(f"[A/B] Results saved -> {OUTPUT_DIR}/ab_test_results.csv")
 
     return results

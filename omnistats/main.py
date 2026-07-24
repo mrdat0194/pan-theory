@@ -67,13 +67,31 @@ def banner(msg: str):
     print("=" * w)
 
 
-def step(n, desc: str):
-    print(f"\n[Step {n}] {desc}")
+def substage(stage_id: str, desc: str):
+    print(f"\n[Stage {stage_id}] {desc}")
 
 
 def main():
     t0 = time.perf_counter()
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    from data_manager import load_and_prepare
+    df = load_and_prepare()
+
+    # =========================================================================
+    # STAGE 0 -- Pre-Flight Diagnostics
+    # PURPOSE: VALIDATE -- verify mathematical & statistical prerequisites
+    # =========================================================================
+    banner("STAGE 0 -- Pre-Flight Diagnostics (VALIDATE)")
+    substage("0.1", "Run Pre-Flight Linear Algebra, MMD & Statistical Diagnostics")
+    from modules.diagnostics import run_stage0_diagnostics
+    from config import INDICATOR_COLS
+    diag_res = run_stage0_diagnostics(
+        df,
+        indicator_cols=INDICATOR_COLS,
+        ab_group_col=AB_GROUP_COL,
+        ab_metric_col=AB_METRIC_COL
+    )
 
     # =========================================================================
     # STAGE 1 -- Latent Profile Analysis
@@ -81,23 +99,21 @@ def main():
     # =========================================================================
     banner("STAGE 1 -- Latent Profile Analysis  [DESCRIBE]")
 
-    step(1, "Load & prepare data")
-    from data_manager import load_and_prepare
-    df = load_and_prepare()
+    substage("1.1", "Prepare data & indicators")
 
-    step(2, f"Run LPA (K_MIN..K_MAX), assign K={N_PROFILES} profiles")
+    substage("1.2", f"Run LPA (K_MIN..K_MAX), assign K={N_PROFILES} profiles")
     from modules.lpa import run_lpa
     df_profiles, fit_df = run_lpa(df)
 
-    step(3, "Welch ANOVA + Games-Howell post-hoc")
+    substage("1.3", "Welch ANOVA + Games-Howell post-hoc")
     from modules.anova import run_anova
     anova_df, posthoc_df = run_anova(df_profiles)
 
-    step(4, "Chi-square tests + Cramer's V")
+    substage("1.4", "Chi-square tests + Cramer's V")
     from modules.chi_square import run_chi_square
     chi2_df, crosstab_df = run_chi_square(df_profiles)
 
-    step(5, "Visualise profiles and demographics")
+    substage("1.5", "Visualise profiles and demographics")
     from modules.visualisation import (
         plot_lpa_profiles, plot_demographics,
         plot_posthoc_heatmap, plot_chi_square_mosaic,
@@ -113,7 +129,7 @@ def main():
     # =========================================================================
     banner("STAGE 2 -- A/B Testing (Frequentist + Bayesian Sequential)  [COMPARE]")
 
-    step("6a", f"Frequentist A/B: proportion z-test, Welch t-test, dist. fit")
+    substage("2.1", f"Frequentist A/B: proportion z-test, Welch t-test, MMD (RKHS), dist. fit")
     from modules.ab_testing import run_ab_tests
     ab_results = run_ab_tests(
         df_profiles,
@@ -122,7 +138,7 @@ def main():
         conversion_col=AB_CONVERSION_COL if AB_CONVERSION_COL in df_profiles.columns else None,
     )
 
-    step("6b", "Bayesian A/B: Beta-Binomial (PyMC / IS fallback), StudentT means (PyMC NUTS)")
+    substage("2.2", "Bayesian A/B: Beta-Binomial (PyMC / IS fallback), StudentT means (PyMC NUTS)")
     from modules.bayesian import run_bayesian_ab_tests
     bayesian_ab_results = run_bayesian_ab_tests(
         df_profiles,
@@ -145,7 +161,7 @@ def main():
     # =========================================================================
     banner("STAGE 3 -- CUPED Variance Reduction  [SHARPEN]")
 
-    step("6c", f"CUPED: monotonic covariate adjustment (covariate='{CUPED_COVARIATE_COL}')")
+    substage("3.1", f"CUPED: monotonic covariate adjustment (covariate='{CUPED_COVARIATE_COL}')")
     from modules.cuped import run_cuped
 
     if CUPED_ENABLED and CUPED_COVARIATE_COL in df_profiles.columns:
@@ -171,8 +187,8 @@ def main():
     # =========================================================================
     banner("STAGE 4 -- Causal Inference (DiD / IV / RDD / SCM / MC / CausalImpact)  [ATTRIBUTE]")
 
-    step(7, "Run full causal suite: DiD, IV, RDD, SCM, Matrix Completion, "
-            "CausalImpact BSTS -- all operating on df_cuped")
+    substage("4.1", "Run full causal suite: DiD, IV, RDD, SCM, Matrix Completion, "
+                    "CausalImpact BSTS -- all operating on df_cuped")
     from modules.causal import run_causal_suite
     causal_results = run_causal_suite()
 
@@ -185,7 +201,7 @@ def main():
     # =========================================================================
     banner("STAGE 5 -- APA Report  [CONSOLIDATE]")
 
-    step(8, "Generate APA 7th edition report (Tables 1-8) from all stage outputs")
+    substage("5.1", "Generate APA 7th edition report (Tables 1-8) from all stage outputs")
     from modules.apa_report import build_report
     build_report()
 

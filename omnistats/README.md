@@ -5,10 +5,11 @@ into one orchestrated run, generating an APA 7th edition Word report.
 
 | Stage | Purpose | Methods |
 |---|---|---|
+| **0 — Diagnostics** | **VALIDATE** — verify prerequisites | MMD (arXiv:0805.2368), SVD Condition Number, Matrix Rank, Covariance Det, SRM ($\chi^2$), Levene, D'Agostino-Pearson |
 | **1 — LPA** | **DESCRIBE** — segment users | GMM, Welch ANOVA, Games-Howell, Chi-square, Cramér's V |
-| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test; Bayesian Sequential: Beta-Binomial (Conjugate), StudentT (PyMC NUTS), Expected Loss |
-| **3 — CUPED** | **SHARPEN** — reduce variance before causal attribution | Monotonic CatBoost / DT regression on LPA profile score |
-| **4 — Causal** | **ATTRIBUTE** — explain *why* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM, Matrix Completion, BMA (HTE) |
+| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test, MMD (RKHS); Bayesian Sequential: Beta-Binomial, PyMC NUTS, Expected Loss |
+| **3 — CUPED** | **SHARPEN** — reduce variance before causal attribution | Monotonic CatBoost / DT regression on LPA profile score (Proximal Operator) |
+| **4 — Causal** | **ATTRIBUTE** — explain *why* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM (Convex Opt.), Matrix Completion (SoftImpute SVT), BMA |
 | **5 — Time-Series + APA** | **PROJECT + CONSOLIDATE** | CausalImpact (Pyro BSTS SVI); APA 7th edition Word document (Tables 1–8) |
 
 ---
@@ -22,6 +23,7 @@ omnistats/
 ├── main.py                 ← Run this to execute the full pipeline
 ├── requirements.txt
 ├── modules/
+│   ├── diagnostics.py      ← Stage 0 Pre-Flight Diagnostics (MMD, SVD, Rank, SRM, Convexity) [Stage 0]
 │   ├── lpa.py              ← Gaussian Mixture Model (LPA) fitting
 │   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
 │   ├── chi_square.py       ← Chi-square independence test + Cramér's V
