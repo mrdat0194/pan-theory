@@ -39,6 +39,22 @@ except ImportError:
             "n_obs":    0, "warnings": ["timeseries module not available"],
         }
 
+# HTE Subgroup Analysis — DR-OLS replacing the BMA stub in Stage 4.
+try:
+    from .bma import run_bma
+    _HAS_BMA = True
+except ImportError:
+    _HAS_BMA = False
+    def run_bma(verbose=True):
+        return {
+            "method":   "Subgroup HTE (DR-OLS)",
+            "estimand": "Marginalized ATT (Treatment coef, interaction OLS)",
+            "estimate": float("nan"), "se": float("nan"),
+            "ci_lower": float("nan"), "ci_upper": float("nan"),
+            "ci_type":  "not_available", "p_value": float("nan"),
+            "n_obs":    0, "warnings": ["bma module not available"],
+        }
+
 
 def run_causal_suite(verbose: bool = True) -> dict:
     """
@@ -51,12 +67,13 @@ def run_causal_suite(verbose: bool = True) -> dict:
       4. Synthetic Control Method (cvxpy)
       5. Matrix Completion (SoftImpute)
       6. CausalImpact BSTS (time-series causal — same Stage 4)
+      7. Subgroup HTE DR-OLS (demographic HTE, replaces BMA stub)
 
     All results written to causal_results.csv for APA Table 8.
 
     Returns
     -------
-    dict with keys "did", "iv", "rdd", "scm", "mc", "causal_impact";
+    dict with keys "did", "iv", "rdd", "scm", "mc", "causal_impact", "bma";
     each value is the standardised result dict.
     """
     import os
@@ -75,9 +92,10 @@ def run_causal_suite(verbose: bool = True) -> dict:
         "scm": synthetic_control(verbose=verbose),
         "mc":  matrix_completion(verbose=verbose),
         "causal_impact": run_causalimpact(verbose=verbose),
+        "bma": run_bma(verbose=verbose),
     }
 
-    # All six share the same standardised schema → single causal_results.csv
+    # All seven share the same standardised schema → single causal_results.csv
     COLS = ["method", "estimand", "estimate", "se", "ci_lower", "ci_upper",
             "ci_type", "p_value", "n_obs"]
     rows = [{c: res.get(c) for c in COLS} for res in results.values()]
@@ -86,7 +104,7 @@ def run_causal_suite(verbose: bool = True) -> dict:
     )
     if verbose:
         print(f"\n[Causal] All Stage 4 results saved -> {OUTPUT_DIR}/causal_results.csv")
-        print(f"         (DiD, IV, RDD, SCM, Matrix Completion, CausalImpact)")
+        print(f"         (DiD, IV, RDD, SCM, Matrix Completion, CausalImpact, Subgroup HTE)")
 
     return results
 
@@ -98,5 +116,6 @@ __all__ = [
     "synthetic_control",
     "matrix_completion",
     "run_causalimpact",
+    "run_bma",
     "run_causal_suite",
 ]

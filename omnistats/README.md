@@ -1,15 +1,61 @@
 # OmniStats — Unified Statistical Analysis Pipeline
 
-A single, **100 % Python** pipeline that combines five statistical stages
-into one orchestrated run, generating an APA 7th edition Word report.
+A single, **100% Python** end-to-end experimental statistics pipeline spanning three phases:
+**pre-experiment design**, **post-experiment evaluation**, and **APA reporting**.
+
+---
+
+## Three-Phase Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE I — Pre-Experiment  (experiment_design.py)                   │
+│  DESIGN & DISCOVER before traffic is routed                         │
+│                                                                     │
+│  ① Power Analysis  → required sample size per arm                   │
+│  ② LPA on baseline → discover who your users are (Stages 0–1)      │
+│  ③ SOTA CAR        → Covariate-Adaptive Randomization schedule      │
+│     (Mahalanobis-distance minimization — balances demographics      │
+│      and their interactions as subjects enroll)                     │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │  Engineering routes traffic
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE II — Execution  (outside OmniStats)                          │
+│  Run the A/B experiment or field trial                              │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │  Collect results
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  PHASE III — Post-Experiment  (main.py)                             │
+│  EVALUATE & ATTRIBUTE after data collection is complete             │
+│                                                                     │
+│  Stage 0 — VALIDATE    Pre-flight diagnostics (MMD, SVD, SRM)      │
+│  Stage 1 — DESCRIBE    LPA: GMM segmentation + ANOVA + Chi-square  │
+│  Stage 2 — COMPARE     A/B: Frequentist z/t + Bayesian Sequential  │
+│  Stage 3 — SHARPEN     CUPED: Monotonic variance reduction         │
+│  Stage 4 — ATTRIBUTE   Causal: DiD, IV, RDD, SCM, MC, HTE(BMA)    │
+│  Stage 5 — CONSOLIDATE CausalImpact BSTS + APA 7th report          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### At a Glance
+
+| Phase | Entry Point | Purpose | Key Output |
+|---|---|---|---|
+| **I — Pre-Experiment** | `experiment_design.py` | Design a statistically valid experiment | `randomization_schedule.csv` |
+| **II — Execution** | *(Engineering)* | Run the field experiment | Raw experiment data |
+| **III — Post-Experiment** | `main.py` | Evaluate, attribute, and report | `apa_report.docx` (Tables 1–8) |
+
+### Phase III — Stage Summary
 
 | Stage | Purpose | Methods |
 |---|---|---|
 | **0 — Diagnostics** | **VALIDATE** — verify prerequisites | MMD (arXiv:0805.2368), SVD Condition Number, Matrix Rank, Covariance Det, SRM ($\chi^2$), Levene, D'Agostino-Pearson |
 | **1 — LPA** | **DESCRIBE** — segment users | GMM, Welch ANOVA, Games-Howell, Chi-square, Cramér's V |
 | **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test, MMD (RKHS); Bayesian Sequential: Beta-Binomial, PyMC NUTS, Expected Loss |
-| **3 — CUPED** | **SHARPEN** — reduce variance before causal attribution | Monotonic CatBoost / DT regression on LPA profile score (Proximal Operator) |
-| **4 — Causal** | **ATTRIBUTE** — explain *why* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM (Convex Opt.), Matrix Completion (SoftImpute SVT), BMA |
+| **3 — CUPED** | **SHARPEN** — reduce outcome variance | Monotonic CatBoost / DT regression on LPA profile score |
+| **4 — Causal + HTE** | **ATTRIBUTE** — explain *why* and *for whom* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM (Convex Opt.), Matrix Completion (SoftImpute), DR-OLS HTE Subgroups |
 | **5 — Time-Series + APA** | **PROJECT + CONSOLIDATE** | CausalImpact (Pyro BSTS SVI); APA 7th edition Word document (Tables 1–8) |
 
 ---
@@ -20,28 +66,30 @@ into one orchestrated run, generating an APA 7th edition Word report.
 omnistats/
 ├── config.py               ← Edit this file to configure all settings
 ├── data_manager.py         ← Centralised data loading & z-scoring
-├── main.py                 ← Run this to execute the full pipeline
+├── experiment_design.py    ← Phase I: SOTA CAR randomization + power analysis (NEW)
+├── main.py                 ← Phase III: Run the full post-experiment pipeline
 ├── requirements.txt
 ├── modules/
-│   ├── diagnostics.py      ← Stage 0 Pre-Flight Diagnostics (MMD, SVD, Rank, SRM, Convexity) [Stage 0]
-│   ├── lpa.py              ← Gaussian Mixture Model (LPA) fitting
-│   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
-│   ├── chi_square.py       ← Chi-square independence test + Cramér's V
-│   ├── ab_testing.py       ← Frequentist: proportion z-test, Welch t-test, dist. fit
-│   ├── bayesian/           ← Bayesian Sequential A/B subpackage [Stage 2]
+│   ├── diagnostics.py      ← Stage 0: Pre-Flight Diagnostics (MMD, SVD, Rank, SRM)
+│   ├── lpa.py              ← Stage 1: Gaussian Mixture Model (LPA) fitting
+│   ├── anova.py            ← Stage 1: Welch ANOVA + Games-Howell post-hoc
+│   ├── chi_square.py       ← Stage 1: Chi-square independence test + Cramér's V
+│   ├── ab_testing.py       ← Stage 2: Frequentist proportion z-test, Welch t-test
+│   ├── bayesian/           ← Stage 2: Bayesian Sequential A/B subpackage
 │   │   ├── __init__.py     ←   run_bayesian_ab_tests() orchestrator
 │   │   ├── beta_binomial.py←   Beta-Binomial conjugate update
-│   │   ├── normal_model.py ←   PyMC NUTS StudentT (Mandatory)
+│   │   ├── normal_model.py ←   PyMC NUTS StudentT
 │   │   └── sequential.py   ←   SIR batch stopping rule + Expected Loss
-│   ├── cuped.py            ← CUPED variance reduction (CatBoost monotonic) [Stage 3]
-│   ├── causal/             ← Robust causal inference subpackage [Stage 4]
+│   ├── cuped.py            ← Stage 3: CUPED variance reduction (CatBoost monotonic)
+│   ├── causal/             ← Stage 4: Robust causal inference subpackage
 │   │   ├── __init__.py     ←   run_causal_suite() orchestrator
 │   │   ├── did.py          ←   Staggered DiD (Callaway & Sant'Anna ATT(g,t))
 │   │   ├── iv.py           ←   Robust IV/2SLS (linearmodels + Anderson-Rubin)
 │   │   ├── rdd.py          ←   CCT optimal-bandwidth RDD (rdrobust + rddensity)
 │   │   ├── scm.py          ←   Synthetic Control Method (cvxpy convex opt.)
-│   │   └── matrix_completion.py ← Matrix Completion (SoftImpute / ALS)
-│   ├── timeseries/         ← Bayesian time-series causal subpackage [Stage 5]
+│   │   ├── matrix_completion.py ← Matrix Completion (SoftImpute / ALS)
+│   │   └── bma.py          ←   HTE Subgroup Analysis: DR-OLS + Bonferroni (NEW)
+│   ├── timeseries/         ← Stage 5: Bayesian time-series causal subpackage
 │   │   ├── __init__.py     ←   run_timeseries_suite() orchestrator
 │   │   └── causal_impact.py←   Pyro BSTS CausalImpact
 │   ├── visualisation.py    ← All plots (line, stacked bar, heatmap, mosaic)
@@ -89,9 +137,25 @@ DEMOGRAPHIC_COLS = ["sex", "group", "region"]  # categorical variables
 AB_GROUP_COL     = "group"     # column with exactly 2 values (control / treatment)
 AB_METRIC_COL    = "revenue"   # continuous metric for A/B comparison
 AB_CONVERSION_COL= "converted" # binary 0/1 conversion column (or None)
+
+# Phase I — Experimental Design
+DESIGN_MDE_RELATIVE  = 0.05          # 5% Minimum Detectable Effect
+DESIGN_STRATIFY_COLS = ["sex", "region"]  # covariates to balance via CAR
 ```
 
-### 3. Run the pipeline
+### 3. (Phase I) Design your experiment
+
+*Run this **before** launching your A/B test.*
+
+```powershell
+python -X utf8 experiment_design.py
+```
+
+Outputs `outputs/randomization_schedule.csv` — a SOTA Covariate-Adaptive Randomization (CAR) assignment table balanced on `DESIGN_STRATIFY_COLS`. Share with Engineering for traffic routing.
+
+### 4. (Phase III) Evaluate post-experiment results
+
+*Run this **after** your experiment data is collected.*
 
 ```powershell
 python -X utf8 main.py
@@ -101,20 +165,27 @@ python -X utf8 main.py
 
 ## Stage Explanations — Why Each Exists
 
-These are five **distinct inferential modes** following a strict dependency chain.
+Phase III has six **distinct inferential stages** following a strict dependency chain.
 The output of each stage is the direct input to the next.
 
 ```
-Stage 1 (LPA)
-  └─ outputs profile_prob_max
+Phase I  (experiment_design.py)
+  └─ outputs randomization_schedule.csv → Engineering routes traffic
+       │
+       ▼  [Experiment runs in the real world]
        │
        ▼
-Stage 2 (A/B Testing)
-  └─ outputs bayesian_ab_results (comparison: did B beat A?)
-       │
-       ▼
-Stage 3 (CUPED) ← uses profile_prob_max from Stage 1
-  └─ outputs df_cuped
+Phase III (main.py)
+  Stage 1 (LPA)
+    └─ outputs profile_prob_max
+         │
+         ▼
+  Stage 2 (A/B Testing)
+    └─ outputs bayesian_ab_results (comparison: did B beat A?)
+         │
+         ▼
+  Stage 3 (CUPED) ← uses profile_prob_max from Stage 1
+    └─ outputs df_cuped
        │
        ▼
 Stage 4 (Causal Inference) ← operates on df_cuped
@@ -224,33 +295,209 @@ This pipeline is designed as an **Explainable AI system** for causal inference. 
 
 ---
 
-## Future Roadmap — JEPA & Deep Learning Counterfactuals
+## Future Roadmap — World Models, JEPA & Beyond RL
 
-> **Research direction — significant work required before integration.**
+> **"A machine cannot be said to be intelligent if it cannot predict the consequences
+> of its actions."** — Yann LeCun, *A Path Towards Autonomous Machine Intelligence* (2022)
 
-### Why JEPA Is Not in the Current Pipeline
+### 🧠 The Big Idea: JEPA vs. Generative World Models (PPUU)
 
-Meta's **Joint Embedding Predictive Architecture (JEPA)** predicts causal dynamics in an *abstract latent space* rather than predicting the raw metric value. While this makes JEPA extremely efficient and generalisable, it is currently incompatible with an APA reporting pipeline for two reasons:
+Traditional Reinforcement Learning learns by **trial and error** — taking millions of actions on real traffic. This is dangerous and slow.
 
-1. **No interpretable effect size:** JEPA predicts that a user's latent state vector shifts from `[0.2, -1.4]` to `[0.5, -0.9]`. This cannot be placed in an APA table — reviewers require dollar amounts, conversion rates, or other real-world quantities.
-2. **No standard errors:** Translating a JEPA latent shift back into a real metric with a valid standard error is an unsolved, actively researched problem.
+LeCun's **World Model** approach flips this: learn a simulator, then *imagine* the outcomes of actions to plan safely. However, not all world models are the same:
 
-### How OmniStats Enables Future JEPA Integration
+| Feature | Generative World Models (e.g., `pytorch-PPUU`) | JEPA (`eb_jepa` / `le-wm`) |
+|---|---|---|
+| **Prediction Space** | **Observation Space** (reconstructs raw pixels/metrics via VAEs/Decoders). | **Abstract Latent Space** (joint embedding, no reconstruction needed). |
+| **Uncertainty** | Explicit generative sampling (VAE prior/posterior). | **Energy-Based / Anti-collapse Loss** (e.g., VICReg). |
+| **Planning Mechanism**| Optimizes actions through a heavy generative decoder. | Plans directly in latent space using fast MPC (CEM/MPPI). |
+| **Noise Sensitivity** | Wastes capacity predicting task-irrelevant noise. | Filters out noise, retaining only features necessary for state prediction. |
 
-By producing **highly interpretable, mathematically proven causal counterfactuals** (SCM weights, BSTS posterior intervals, doubly-robust ATT, BMA PIPs), this pipeline generates **ground-truth training signal** for future latent-space causal models.
+**JEPA (Joint Embedding Predictive Architecture)** is far more sample-efficient and generalizable because it avoids pixel-perfect reconstruction.
 
-A future JEPA architecture for causal inference could be trained using OmniStats as the teacher: JEPA learns to align its abstract latent state transitions with the explainable causal effects calculated by the econometric estimators in Stage 4 and Stage 5. The pipeline is thus the necessary rigorous foundation before deploying opaque latent-space causal models.
+### Integrating OmniStats APA Knowledge into JEPA Planning
 
-### Reinforcement Learning Connection
+How do we bridge OmniStats' rigorous econometrics with JEPA's abstract latent planning? 
 
+```
+ ┌─────────────────────────────────────────────────────────────────────────┐
+ │                      OmniStats APA Knowledge (The Ground Truth)         │
+ │  • Stage 1: LPA Profiles (User Segments)                                │
+ │  • Stage 2: Bayesian Loss / P(B>A) (Risk limits)                        │
+ │  • Stage 3: CUPED (Noise-reduced baselines)                             │
+ │  • Stage 4: Causal ATT & DR-OLS Subgroups (True Lift & Fairness)        │
+ └────────────────────────────────────┬────────────────────────────────────┘
+                                      │
+                                      ▼
+ ┌─────────────────────────────────────────────────────────────────────────┐
+ │                    JEPA Latent Planning Engine                          │
+ │                                                                         │
+ │  1. State Encoder (z_t): Conditioned on LPA Profile Posterior & CUPED.  │
+ │  2. Predictor (P_psi): Unrolls experiment actions in latent space.      │
+ │  3. APA Objective: Score trajectories based on ATT Lift, Bayesian Risk, │
+ │                    and Subgroup Fairness.                               │
+ └─────────────────────────────────────────────────────────────────────────┘
+```
 
-| OmniStats component | RL equivalent |
+#### The Four-Step Integration:
+1. **State Space ($z_t$)**: The JEPA Encoder ingests Stage 1 LPA Profile Probabilities and Stage 3 CUPED-adjusted baselines to strip historical noise.
+2. **Action Space ($a_t$)**: Interventions are experiment designs (treatment allocation $T$, sample size $n$, subgroup filters).
+3. **APA Planning Objective**: In `planning.py`, CEM/MPPI scores unrolled paths:
+   $$Cost = -\mathbb{E}[\text{ATT}] + \lambda_1 (\text{Expected Loss}) + \lambda_2 (\text{Subgroup Disparity})$$
+4. **Latent-to-APA Decoder**: A trained linear probe maps the latent state back to readable APA formats (Effect Size $\pm$ SE).
+
+---
+
+### Why JEPA Is Not in the Current Pipeline (Yet)
+
+JEPA today predicts that a user's latent state shifts from `z = [0.2, -1.4]` to
+`z' = [0.5, -0.9]` after treatment.  There are two open problems:
+
+1. **No interpretable effect size** — an APA table requires "revenue increased by
+   $2.30 ± 0.45" — not a latent vector delta.
+2. **No valid standard errors** — translating a latent shift into a metric with a
+   calibrated confidence interval remains an active research problem (see
+   *Conformal Prediction* and *Latent-Space Calibration*).
+
+### The Integration Vision: OmniStats → World Model → Autonomous Experimentation
+
+The key insight is that OmniStats and JEPA are **complementary, not competing**:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TODAY: OmniStats generates interpretable causal ground truth           │
+│                                                                        │
+│  experiment_design.py  →  [Run Experiment]  →  main.py  →  APA Report  │
+│  (power, CAR)              (real traffic)      (DiD, IV,    (Tables 1-8)│
+│                                                 RDD, SCM,              │
+│                                                 HTE, BSTS)             │
+└──────────────────────────────┬───────────────────────────────────────────┘
+                               │
+              OmniStats outputs become TRAINING SIGNAL
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TOMORROW: JEPA World Model learns from OmniStats ground truth         │
+│                                                                        │
+│  Encoder              Predictor             Decoder (new)              │
+│  ┌─────────┐          ┌──────────┐          ┌──────────────┐           │
+│  │ User    │  action  │ Predict  │  decode  │ Map latent Δ │           │
+│  │ context │ ───────► │ next z'  │ ───────► │ → ΔATT, ΔSE  │           │
+│  │ → z     │          │ in latent│          │ (calibrated) │           │
+│  └─────────┘          └──────────┘          └──────────────┘           │
+│                                                                        │
+│  Training loss = ||decoded_ATT − OmniStats_ATT||² + calibration_loss   │
+└──────────────────────────────┬───────────────────────────────────────────┘
+                               │
+              World Model enables AUTONOMOUS PLANNING
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  FUTURE: Autonomous Experimentation Agent                              │
+│                                                                        │
+│  1. World Model imagines 1000 possible experiments (zero real traffic)  │
+│  2. Picks the experiment with highest expected ATT / lowest risk        │
+│  3. Validates with OmniStats on real data (human-in-the-loop)          │
+│  4. Feeds real results back → World Model improves                     │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Concrete Integration Paths
+
+#### Path A: OmniStats as Teacher → JEPA as Student (Knowledge Distillation)
+
+OmniStats' causal estimates become **supervised labels** for training a JEPA world model:
+
+| OmniStats Output | What JEPA Learns From It |
+|---|---|
+| `causal_results.csv` (ATT, SE, CI per method) | Ground-truth treatment effects → JEPA decoder targets |
+| `bma_subgroups.csv` (per-demographic ATT) | Who benefits from treatment → JEPA learns heterogeneous dynamics |
+| `lpa_profiles.csv` (profile assignments) | User archetypes → JEPA encoder initialisation / pre-training |
+| `cuped_variance_reduction.csv` (θ, % reduction) | Noise structure → JEPA regularizer calibration |
+| `randomization_schedule.csv` (CAR assignments) | Balanced experiment design → JEPA training data quality |
+| `power_analysis.csv` (n, power curve) | Sample efficiency targets → JEPA evaluation benchmark |
+
+#### Path B: JEPA as Counterfactual Generator → OmniStats as Validator
+
+Once the world model is trained, it generates **synthetic counterfactuals** that
+OmniStats validates against real experiments:
+
+1. JEPA imagines: *"If we apply Treatment B to Profile 2 users, revenue shifts by Δz"*
+2. A learned **decoder head** maps Δz → predicted ΔATT = +$1.80 ± $0.35
+3. When the real experiment runs, OmniStats computes the true ATT via DiD/IV/RDD
+4. **Calibration loss** = |predicted_ATT − true_ATT| feeds back to the decoder
+
+#### Path C: Energy-Based Planning (EB-JEPA → Experiment Design)
+
+Your `eb_jepa/` already implements energy-based planning with CEM/MPPI planners.
+The future integration replaces the Two Rooms environment with the **experiment
+design space**:
+
+| EB-JEPA Component | Experiment Design Analogue |
+|---|---|
+| `planning.py` → CEM/MPPI planner | Search over possible experiment designs (which treatment × which segment × what sample size) |
+| `jepa.py` → Encoder + Predictor | Encode user context → predict outcome in latent space |
+| `losses.py` → VCLoss (anti-collapse) | Ensure the world model represents *different* user segments distinctly |
+| Energy function (objective) | Expected information gain × safety constraint (max acceptable loss) |
+
+### Why This Is Better Than Pure RL
+
+| Dimension | Pure RL Agent | World Model + OmniStats |
+|---|---|---|
+| **Sample cost** | Millions of real user interactions | Imagines outcomes; validates on small real experiments |
+| **Safety** | Deploys bad treatments to discover they're bad | Predicts bad outcomes *before* deployment |
+| **Interpretability** | "Policy says do X" (black box) | "ATT = +$2.30 for Profile 2 because DiD estimates show..." |
+| **Regulatory** | Cannot explain decisions (GDPR Art. 22 risk) | Full APA audit trail with standard errors and CIs |
+| **Speed to insight** | Weeks of exploration | Seconds of imagination + 1 validation experiment |
+
+### Phased Roadmap
+
+```
+Phase I  ✅  DONE — OmniStats generates interpretable causal ground truth
+  │         (experiment_design.py, main.py, APA report)
+  │
+Phase II 🔲  Decoder Head Training
+  │         Train a linear probe / MLP decoder on top of JEPA encoder
+  │         that maps latent z → interpretable metrics (revenue, CVR)
+  │         using OmniStats outputs as supervised labels.
+  │         Success criterion: decoded ATT within 1 SE of OmniStats ATT.
+  │
+Phase III 🔲  Counterfactual Imagination
+  │         Use JEPA predictor to generate counterfactual z' for
+  │         unseen treatment × segment combinations.
+  │         Validate against held-out OmniStats experiments.
+  │
+Phase IV 🔲  Energy-Based Experiment Planning
+  │         Replace EB-JEPA's Two Rooms planner with an experiment
+  │         design planner that searches over (treatment, segment, n)
+  │         using energy = expected_ATT × P(safe) as objective.
+  │
+Phase V  🔲  Autonomous Experimentation Loop
+            World Model proposes → OmniStats validates → human approves
+            → results feed back → World Model improves.
+            Human remains in the loop for safety and regulatory compliance.
+```
+
+### Reinforcement Learning Connection (OmniStats as Critic Network)
+
+Even though World Models reduce the need for pure RL, the RL interpretation remains
+useful — OmniStats functions as the **critic (evaluator) network** in an actor-critic
+architecture:
+
+| OmniStats Component | RL / World Model Equivalent |
 |---|---|
 | Bayesian Sequential A/B (Stage 2) | Thompson Sampling — Multi-Armed Bandit (Exploration vs. Exploitation) |
+| LPA Profile Segmentation (Stage 1) | State representation learning — JEPA encoder pre-training |
+| CUPED Variance Reduction (Stage 3) | Advantage normalisation — reducing variance of the reward signal |
 | Doubly Robust DiD / IV (Stage 4) | Off-Policy Evaluation (OPE) for safe agent policy comparison |
-| CausalImpact BSTS / Kalman Filter (Stage 5) | Belief-state updating in POMDPs (Partially Observable MDPs) |
+| DR-OLS Subgroup HTE (Stage 4) | Heterogeneous reward modelling — different users get different reward functions |
+| CausalImpact BSTS (Stage 5) | Belief-state updating in POMDPs (Partially Observable MDPs) |
+| APA Report (Stage 5) | Evaluation report card — the "training log" of the critic |
+| JEPA World Model (Future) | The *actor* that proposes experiments; OmniStats is the *critic* that evaluates them |
 
-By building OmniStats, you are constructing the **critic (evaluator) network** for a future Reinforcement Learning agent that automatically allocates user traffic to optimal treatments.
+By building OmniStats, you are constructing the **rigorous statistical foundation**
+that any future World Model — JEPA, Genie, IRIS, Dreamer, or whatever comes next —
+will need as its ground-truth training signal and safety validator.
 
 ---
 
@@ -260,14 +507,38 @@ By building OmniStats, you are constructing the **critic (evaluator) network** f
 |---|---|
 | 1 | LPA model fit statistics (AIC, BIC, aBIC, Entropy, LMR-LRT p) |
 | 2 | Profile indicator means (SD) + Welch ANOVA + η² |
-| 3 | Chi-square tests + Cramér's V for demographic variables |
+| 3 | Chi-Square tests + Cramér's V for demographic variables |
 | 4 | Profile membership counts, percentages, mean max probability |
 | 5 | Frequentist A/B test results (proportion, means, distribution fit) |
-| 6 | Causal inference results — DiD, IV, RDD, SCM (weights), Matrix Completion |
-| 7 | Time-Series Causal — CausalImpact BSTS lift, MCMC credible interval |
-| 8 | Bayesian A/B — P(B>A), Expected Loss, ESS, R-hat, decision |
+| 6 | Sequential Bayesian A/B Results — P(B>A), Expected Loss, ESS |
+| 7 | CUPED Variance Reduction — θ, variance reduction % |
+| 8 | Full Causal Suite — DiD, IV, RDD, SCM, MC, DR-OLS HTE, CausalImpact BSTS |
 
 Formatting follows **APA 7th edition**: no vertical borders, three horizontal rules, Times New Roman 12pt.
+
+---
+
+### 💡 Informal Guide: How to Read the APA Report Results
+
+If you want to quickly understand what the tables are telling you in plain English:
+
+* **Table 1 (LPA Model Fit)**: *"How many customer segments make sense?"*
+  * **Look for**: Lower **BIC** / **AIC** values and an **Entropy** score closer to $1.0$ (above $0.80$ is great). It tells you if $K=3$ profiles represent your user base better than $K=2$ or $K=4$.
+* **Table 2 & 3 (Profile Breakdown & Demographics)**: *"Who is in each segment and how do they behave?"*
+  * **Table 2**: Compares metric averages across segments. Small $p$-values ($p < 0.05$) and higher $\eta^2$ mean the segments have distinctly different usage behaviors.
+  * **Table 3**: Shows if demographics (e.g. gender, tier, device) are tied to segments. A higher **Cramér's $V$** ($> 0.3$) indicates a strong relationship.
+* **Table 4 (Segment Sizes)**: *"How big is each user group?"*
+  * Gives you the percentage breakdown ($N, \%$) of your user base across profiles.
+* **Table 5 (Frequentist A/B Test)**: *"Did B beat A in traditional testing?"*
+  * **Look for**: Is $p < 0.05$? If yes, the difference between Treatment B and Control A is statistically significant under standard standard hypothesis testing.
+* **Table 6 (Bayesian A/B Test)**: *"How sure are we that B is better, and what is the risk?"*
+  * **$P(B > A)$**: If this is $\ge 95\%$, B is almost certainly better.
+  * **Expected Loss**: If you deploy B and it turns out to be wrong, this is the worst-case metric drop. If loss is $<1\%$ of baseline, it's safe to ship!
+* **Table 7 (CUPED Variance Reduction)**: *"How much noise did we clean up?"*
+  * **Look for**: **Variance Reduction %**. Higher percentage means CUPED removed pre-experiment noise, tightening your confidence intervals so you need fewer users or less time to declare a winner.
+* **Table 8 (Causal Inference Suite & Subgroups)**: *"Did the feature ACTUALLY cause the uplift, and for whom?"*
+  * **Estimates & CIs**: Summarizes true treatment effects across observational methods (DiD, IV, RDD, SCM, Matrix Completion, CausalImpact BSTS).
+  * **DR-OLS Subgroups**: Highlights Heterogeneous Treatment Effects (HTE) — showing *which exact demographic subgroup* benefited the most.
 
 ---
 
