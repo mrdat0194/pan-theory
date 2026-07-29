@@ -118,23 +118,23 @@ def run_stage0_diagnostics(df: pd.DataFrame, indicator_cols: list, ab_group_col:
     X = df_clean[indicator_cols].values
     la_res = check_linear_algebra_prerequisites(X, indicator_cols)
     
-    print(f"  • Feature Matrix Shape: {la_res['n_samples']} samples × {la_res['n_features']} features")
-    print(f"  • Covariance Determinant: {la_res['determinant']:.6f}")
-    print(f"  • Matrix Rank: {la_res['rank']} / {la_res['n_features']} ({'Full Rank' if la_res['full_rank'] else 'WARNING: Rank Deficient'})")
-    print(f"  • SVD Condition Number: {la_res['condition_number']:.2f}")
-    print(f"  • Gram Matrix Min Eigenvalue (λ_min): {la_res['min_eigenvalue']:.6f} ({'Strictly Convex' if la_res['strictly_convex'] else 'Non-Convex / Singular'})")
+    print(f"  * Feature Matrix Shape: {la_res['n_samples']} samples x {la_res['n_features']} features")
+    print(f"  * Covariance Determinant: {la_res['determinant']:.6f}")
+    print(f"  * Matrix Rank: {la_res['rank']} / {la_res['n_features']} ({'Full Rank' if la_res['full_rank'] else 'WARNING: Rank Deficient'})")
+    print(f"  * SVD Condition Number: {la_res['condition_number']:.2f}")
+    print(f"  * Gram Matrix Min Eigenvalue (lambda_min): {la_res['min_eigenvalue']:.6f} ({'Strictly Convex' if la_res['strictly_convex'] else 'Non-Convex / Singular'})")
 
     # 2. Sample Ratio Mismatch (SRM)
     srm_res = None
     if ab_group_col and ab_group_col in df.columns:
         print("\n--- 2. Sample Ratio Mismatch (SRM) Test ---")
         srm_res = check_sample_ratio_mismatch(df, ab_group_col)
-        print(f"  • Allocation Split: Control={srm_res['n_ctrl']}, Treatment={srm_res['n_treat']}")
-        print(f"  • Chi-Square p-value: {srm_res['p_value']:.4f}")
+        print(f"  * Allocation Split: Control={srm_res['n_ctrl']}, Treatment={srm_res['n_treat']}")
+        print(f"  * Chi-Square p-value: {srm_res['p_value']:.4f}")
         if srm_res['srm_detected']:
-            print("  • [WARNING] Sample Ratio Mismatch (SRM) detected! Traffic allocation may be corrupted.")
+            print("  * [WARNING] Sample Ratio Mismatch (SRM) detected! Traffic allocation may be corrupted.")
         else:
-            print("  • [OK] No Sample Ratio Mismatch detected. Traffic split is unbiased.")
+            print("  * [OK] No Sample Ratio Mismatch detected. Traffic split is unbiased.")
 
     # 3. Kernel MMD & Distributional Checks
     mmd_res = None

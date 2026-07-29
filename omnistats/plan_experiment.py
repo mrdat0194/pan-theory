@@ -274,7 +274,7 @@ def _banner(msg: str) -> None:
     print("=" * w)
 
 
-def main() -> None:
+def main(args_list: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Phase IV — Energy-Based Experiment Planning (JEPA × OmniStats)"
     )
@@ -298,7 +298,7 @@ def main() -> None:
     parser.add_argument("--lr",          type=float, default=1e-3,
                         help="Joint training learning rate (default: 1e-3)")
     parser.add_argument("--device",      default="cpu")
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
 
     device = torch.device(args.device)
     os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -1,47 +1,19 @@
 """
 omnistats/main.py
 -----------------
-OmniStats Pipeline Orchestrator -- v3
+OmniStats Unified 4-Stage Statistical & AI Pipeline Orchestrator
 
-STAGE PURPOSE MAP
------------------
-  Stage 1 -- Latent Profile Analysis (LPA)
-    PURPOSE: DESCRIBE -- Segment the population into meaningfully distinct
-    behavioural profiles using Gaussian Mixture Models.
-    Q: "How many different user types exist, and how do they differ?"
+Usage:
+    python main.py [--mode design|eval|plan|all]
 
-  Stage 2 -- A/B Testing (Frequentist + Bayesian Sequential)
-    PURPOSE: COMPARE -- Measure the size of a treatment effect with valid
-    uncertainty quantification. Solves the peaking problem via Bayesian
-    posterior thresholds rather than fixed-horizon p-values.
-    Q: "Did Treatment B improve the metric? By how much, with what certainty?"
-
-  Stage 3 -- CUPED Variance Reduction
-    PURPOSE: SHARPEN -- Reduce outcome variance using the LPA profile score
-    (Stage 1 output) as a pre-experiment covariate.
-    Output df_cuped is the DIRECT INPUT to Stage 4 Causal Inference.
-    Q: "Can we remove predictable variance to tighten all downstream CIs?"
-
-  Stage 4 -- Causal Inference (All Estimators + CausalImpact BSTS)
-    PURPOSE: ATTRIBUTE -- Explain *why* an effect occurred.
-    Estimators: DiD, IV, RDD, SCM, Matrix Completion, CausalImpact (BSTS).
-    CausalImpact is DiD generalised to continuous time -- same Stage 4.
-    All results written to causal_results.csv for APA Table 8.
-    Q: "Is the difference caused by the treatment, not an unobserved confound?"
-
-  Stage 5 -- APA Report (CONSOLIDATE)
-    PURPOSE: Read output CSVs from ALL stages 1-4 and render APA 7th edition.
-    No new estimates are produced in Stage 5.
-    Table order: 1-4 LPA | 5 Freq A/B | 6 Bayesian A/B | 7 CUPED | 8 Causal Suite
-
-Usage
------
-    python -X utf8 main.py
-
-Tip: After Stage 1 Step 2, inspect outputs/lpa_fit_stats.csv.
-     Set N_PROFILES = K in config.py and re-run.
+Modes:
+    design : Stage 1 -- Pre-Experiment Design (Power analysis & CAR schedule)
+    eval   : Stage 3 -- Post-Experiment Evaluation (Diagnostics, LPA, A/B, CUPED, Causal Suite, APA Report) [DEFAULT]
+    plan   : Stage 4 -- World Model Planning (JEPA Bridge & CEM/MPPI optimization)
+    all    : Run all stages sequentially (Stage 1 -> Stage 3 -> Stage 4)
 """
 
+import argparse
 import os
 import sys
 import time
@@ -71,76 +43,62 @@ def substage(stage_id: str, desc: str):
     print(f"\n[Stage {stage_id}] {desc}")
 
 
-def main():
+def run_stage_eval():
+    """Stage 3: Post-Experiment Evaluation (Diagnostics, LPA, A/B, CUPED, Causal Suite, APA Report)."""
     t0 = time.perf_counter()
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     from data_manager import load_and_prepare
     df = load_and_prepare()
 
-    # =========================================================================
-    # STAGE 0 -- Pre-Flight Diagnostics
-    # PURPOSE: VALIDATE -- verify mathematical & statistical prerequisites
-    # =========================================================================
-    banner("STAGE 0 -- Pre-Flight Diagnostics (VALIDATE)")
-    substage("0.1", "Run Pre-Flight Linear Algebra, MMD & Statistical Diagnostics")
+    # Diagnostics
+    banner("STAGE 3.0 -- Pre-Flight Diagnostics (VALIDATE)")
+    substage("3.0", "Run Pre-Flight Linear Algebra, MMD & Statistical Diagnostics")
     from modules.diagnostics import run_stage0_diagnostics
     from config import INDICATOR_COLS
-    diag_res = run_stage0_diagnostics(
+    run_stage0_diagnostics(
         df,
         indicator_cols=INDICATOR_COLS,
         ab_group_col=AB_GROUP_COL,
         ab_metric_col=AB_METRIC_COL
     )
 
-    # =========================================================================
-    # STAGE 1 -- Latent Profile Analysis
-    # PURPOSE: DESCRIBE -- segment users into behavioural profiles
-    # =========================================================================
-    banner("STAGE 1 -- Latent Profile Analysis  [DESCRIBE]")
-
-    substage("1.1", "Prepare data & indicators")
-
-    substage("1.2", f"Run LPA (K_MIN..K_MAX), assign K={N_PROFILES} profiles")
+    # Latent Profile Analysis
+    banner("STAGE 3.1 -- Latent Profile Analysis  [DESCRIBE]")
+    substage("3.1.1", f"Run LPA (K_MIN..K_MAX), assign K={N_PROFILES} profiles")
     from modules.lpa import run_lpa
     df_profiles, fit_df = run_lpa(df)
 
-    substage("1.3", "Welch ANOVA + Games-Howell post-hoc")
+    substage("3.1.2", "Welch ANOVA + Games-Howell post-hoc")
     from modules.anova import run_anova
-    anova_df, posthoc_df = run_anova(df_profiles)
+    run_anova(df_profiles)
 
-    substage("1.4", "Chi-square tests + Cramer's V")
+    substage("3.1.3", "Chi-square tests + Cramer's V")
     from modules.chi_square import run_chi_square
-    chi2_df, crosstab_df = run_chi_square(df_profiles)
+    run_chi_square(df_profiles)
 
-    substage("1.5", "Visualise profiles and demographics")
+    substage("3.1.4", "Visualise profiles and demographics")
     from modules.visualisation import (
         plot_lpa_profiles, plot_demographics,
         plot_posthoc_heatmap, plot_chi_square_mosaic,
     )
     plot_lpa_profiles(df_profiles)
     plot_demographics(df_profiles)
-    plot_posthoc_heatmap(posthoc_df)
-    plot_chi_square_mosaic(df_profiles)
 
-    # =========================================================================
-    # STAGE 2 -- A/B Testing (Frequentist + Bayesian Sequential)
-    # PURPOSE: COMPARE -- measure effect size with valid uncertainty
-    # =========================================================================
-    banner("STAGE 2 -- A/B Testing (Frequentist + Bayesian Sequential)  [COMPARE]")
-
-    substage("2.1", f"Frequentist A/B: proportion z-test, Welch t-test, MMD (RKHS), dist. fit")
+    # A/B Testing
+    banner("STAGE 3.2 -- A/B Testing (Frequentist + Bayesian Sequential)  [COMPARE]")
+    substage("3.2.1", "Frequentist A/B: proportion z-test, Welch t-test, MMD")
     from modules.ab_testing import run_ab_tests
-    ab_results = run_ab_tests(
+    run_ab_tests(
         df_profiles,
         group_col=AB_GROUP_COL,
         metric_col=AB_METRIC_COL,
         conversion_col=AB_CONVERSION_COL if AB_CONVERSION_COL in df_profiles.columns else None,
     )
 
-    substage("2.2", "Bayesian A/B: Beta-Binomial (PyMC / IS fallback), StudentT means (PyMC NUTS)")
+    substage("3.2.2", "Bayesian A/B: StudentT means (PyMC NUTS)")
     from modules.bayesian import run_bayesian_ab_tests
-    bayesian_ab_results = run_bayesian_ab_tests(
+    run_bayesian_ab_tests(
         df_profiles,
         group_col=AB_GROUP_COL,
         metric_col=AB_METRIC_COL,
@@ -154,16 +112,10 @@ def main():
         seed=BAYES_AB_SEED,
     )
 
-    # =========================================================================
-    # STAGE 3 -- CUPED Variance Reduction
-    # PURPOSE: SHARPEN -- adjust outcome so Stage 4 causal CIs are tighter
-    # df_cuped IS the direct input to run_causal_suite() in Stage 4
-    # =========================================================================
-    banner("STAGE 3 -- CUPED Variance Reduction  [SHARPEN]")
-
-    substage("3.1", f"CUPED: monotonic covariate adjustment (covariate='{CUPED_COVARIATE_COL}')")
+    # CUPED Variance Reduction
+    banner("STAGE 3.3 -- CUPED Variance Reduction  [SHARPEN]")
+    substage("3.3.1", f"CUPED: monotonic covariate adjustment ('{CUPED_COVARIATE_COL}')")
     from modules.cuped import run_cuped
-
     if CUPED_ENABLED and CUPED_COVARIATE_COL in df_profiles.columns:
         df_cuped = run_cuped(
             df_profiles,
@@ -174,78 +126,67 @@ def main():
             use_catboost=CUPED_USE_CATBOOST,
         )
     else:
-        if CUPED_ENABLED:
-            print(f"  [CUPED] Covariate '{CUPED_COVARIATE_COL}' not found -- "
-                  f"skipping. Run Stage 1 LPA first.")
         df_cuped = df_profiles.copy()
 
-    # =========================================================================
-    # STAGE 4 -- Causal Inference: ALL estimators including CausalImpact BSTS
-    # PURPOSE: ATTRIBUTE -- DiD, IV, RDD, SCM, MC, CausalImpact (same stage)
-    # CausalImpact is DiD generalised to continuous time (BSTS + spike-and-slab)
-    # All six results written to causal_results.csv -> APA Table 8
-    # =========================================================================
-    banner("STAGE 4 -- Causal Inference (DiD / IV / RDD / SCM / MC / CausalImpact)  [ATTRIBUTE]")
-
-    substage("4.1", "Run full causal suite: DiD, IV, RDD, SCM, Matrix Completion, "
-                    "CausalImpact BSTS -- all operating on df_cuped")
+    # Causal Inference Suite
+    banner("STAGE 3.4 -- Causal Inference Suite  [ATTRIBUTE]")
+    substage("3.4.1", "Run full causal suite: DiD, IV, RDD, SCM, MC, BSTS, HTE")
     from modules.causal import run_causal_suite
-    causal_results = run_causal_suite()
+    run_causal_suite()
 
-    # =========================================================================
-    # STAGE 5 -- APA Report (CONSOLIDATE)
-    # PURPOSE: Read output CSVs from ALL stages 1-4; render Word document.
-    # No new estimates are computed here -- pure read-and-render pass.
-    # Table 1-4: LPA  |  Table 5: Freq A/B  |  Table 6: Bayesian A/B
-    # Table 7: CUPED  |  Table 8: Full Causal Suite (incl. CausalImpact)
-    # =========================================================================
-    banner("STAGE 5 -- APA Report  [CONSOLIDATE]")
-
-    substage("5.1", "Generate APA 7th edition report (Tables 1-8) from all stage outputs")
+    # APA Report Generation
+    banner("STAGE 3.5 -- APA Report Generation  [CONSOLIDATE]")
+    substage("3.5.1", "Generate APA 7th edition report (Tables 1-8)")
     from modules.apa_report import build_report
     build_report()
 
-    # =========================================================================
-    # DONE
-    # =========================================================================
     elapsed = time.perf_counter() - t0
-    banner(f"PIPELINE COMPLETE  ({elapsed:.1f}s)")
+    banner(f"STAGE 3 EVALUATION COMPLETE  ({elapsed:.1f}s)")
 
-    print(f"\nOutputs written to: {OUTPUT_DIR}")
-    print()
-    print("  -- Stage 1 (LPA) ---------------------------------------------------")
-    print("  lpa_fit_stats.csv          -- Review to choose K, then re-run")
-    print("  lpa_profiles.csv           -- Full dataset with profile assignments")
-    print("  anova_results.csv          -- Welch ANOVA summary")
-    print("  anova_posthoc.csv          -- Games-Howell pairwise comparisons")
-    print("  chi_square_results.csv     -- Chi-square + Cramer's V")
-    print("  profiles_lineplot.png      -- LPA profile means plot")
-    print("  demographics_plot.png      -- Demographic stacked bar charts")
-    print()
-    print("  -- Stage 2 (A/B Testing) -------------------------------------------")
-    print("  ab_test_results.csv        -- Frequentist A/B summary  -> APA Table 5")
-    print("  bayesian_ab_results.csv    -- P(B>A), Expected Loss, ESS -> APA Table 6")
-    print("  dist_fit_*.png             -- Distribution fit plots")
-    print()
-    print("  -- Stage 3 (CUPED) -------------------------------------------------")
-    print("  cuped_variance_reduction.csv -- theta, variance reduction % -> APA Table 7")
-    print()
-    print("  -- Stage 4 (Causal Inference + CausalImpact) -----------------------")
-    print("  causal_results.csv         -- DiD/IV/RDD/SCM/MC/CausalImpact -> APA Table 8")
-    print("  did_attgt.csv              -- Full ATT(g,t) table")
-    print("  iv_estimates.csv           -- IV 2SLS + diagnostics")
-    print("  rdd_results.csv            -- RDD estimate + CCT bandwidth")
-    print("  scm_weights.csv            -- SCM donor unit weights")
-    print("  scm_gaps.csv / scm_plot.png")
-    print("  mc_gaps.csv / mc_plot.png  -- Matrix Completion counterfactual")
-    print("  ts_causalimpact.png        -- CausalImpact BSTS plot")
-    print("  ts_counterfactual.png      -- Prophet fallback plot (if needed)")
-    print()
-    print("  -- Stage 5 (APA Report) --------------------------------------------")
-    print("  apa_report.docx            -- APA 7th edition (Tables 1-8)")
-    print()
-    print("Next step: Open outputs/lpa_fit_stats.csv, agree on K,")
-    print("  set N_PROFILES = K in config.py, then re-run: python -X utf8 main.py")
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="OmniStats Unified 4-Stage Statistical & AI Pipeline Orchestrator"
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["design", "eval", "plan", "all"],
+        default="eval",
+        help="Pipeline execution mode: design (Stage 1), eval (Stage 3) [DEFAULT], plan (Stage 4), all (1->3->4)",
+    )
+    # Pass-through args for Stage 4 planning
+    parser.add_argument("--planner", choices=["cem", "mppi"], default="cem")
+    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--n-iters", type=int, default=20)
+    parser.add_argument("--n-samples", type=int, default=200)
+    parser.add_argument("--plan-length", type=int, default=5)
+
+    args, unknown = parser.parse_known_args()
+
+    if args.mode in ("design", "all"):
+        banner("STAGE 1 -- Pre-Experiment Design (experiment_design.py)")
+        import experiment_design
+        experiment_design.main()
+
+    if args.mode in ("execution", "all"):
+        banner("STAGE 2 -- Execution (Outside OmniStats / Field Trial)")
+        print("\n  [Stage 2] Live A/B test run executed by Engineering on traffic.")
+        print("  Raw experimental data collected and saved to DATA_PATH.")
+
+    if args.mode in ("eval", "all"):
+        run_stage_eval()
+
+    if args.mode in ("plan", "all"):
+        banner("STAGE 4 -- World Model Planning (plan_experiment.py)")
+        import plan_experiment
+        plan_args = [
+            "--planner", args.planner,
+            "--epochs", str(args.epochs),
+            "--n-iters", str(args.n_iters),
+            "--n-samples", str(args.n_samples),
+            "--plan-length", str(args.plan_length),
+        ]
+        plan_experiment.main(plan_args)
 
 
 if __name__ == "__main__":

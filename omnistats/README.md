@@ -1,62 +1,44 @@
-# OmniStats — Unified Statistical Analysis Pipeline
+# OmniStats — Unified 4-Stage Statistical & AI Pipeline
 
-A single, **100% Python** end-to-end experimental statistics pipeline spanning three phases:
-**pre-experiment design**, **post-experiment evaluation**, and **APA reporting**.
+A concise **100% Python** 4-stage experimental statistics and world model planning architecture:
 
 ---
 
-## Three-Phase Architecture
+## 4-Stage Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  PHASE I — Pre-Experiment  (experiment_design.py)                   │
-│  DESIGN & DISCOVER before traffic is routed                         │
-│                                                                     │
-│  ① Power Analysis  → required sample size per arm                   │
-│  ② LPA on baseline → discover who your users are (Stages 0–1)      │
-│  ③ SOTA CAR        → Covariate-Adaptive Randomization schedule      │
-│     (Mahalanobis-distance minimization — balances demographics      │
-│      and their interactions as subjects enroll)                     │
+│  STAGE 1 — Pre-Experiment Design  (experiment_design.py)            │
+│  Power Analysis, LPA baseline, Covariate-Adaptive Randomization     │
 └───────────────────────────────┬─────────────────────────────────────┘
-                                │  Engineering routes traffic
+                                │  Share randomization schedule with Engineering
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  PHASE II — Execution  (outside OmniStats)                          │
-│  Run the A/B experiment or field trial                              │
+│  STAGE 2 — Execution  (Outside OmniStats / Engineering)             │
+│  Run live A/B test / field trial on traffic (intentionally empty)   │
 └───────────────────────────────┬─────────────────────────────────────┘
-                                │  Collect results
+                                │  Collect experiment data
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  PHASE III — Post-Experiment  (main.py)                             │
-│  EVALUATE & ATTRIBUTE after data collection is complete             │
-│                                                                     │
-│  Stage 0 — VALIDATE    Pre-flight diagnostics (MMD, SVD, SRM)      │
-│  Stage 1 — DESCRIBE    LPA: GMM segmentation + ANOVA + Chi-square  │
-│  Stage 2 — COMPARE     A/B: Frequentist z/t + Bayesian Sequential  │
-│  Stage 3 — SHARPEN     CUPED: Monotonic variance reduction         │
-│  Stage 4 — ATTRIBUTE   Causal: DiD, IV, RDD, SCM, MC, HTE(BMA)    │
-│  Stage 5 — CONSOLIDATE CausalImpact BSTS + APA 7th report          │
+│  STAGE 3 — Post-Experiment Evaluation  (main.py)                    │
+│  Diagnostics, LPA, A/B Testing, CUPED, Causal Suite & APA Report    │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │  Pass statistical outputs to World Model
+                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STAGE 4 — World Model Planning  (plan_experiment.py)               │
+│  JEPA World Model + CEM/MPPI Planner optimizes next experiment plan │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### At a Glance
 
-| Phase | Entry Point | Purpose | Key Output |
+| Stage | Entry Point | Purpose | Key Output |
 |---|---|---|---|
-| **I — Pre-Experiment** | `experiment_design.py` | Design a statistically valid experiment | `randomization_schedule.csv` |
-| **II — Execution** | *(Engineering)* | Run the field experiment | Raw experiment data |
-| **III — Post-Experiment** | `main.py` | Evaluate, attribute, and report | `apa_report.docx` (Tables 1–8) |
-
-### Phase III — Stage Summary
-
-| Stage | Purpose | Methods |
-|---|---|---|
-| **0 — Diagnostics** | **VALIDATE** — verify prerequisites | MMD (arXiv:0805.2368), SVD Condition Number, Matrix Rank, Covariance Det, SRM ($\chi^2$), Levene, D'Agostino-Pearson |
-| **1 — LPA** | **DESCRIBE** — segment users | GMM, Welch ANOVA, Games-Howell, Chi-square, Cramér's V |
-| **2 — A/B Testing** | **COMPARE** — measure effect size | Frequentist: z-test, Welch t-test, MMD (RKHS); Bayesian Sequential: Beta-Binomial, PyMC NUTS, Expected Loss |
-| **3 — CUPED** | **SHARPEN** — reduce outcome variance | Monotonic CatBoost / DT regression on LPA profile score |
-| **4 — Causal + HTE** | **ATTRIBUTE** — explain *why* and *for whom* | Staggered DiD (C&S-A), IV/2SLS, RDD, SCM (Convex Opt.), Matrix Completion (SoftImpute), DR-OLS HTE Subgroups |
-| **5 — Time-Series + APA** | **PROJECT + CONSOLIDATE** | CausalImpact (Pyro BSTS SVI); APA 7th edition Word document (Tables 1–8) |
+| **Stage 1 — Design** | `experiment_design.py` | Design experiment & balance covariates | `randomization_schedule.csv` |
+| **Stage 2 — Execution** | *(Outside OmniStats)* | Run live A/B test / field trial | Raw experiment dataset |
+| **Stage 3 — Evaluation** | `main.py` | Run diagnostics, A/B tests, CUPED & Causal Suite | `apa_report.docx` (Tables 1–8) |
+| **Stage 4 — Planning** | `plan_experiment.py` | JEPA World Model plans next experiment | `jepa_experiment_plan.csv` |
 
 ---
 
@@ -64,40 +46,27 @@ A single, **100% Python** end-to-end experimental statistics pipeline spanning t
 
 ```
 omnistats/
-├── config.py               ← Edit this file to configure all settings
-├── data_manager.py         ← Centralised data loading & z-scoring
-├── experiment_design.py    ← Phase I: SOTA CAR randomization + power analysis
-├── main.py                 ← Phase III: Run the full post-experiment pipeline
-├── plan_experiment.py      ← Phase IV: JEPA World Model experiment planner  ✅ NEW
+├── config.py               ← Edit settings and parameters
+├── data_manager.py         ← Centralised data loading & preparation
+├── experiment_design.py    ← Stage 1: Power analysis + CAR randomization schedule
+├── main.py                 ← Stage 3: Post-experiment evaluation & APA report
+├── plan_experiment.py      ← Stage 4: JEPA World Model experiment planner
 ├── requirements.txt
 ├── modules/
-│   ├── diagnostics.py      ← Stage 0: Pre-Flight Diagnostics (MMD, SVD, Rank, SRM)
-│   ├── lpa.py              ← Stage 1: Gaussian Mixture Model (LPA) fitting
-│   ├── anova.py            ← Stage 1: Welch ANOVA + Games-Howell post-hoc
-│   ├── chi_square.py       ← Stage 1: Chi-square independence test + Cramér's V
-│   ├── ab_testing.py       ← Stage 2: Frequentist proportion z-test, Welch t-test
-│   ├── bayesian/           ← Stage 2: Bayesian Sequential A/B subpackage
-│   │   ├── __init__.py     ←   run_bayesian_ab_tests() orchestrator
-│   │   ├── beta_binomial.py←   Beta-Binomial conjugate update
-│   │   ├── normal_model.py ←   PyMC NUTS StudentT
-│   │   └── sequential.py   ←   SIR batch stopping rule + Expected Loss
-│   ├── cuped.py            ← Stage 3: CUPED variance reduction (CatBoost monotonic)
-│   ├── causal/             ← Stage 4: Robust causal inference subpackage
-│   │   ├── __init__.py     ←   run_causal_suite() orchestrator
-│   │   ├── did.py          ←   Staggered DiD (Callaway & Sant'Anna ATT(g,t))
-│   │   ├── iv.py           ←   Robust IV/2SLS (linearmodels + Anderson-Rubin)
-│   │   ├── rdd.py          ←   CCT optimal-bandwidth RDD (rdrobust + rddensity)
-│   │   ├── scm.py          ←   Synthetic Control Method (cvxpy convex opt.)
-│   │   ├── matrix_completion.py ← Matrix Completion (SoftImpute / ALS)
-│   │   └── bma.py          ←   HTE Subgroup Analysis: DR-OLS + Bonferroni
-│   ├── timeseries/         ← Stage 5: Bayesian time-series causal subpackage
-│   │   ├── __init__.py     ←   run_timeseries_suite() orchestrator
-│   │   └── causal_impact.py←   Pyro BSTS CausalImpact
-│   ├── jepa_bridge.py      ← Phase IV: OmniStats ↔ EB-JEPA bridge           ✅ NEW
-│   │                           load_state_context(), APADecoder, train_apa_decoder()
-│   ├── visualisation.py    ← All plots (line, stacked bar, heatmap, mosaic)
-│   └── apa_report.py       ← APA 7th edition .docx generator (Tables 1–8)
-└── outputs/                ← All CSVs, PNGs, and .docx created here
+│   ├── diagnostics.py      ← Pre-flight diagnostics (MMD, SVD, Rank, SRM)
+│   ├── lpa.py              ← Gaussian Mixture Model (LPA) fitting
+│   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
+│   ├── chi_square.py       ← Chi-square test + Cramér's V
+│   ├── ab_testing.py       ← Frequentist z-test & Welch t-test
+│   ├── bayesian/           ← Bayesian Sequential A/B (PyMC NUTS, Expected Loss)
+│   ├── cuped.py            ← CUPED variance reduction (CatBoost monotonic)
+│   ├── causal/             ← Robust Causal Suite (DiD, IV, RDD, SCM, MC, HTE)
+│   ├── timeseries/         ← Time-series causal (CausalImpact BSTS)
+│   ├── jepa_bridge.py      ← OmniStats ↔ JEPA state encoder & decoder
+│   ├── visualisation.py    ← Visualization plots
+│   └── apa_report.py       ← APA 7th edition Word report generator
+└── outputs/                ← Saved CSVs, PNGs, and .docx report
+```
     ├── ...                 ← (existing outputs from Phases I–III)
     ├── jepa_experiment_plan.csv  ← Phase IV: optimal continuous experiment plan
     └── jepa_planning_losses.csv  ← Phase IV: CEM/MPPI cost convergence curve
@@ -149,74 +118,43 @@ DESIGN_MDE_RELATIVE  = 0.05          # 5% Minimum Detectable Effect
 DESIGN_STRATIFY_COLS = ["sex", "region"]  # covariates to balance via CAR
 ```
 
-### 3. (Phase I) Design your experiment
+### 3. Run Pipeline via `main.py`
 
-*Run this **before** launching your A/B test.*
-
-```powershell
-python -X utf8 experiment_design.py
-```
-
-Outputs `outputs/randomization_schedule.csv` — a SOTA Covariate-Adaptive Randomization (CAR) assignment table balanced on `DESIGN_STRATIFY_COLS`. Share with Engineering for traffic routing.
-
-### 4. (Phase III) Evaluate post-experiment results
-
-*Run this **after** your experiment data is collected.*
+Run any stage or the entire pipeline using `main.py`:
 
 ```powershell
-python -X utf8 main.py
+# Stage 1 — Pre-Experiment Design (Power analysis & CAR randomization)
+python main.py --mode design
+
+# Stage 3 — Post-Experiment Evaluation (Diagnostics, LPA, A/B, CUPED, Causal Suite, APA Report) [DEFAULT]
+python main.py --mode eval
+
+# Stage 4 — World Model Planning (JEPA experiment design search)
+python main.py --mode plan --planner cem --epochs 50
+
+# Run all stages end-to-end (Stage 1 -> Stage 3 -> Stage 4)
+python main.py --mode all
 ```
-
-### 5. (Phase IV) Plan the next experiment with the JEPA World Model
-
-*Run this **after** Phase III to let the world model propose the optimal next experiment.*
-
-```powershell
-python -X utf8 plan_experiment.py
-
-# Options:
-python -X utf8 plan_experiment.py --planner mppi --epochs 100 --n-samples 300
-python -X utf8 plan_experiment.py --planner cem  --plan-length 10 --d-latent 64
-```
-
-Outputs:
-- `outputs/jepa_experiment_plan.csv` — optimal continuous experiment design (treatment fraction,
-  segment focus, sample size, observation horizon) across the planning horizon.
-- `outputs/jepa_planning_losses.csv` — CEM/MPPI cost convergence curve.
 
 ---
 
-## Stage Explanations — Why Each Exists
-
-Phase III has six **distinct inferential stages** following a strict dependency chain.
-The output of each stage is the direct input to the next.
+## 4-Stage Pipeline Workflow
 
 ```
-Phase I  (experiment_design.py)
-  └─ outputs randomization_schedule.csv → Engineering routes traffic
-       │
-       ▼  [Experiment runs in the real world]
+Stage 1: Pre-Experiment Design  (experiment_design.py / main.py --mode design)
+  └─ outputs randomization_schedule.csv → Share with Engineering
        │
        ▼
-Phase III (main.py)
-  Stage 1 (LPA)
-    └─ outputs profile_prob_max
-         │
-         ▼
-  Stage 2 (A/B Testing)
-    └─ outputs bayesian_ab_results (comparison: did B beat A?)
-         │
-         ▼
-  Stage 3 (CUPED) ← uses profile_prob_max from Stage 1
-    └─ outputs df_cuped
+Stage 2: Execution (Outside OmniStats / Field Trial by Engineering)
+  └─ Engineering routes traffic and collects experimental dataset
        │
        ▼
-Stage 4 (Causal Inference) ← operates on df_cuped
-  └─ outputs causal_results.csv (DiD, IV, RDD, SCM, MC, BMA)
+Stage 3: Post-Experiment Evaluation (main.py / main.py --mode eval)
+  └─ Diagnostics → LPA → A/B Testing → CUPED → Causal Suite → apa_report.docx
        │
        ▼
-Stage 5 (Time-Series + APA Report)
-  └─ outputs apa_report.docx (Tables 1–8)
+Stage 4: World Model Planning (plan_experiment.py / main.py --mode plan)
+  └─ JEPA Bridge → APADecoder → CEM/MPPI Planner → jepa_experiment_plan.csv
 ```
 
 ### Stage 1 — Latent Profile Analysis `[DESCRIBE]`
@@ -265,9 +203,9 @@ $$Y_i^{\text{adj}} = Y_i - \hat\theta (X_i - \bar X)$$
 
 **Why monotonic constraints:** The profile→outcome relationship is monotone by construction. `CatBoostRegressor(monotone_constraints=[+1])` enforces this, preventing overfitting of the hat matrix.
 
-### Stage 4 — Causal Inference `[ATTRIBUTE]`
+### Stage 4 — Causal Inference Suite `[ATTRIBUTE]`
 
-Five core estimators plus BMA for HTE, all operating on `df_cuped` from Stage 3:
+Six core estimators plus DR-OLS for HTE, all operating on `df_cuped` from Stage 3:
 
 | Estimator | Identification strategy | Estimand | Key assumption |
 |---|---|---|---|
@@ -276,24 +214,15 @@ Five core estimators plus BMA for HTE, all operating on `df_cuped` from Stage 3:
 | **RDD** (rdrobust CCT) | Continuity at cutoff | LATE at cutoff | Continuity of potential outcomes |
 | **SCM** (cvxpy) | Convex donor matching | ATT treated unit | Pre-period fit quality |
 | **Matrix Completion** (SoftImpute) | Missing data / nuclear norm | ATT staggered panel | Low-rank latent factor structure |
-| **BMA** | Model averaging over subgroup interactions | HTE / PIP per subgroup | Prior on covariate inclusion |
+| **CausalImpact** (Pyro BSTS) | State-space Bayesian time-series | Continuous ATT | Unobserved control trajectory |
+| **DR-OLS Subgroups** | Doubly robust interaction regression | Subgroup HTE / PIP | Correct propensity or outcome specification |
 
-**Why BMA belongs in Stage 4:**
-BMA models `Treatment × Demographic` interaction effects across all plausible covariate structures and outputs **Posterior Inclusion Probabilities (PIPs)** — the probability that each subgroup has a true heterogeneous treatment effect.
+**CausalImpact (BSTS) Integration:**
+CausalImpact is DiD generalized to continuous time. Instead of a binary pre/post comparison with parallel trends, BSTS models the full counterfactual trajectory. It runs within Stage 4 alongside all other causal estimators, saving results to `causal_results.csv`.
 
-### Stage 5 — Bayesian Time-Series Causal + APA Report `[PROJECT + CONSOLIDATE]`
+### Report Generation — APA 7th Edition `[CONSOLIDATE]`
 
-**CausalImpact (BSTS)** vs. Prophet:
-
-| | Prophet | CausalImpact (BSTS) |
-|---|---|---|
-| Counterfactual source | Historical trend of *treated* series only | Weighted blend of *untreated control* series |
-| Shock handling | Cannot separate macro shocks from treatment | Spike-and-slab separates shared shocks |
-| Explainability | Trend + seasonality components | Posterior Inclusion Probabilities per control series |
-
-**Relationship to Stage 4 DiD:** CausalImpact is DiD generalised to continuous time. Instead of a binary pre/post comparison with parallel trends, BSTS models the full counterfactual trajectory.
-
-The APA Report (`apa_report.docx`) is generated at the end of Stage 5, after all results are available, producing **Tables 1–8** in a single pass.
+The APA Report (`apa_report.docx`) is generated after all statistical inferential outputs (Stages 1–4) are completed, consolidating results into Tables 1–8 in a single pass.
 
 ---
 
