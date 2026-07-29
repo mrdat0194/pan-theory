@@ -501,6 +501,94 @@ class ReprTargetDistMPCObjective:
         return diff
 
 
+class APACausalMPCObjective:
+    """
+    APA-Aware planning objective for OmniStats × EB-JEPA experiment planning.
+
+    Scores a batch of predicted latent trajectories using an APADecoder that
+    maps latent states to interpretable APA causal metrics:
+
+        Cost = -w_att * E[ATT_hat]
+               + w_risk * E[Risk_hat]
+               + w_disp * Subgroup_Disparity_hat
+
+    Lower cost = better experiment design (high lift, low risk, low disparity).
+
+    The planner (CEM / MPPI) will sample continuous action vectors representing
+    experiment design parameters (treatment fraction, segment focus, sample size
+    allocation), unroll predicted latent states with the JEPA predictor, and
+    minimize this cost to find the optimal experiment configuration.
+
+    Parameters
+    ----------
+    decoder : APADecoder
+        The trained (or jointly-trained) APA decoder from jepa_bridge.py.
+    w_att : float
+        Weight on expected ATT (positive = reward for lift).
+    w_risk : float
+        Weight on expected Bayesian Risk (penalises risky designs).
+    w_disp : float
+        Weight on subgroup disparity (penalises designs that harm a subgroup).
+    att_baseline : float
+        Normalisation constant for ATT (e.g., historical mean ATT).
+        Used to make weights scale-invariant.
+    """
+
+    def __init__(
+        self,
+        decoder,                     # APADecoder from jepa_bridge
+        w_att: float   = 1.0,
+        w_risk: float  = 0.5,
+        w_disp: float  = 0.3,
+        att_baseline: float = 1.0,
+        **kwargs,
+    ):
+        self.decoder      = decoder
+        self.w_att        = w_att
+        self.w_risk       = w_risk
+        self.w_disp       = w_disp
+        self.att_baseline = max(abs(att_baseline), 1e-6)
+
+    def __call__(self, encodings: torch.Tensor, keepdims: bool = False) -> torch.Tensor:
+        """
+        Args:
+            encodings : [B, D, T, H, W]  — batch of predicted latent trajectories
+            keepdims  : if True return [B], else return [B] (same; time averaged)
+
+        Returns:
+            cost : [B]  (lower is better — CEM/MPPI minimises this)
+        """
+        B, D, T, H, W = encodings.shape
+
+        # ── Decode each time step and average over horizon ────────────────────
+        att_all  = []
+        risk_all = []
+
+        for t in range(T):
+            z_t = encodings[:, :, t, :, :]          # [B, D, H, W]
+            z_flat = z_t.reshape(B, -1)              # [B, D*H*W]
+            preds = self.decoder(z_flat)
+            att_all.append(preds["att_hat"])         # [B]
+            risk_all.append(preds["risk_hat"])       # [B]
+
+        att_mean  = torch.stack(att_all,  dim=1).mean(dim=1)   # [B]
+        risk_mean = torch.stack(risk_all, dim=1).mean(dim=1)   # [B]
+
+        # ── Subgroup disparity: std of per-step ATT (proxy for HTE variance) ──
+        # High variance across time = inconsistent treatment effects = disparity.
+        # Guard against T=1 where std() is undefined (returns NaN).
+        att_stack = torch.stack(att_all, dim=1)              # [B, T]
+        disp = att_stack.std(dim=1, correction=0).clamp(min=0.0) if T > 1 else torch.zeros(B, device=att_stack.device)  # [B]
+
+        # ── Composite APA cost ────────────────────────────────────────────────
+        cost = (
+            - self.w_att  * (att_mean  / self.att_baseline)
+            + self.w_risk * risk_mean
+            + self.w_disp * disp
+        )
+        return cost   # [B]
+
+
 ### Planning optimizers interface ###
 class PlanningResult(NamedTuple):
     actions: torch.Tensor

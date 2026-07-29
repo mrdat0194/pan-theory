@@ -41,13 +41,12 @@ import torch.nn as nn
 # ── resolve omnistats/ on path ────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
-sys.path.insert(0, str(BASE_DIR.parent))  # repo root for eb_jepa
 
 from config import OUTPUT_DIR
 
 # ── EB-JEPA planning components ───────────────────────────────────────────────
-# Try installed package first, then fall back to sibling repo on the filesystem.
-_EBJEPA_REPO = BASE_DIR.parent / "eb_jepa"
+# Try fallback to user-owned copy in MLModel first.
+_EBJEPA_REPO = BASE_DIR.parent / "MLModel" / "AIModel" / "model"
 if str(_EBJEPA_REPO) not in sys.path and _EBJEPA_REPO.exists():
     sys.path.insert(0, str(_EBJEPA_REPO))
 
@@ -426,8 +425,8 @@ def main() -> None:
 
     print(f"\n  Optimal Experiment Plan:")
     print(plan_df.to_string(index=False))
-    print(f"\n  Plan saved   → {plan_path}")
-    print(f"  Losses saved → {losses_path}")
+    print(f"\n  Plan saved   -> {plan_path}")
+    print(f"  Losses saved -> {losses_path}")
 
     # ── Summary ───────────────────────────────────────────────────────────────
     _banner("PHASE IV COMPLETE")
