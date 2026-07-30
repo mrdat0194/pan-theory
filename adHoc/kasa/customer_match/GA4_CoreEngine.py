@@ -122,75 +122,46 @@ class BuildReport:
             raise ValueError(f"filter_type must be 'string_filter', 'in_list_filter', 'numeric_filter' "
                              f"or 'between_filter' you entered '{filter_type}'")
 
-        if filter_type == 'string_filter' and filter_type:
-            self.dimension_filter = FilterExpression(filter=Filter(field_name   =field_name,
-                                                                   string_filter=Filter.StringFilter(
-                                                                       match_type=match_type,
-                                                                       value=filter_values,
-                                                                       case_sensitive=filter_case
-                                                                   )
-                                                                   )
-                                                     )
-        elif filter_type == 'string_filter' and filter_type is False:
-            self.metric_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                string_filter=Filter.StringFilter(
-                                                                    match_type=match_type,
-                                                                    value=filter_values,
-                                                                    case_sensitive=filter_case
-                                                                )
-                                                                )
-                                                  )
+        filter_obj = None
+        if filter_type == 'string_filter':
+            filter_obj = Filter(
+                field_name=field_name,
+                string_filter=Filter.StringFilter(
+                    match_type=match_type,
+                    value=filter_values,
+                    case_sensitive=filter_case
+                )
+            )
+        elif filter_type == 'in_list_filter':
+            filter_obj = Filter(
+                field_name=field_name,
+                in_list_filter=Filter.InListFilter(
+                    values=filter_values,
+                    case_sensitive=filter_case
+                )
+            )
+        elif filter_type == 'numeric_filter':
+            filter_obj = Filter(
+                field_name=field_name,
+                numeric_filter=Filter.NumericFilter(
+                    operation=operation,
+                    value=filter_values
+                )
+            )
+        elif filter_type == 'between_filter':
+            filter_obj = Filter(
+                field_name=field_name,
+                between_filter=Filter.BetweenFilter(
+                    from_value=from_value,
+                    to_value=to_value
+                )
+            )
 
-        elif filter_type == 'in_list_filter' and filter_dimension:
-            self.dimension_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                   in_list_filter=Filter.InListFilter(
-                                                                       values=filter_values,
-                                                                       case_sensitive=filter_case
-                                                                   )
-                                                                   )
-                                                     )
-        elif filter_type == 'in_list_filter' and filter_dimension is False:
-            self.metric_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                in_list_filter=Filter.InListFilter(
-                                                                    values=filter_values,
-                                                                    case_sensitive=filter_case
-                                                                )
-                                                                )
-                                                  )
-
-        elif filter_type == 'numeric_filter' and filter_dimension:
-            self.dimension_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                   numeric_filter=Filter.NumericFilter(
-                                                                       operation=operation,
-                                                                       value=filter_values
-                                                                   )
-                                                                   )
-                                                     )
-        elif filter_type == 'numeric_filter' and filter_dimension is False:
-            self.metric_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                numeric_filter=Filter.NumericFilter(
-                                                                    operation=operation,
-                                                                    value=filter_values
-                                                                )
-                                                                )
-                                                  )
-
-        elif filter_type == 'between_filter' and filter_dimension:
-            self.dimension_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                   between_filter=Filter.BetweenFilter(
-                                                                       from_value=from_value,
-                                                                       to_value=to_value,
-                                                                   )
-                                                                   )
-                                                     )
-        elif filter_type == 'between_filter' and filter_dimension is False:
-            self.metric_filter = FilterExpression(filter=Filter(field_name=field_name,
-                                                                between_filter=Filter.BetweenFilter(
-                                                                    from_value=from_value,
-                                                                    to_value=to_value
-                                                                )
-                                                                )
-                                                  )
+        filter_expr = FilterExpression(filter=filter_obj)
+        if filter_dimension:
+            self.dimension_filter = filter_expr
+        else:
+            self.metric_filter = filter_expr
     def to_numeric(s: pl.Series) -> pl.Series:
         try:
             result = s.cast(pl.Int64)
