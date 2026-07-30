@@ -15,19 +15,25 @@ import pandas as pd
 import scipy.stats as scipy_stats
 from scipy.spatial.distance import pdist, squareform
 
-def compute_rbf_mmd(X1: np.ndarray, X2: np.ndarray, gamma: float = None) -> float:
+def compute_rbf_mmd(X1: np.ndarray, X2: np.ndarray, gamma: float = None) -> tuple[float, float]:
     """
-    Computes Maximum Mean Discrepancy (MMD^2) with an RBF kernel (Gretton et al., 2008 / arXiv:0805.2368).
+        Computes Maximum Mean Discrepancy (MMD^2) with an RBF kernel (Gretton et al., 2008 / arXiv:0805.2368).
     
-    # --- Educational Manual Implementation ---
-    # def manual_rbf_kernel(X, Y, gamma):
-    #     dist_sq = np.sum((X[:, np.newaxis, :] - Y[np.newaxis, :, :]) ** 2, axis=-1)
-    #     return np.exp(-gamma * dist_sq)
-    # K_11 = manual_rbf_kernel(X1, X1, gamma)
-    # K_22 = manual_rbf_kernel(X2, X2, gamma)
-    # K_12 = manual_rbf_kernel(X1, X2, gamma)
-    # mmd_sq = np.mean(K_11) + np.mean(K_22) - 2 * np.mean(K_12)
+        # --- Educational Manual Implementation ---
+        # def manual_rbf_kernel(X, Y, gamma):
+        #     dist_sq = np.sum((X[:, np.newaxis, :] - Y[np.newaxis, :, :]) ** 2, axis=-1)
+        #     return np.exp(-gamma * dist_sq)
+        # K_11 = manual_rbf_kernel(X1, X1, gamma)
+        # K_22 = manual_rbf_kernel(X2, X2, gamma)
+        # K_12 = manual_rbf_kernel(X1, X2, gamma)
+        # mmd_sq = np.mean(K_11) + np.mean(K_22) - 2 * np.mean(K_12)
+    
+
+    Computes unbiased Maximum Mean Discrepancy (MMD^2_u) and p-value with an RBF kernel 
+    (Gretton et al., 2012).
     """
+    
+    from modules.kernel_two_sample_test import kernel_two_sample_test
     X1 = np.atleast_2d(X1)
     X2 = np.atleast_2d(X2)
     
@@ -38,15 +44,10 @@ def compute_rbf_mmd(X1: np.ndarray, X2: np.ndarray, gamma: float = None) -> floa
         median_dist = np.median(dists) if len(dists) > 0 else 1.0
         gamma = 1.0 / (median_dist + 1e-8)
         
-    K_11 = np.exp(-gamma * squareform(pdist(X1, metric='sqeuclidean')))
-    K_22 = np.exp(-gamma * squareform(pdist(X2, metric='sqeuclidean')))
-    
-    # Cross terms
-    dists_12 = np.sum((X1[:, np.newaxis, :] - X2[np.newaxis, :, :]) ** 2, axis=-1)
-    K_12 = np.exp(-gamma * dists_12)
-    
-    mmd_sq = np.mean(K_11) + np.mean(K_22) - 2 * np.mean(K_12)
-    return max(0.0, float(mmd_sq))
+    mmd2u, mmd2u_null, p_value = kernel_two_sample_test(
+        X1, X2, kernel_function='rbf', gamma=gamma, iterations=1000
+    )
+    return max(0.0, float(mmd2u)), float(p_value)
 
 def check_linear_algebra_prerequisites(X: np.ndarray, feature_names: list) -> dict:
     """
@@ -137,15 +138,16 @@ def run_stage0_diagnostics(df: pd.DataFrame, indicator_cols: list, ab_group_col:
             print("  * [OK] No Sample Ratio Mismatch detected. Traffic split is unbiased.")
 
     # 3. Kernel MMD & Distributional Checks
-    mmd_res = None
+    mmd_val = None
+    mmd_p = None
     if ab_group_col and ab_metric_col and ab_group_col in df.columns and ab_metric_col in df.columns:
         print("\n--- 3. Kernel MMD & Distributional Diagnostics ---")
         df_sub = df.dropna(subset=[ab_group_col, ab_metric_col])
         groups = [val.values.reshape(-1, 1) for _, val in df_sub.groupby(ab_group_col)[ab_metric_col]]
         if len(groups) == 2:
             g1, g2 = groups[0], groups[1]
-            mmd_val = compute_rbf_mmd(g1, g2)
-            print(f"  * Maximum Mean Discrepancy (MMD^2 in RKHS): {mmd_val:.6f}")
+            mmd_val, mmd_p = compute_rbf_mmd(g1, g2)
+            print(f"  * Maximum Mean Discrepancy (MMD^2_u): {mmd_val:.6f} (p-value: {mmd_p:.4f})")
             
             # Normality check
             _, p_norm1 = scipy_stats.normaltest(g1.ravel())
@@ -167,5 +169,6 @@ def run_stage0_diagnostics(df: pd.DataFrame, indicator_cols: list, ab_group_col:
         "passed": passed,
         "linear_algebra": la_res,
         "srm": srm_res,
-        "mmd_val": mmd_val
+        "mmd_val": mmd_val,
+        "mmd_p": mmd_p
     }

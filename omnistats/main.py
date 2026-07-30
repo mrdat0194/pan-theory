@@ -95,6 +95,7 @@ def run_stage_eval():
         metric_col=AB_METRIC_COL,
         conversion_col=AB_CONVERSION_COL if AB_CONVERSION_COL in df_profiles.columns else None,
         mmd_val=diag_res.get("mmd_val"),
+        mmd_p=diag_res.get("mmd_p"),
     )
 
     substage("3.2.2", "Bayesian A/B: StudentT means (PyMC NUTS)")

@@ -204,6 +204,7 @@ def run_ab_tests(df: pd.DataFrame,
                  conversion_col: str = None,
                  alpha: float = 0.05,
                  mmd_val: float | None = None,
+                 mmd_p: float | None = None,
                  verbose: bool = True) -> dict:
     """
     Convenience wrapper: extracts two groups from df[group_col], then runs
@@ -244,14 +245,15 @@ def run_ab_tests(df: pd.DataFrame,
         results["proportion"] = proportion_test(n_a, conv_a, n_b, conv_b,
                                                 alpha=alpha, verbose=verbose)
 
-    # Non-parametric MMD Test (Gretton et al., 2008 / arXiv:0805.2368)
-    if mmd_val is None:
+    # Non-parametric MMD Test (Gretton et al., 2012)
+    if mmd_val is None or mmd_p is None:
         from modules.diagnostics import compute_rbf_mmd
-        mmd_val = compute_rbf_mmd(ctrl.reshape(-1, 1), trt.reshape(-1, 1))
+        mmd_val, mmd_p = compute_rbf_mmd(ctrl.reshape(-1, 1), trt.reshape(-1, 1))
 
     results["mmd_rkhs"] = {
         "mmd_sq": round(mmd_val, 6),
-        "significant": mmd_val > 1e-4
+        "p_value": round(mmd_p, 4) if mmd_p is not None else None,
+        "significant": mmd_p < alpha if mmd_p is not None else mmd_val > 1e-4
     }
 
     # Save summary CSV
@@ -260,7 +262,7 @@ def run_ab_tests(df: pd.DataFrame,
         rows.append({"test": test_name, **res})
     pd.DataFrame(rows).to_csv(os.path.join(OUTPUT_DIR, "ab_test_results.csv"), index=False)
     if verbose:
-        print(f"[A/B] MMD (RKHS) Discrepancy: {mmd_val:.6f}")
+        print(f"[A/B] MMD (RKHS) Discrepancy: {mmd_val:.6f} (p-value: {mmd_p:.4f})")
         print(f"[A/B] Results saved -> {OUTPUT_DIR}/ab_test_results.csv")
 
     return results
