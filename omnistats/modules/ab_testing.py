@@ -203,6 +203,7 @@ def run_ab_tests(df: pd.DataFrame,
                  metric_col: str,
                  conversion_col: str = None,
                  alpha: float = 0.05,
+                 mmd_val: float | None = None,
                  verbose: bool = True) -> dict:
     """
     Convenience wrapper: extracts two groups from df[group_col], then runs
@@ -214,6 +215,7 @@ def run_ab_tests(df: pd.DataFrame,
     group_col      : column with exactly 2 unique values (A / B)
     metric_col     : continuous metric column
     conversion_col : optional binary (0/1) column for proportion test
+    mmd_val        : optional precomputed MMD value from Stage 0 diagnostics
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     groups = df[group_col].unique()
@@ -243,8 +245,10 @@ def run_ab_tests(df: pd.DataFrame,
                                                 alpha=alpha, verbose=verbose)
 
     # Non-parametric MMD Test (Gretton et al., 2008 / arXiv:0805.2368)
-    from modules.diagnostics import compute_rbf_mmd
-    mmd_val = compute_rbf_mmd(ctrl.reshape(-1, 1), trt.reshape(-1, 1))
+    if mmd_val is None:
+        from modules.diagnostics import compute_rbf_mmd
+        mmd_val = compute_rbf_mmd(ctrl.reshape(-1, 1), trt.reshape(-1, 1))
+
     results["mmd_rkhs"] = {
         "mmd_sq": round(mmd_val, 6),
         "significant": mmd_val > 1e-4

@@ -21,7 +21,9 @@ def load_and_prepare(verbose: bool = True) -> pd.DataFrame:
     if verbose:
         print(f"[DataManager] Loaded {len(df)} rows from {DATA_PATH}")
 
-    keep = INDICATOR_COLS + DEMOGRAPHIC_COLS
+    from config import AB_GROUP_COL, AB_METRIC_COL, AB_CONVERSION_COL
+    ab_cols = [c for c in [AB_GROUP_COL, AB_METRIC_COL, AB_CONVERSION_COL] if c]
+    keep = list(dict.fromkeys(INDICATOR_COLS + DEMOGRAPHIC_COLS + ab_cols))
     df = df[[c for c in keep if c in df.columns]].copy()
 
     before = len(df)

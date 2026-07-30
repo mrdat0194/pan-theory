@@ -56,7 +56,7 @@ def run_stage_eval():
     substage("3.0", "Run Pre-Flight Linear Algebra, MMD & Statistical Diagnostics")
     from modules.diagnostics import run_stage0_diagnostics
     from config import INDICATOR_COLS
-    run_stage0_diagnostics(
+    diag_res = run_stage0_diagnostics(
         df,
         indicator_cols=INDICATOR_COLS,
         ab_group_col=AB_GROUP_COL,
@@ -94,6 +94,7 @@ def run_stage_eval():
         group_col=AB_GROUP_COL,
         metric_col=AB_METRIC_COL,
         conversion_col=AB_CONVERSION_COL if AB_CONVERSION_COL in df_profiles.columns else None,
+        mmd_val=diag_res.get("mmd_val"),
     )
 
     substage("3.2.2", "Bayesian A/B: StudentT means (PyMC NUTS)")

@@ -145,17 +145,17 @@ def run_stage0_diagnostics(df: pd.DataFrame, indicator_cols: list, ab_group_col:
         if len(groups) == 2:
             g1, g2 = groups[0], groups[1]
             mmd_val = compute_rbf_mmd(g1, g2)
-            print(f"  • Maximum Mean Discrepancy (MMD² in RKHS): {mmd_val:.6f}")
+            print(f"  * Maximum Mean Discrepancy (MMD^2 in RKHS): {mmd_val:.6f}")
             
             # Normality check
             _, p_norm1 = scipy_stats.normaltest(g1.ravel())
             _, p_norm2 = scipy_stats.normaltest(g2.ravel())
             is_normal = (p_norm1 > 0.05) and (p_norm2 > 0.05)
-            print(f"  • Metric Normality (D'Agostino-Pearson): {'Normal' if is_normal else 'Non-Normal (PyMC / Mann-Whitney recommended)'}")
+            print(f"  * Metric Normality (D'Agostino-Pearson): {'Normal' if is_normal else 'Non-Normal (PyMC / Mann-Whitney recommended)'}")
             
             # Variance Homogeneity (Levene)
             _, p_levene = scipy_stats.levene(g1.ravel(), g2.ravel())
-            print(f"  • Homogeneity of Variance (Levene p-val): {p_levene:.4f} ({'Equal Variances' if p_levene > 0.05 else 'Unequal Variances (Welch t-test required)'})")
+            print(f"  * Homogeneity of Variance (Levene p-val): {p_levene:.4f} ({'Equal Variances' if p_levene > 0.05 else 'Unequal Variances (Welch t-test required)'})")
 
     passed = la_res['full_rank'] and abs(la_res['determinant']) > 1e-6
     if passed:
@@ -166,5 +166,6 @@ def run_stage0_diagnostics(df: pd.DataFrame, indicator_cols: list, ab_group_col:
     return {
         "passed": passed,
         "linear_algebra": la_res,
-        "srm": srm_res
+        "srm": srm_res,
+        "mmd_val": mmd_val
     }

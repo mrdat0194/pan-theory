@@ -90,13 +90,16 @@ def _recode_treatment(df: pd.DataFrame, group_col: str) -> pd.Series:
     Recode the A/B group column to binary {0, 1}.
     The lexicographically first value → 0 (control), second → 1 (treatment).
     """
-    vals = sorted(df[group_col].dropna().unique())
+    col_data = df[group_col]
+    if isinstance(col_data, pd.DataFrame):
+        col_data = col_data.iloc[:, 0]
+    vals = sorted(col_data.dropna().unique())
     if len(vals) < 2:
         raise ValueError(
             f"[BMA] AB_GROUP_COL='{group_col}' has fewer than 2 unique values: {vals}"
         )
     mapping = {vals[0]: 0, vals[1]: 1}
-    return df[group_col].map(mapping)
+    return col_data.map(mapping)
 
 
 # ---------------------------------------------------------------------------

@@ -106,11 +106,15 @@ def run_lpa(df: pd.DataFrame, verbose: bool = True) -> tuple:
 
     # Assign profiles using N_PROFILES
     chosen = models[N_PROFILES]
-    df_out = df.copy()
-    df_out["Profile"]          = chosen.predict(X) + 1          # 1-indexed
-    df_out["Profile_Max_Prob"] = chosen.predict_proba(X).max(axis=1)
+    df_out = df.loc[:, ~df.columns.duplicated()].copy()
+    probs = chosen.predict_proba(X)
+    df_out["profile"]          = chosen.predict(X) + 1          # 1-indexed
+    df_out["Profile"]          = df_out["profile"]              # alias for anova/chi2/viz
+    df_out["profile_prob_max"] = probs.max(axis=1)
+    df_out["Profile_Max_Prob"] = df_out["profile_prob_max"]     # alias
     for ki in range(N_PROFILES):
-        df_out[f"P_Profile_{ki + 1}"] = chosen.predict_proba(X)[:, ki]
+        df_out[f"profile_prob_{ki + 1}"] = probs[:, ki]
+        df_out[f"P_Profile_{ki + 1}"]   = probs[:, ki]          # alias
 
     prof_path = os.path.join(OUTPUT_DIR, "lpa_profiles.csv")
     df_out.to_csv(prof_path, index=False)
