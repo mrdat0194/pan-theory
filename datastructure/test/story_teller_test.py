@@ -861,3 +861,88 @@ class TestBSTMatrixVector(unittest.TestCase):
         self.assertTrue(0 <= col_sampled < 20)
 
 
+class TestQILinearEstimator(unittest.TestCase):
+    """Tests for the Phase 1 Quantum-Inspired Linear Systems Solver."""
+
+    def _bst_path(self):
+        import os
+        return os.path.join(
+            os.path.dirname(__file__), "..",
+            "Data_Structures_Algorithms_In_Python-master", "Tree", "BinarySearchTree"
+        )
+
+    def test_imports_and_placeholders(self):
+        """QILinearEstimator imports and phase placeholders raise correctly."""
+        import sys
+        sys.path.append(self._bst_path())
+        from QILinearEstimator import (
+            QILinearEstimator,
+            _QIRecommendationSystem,
+            _QIPortfolioOptimizer,
+        )
+        # Phase 2 and 3 must raise NotImplementedError on instantiation
+        with self.assertRaises(NotImplementedError):
+            _QIRecommendationSystem()
+        with self.assertRaises(NotImplementedError):
+            _QIPortfolioOptimizer()
+
+    def test_fit_predict_simple(self):
+        """Approximate solution should be close to exact OLS on easy data."""
+        import sys
+        import numpy as np
+        sys.path.append(self._bst_path())
+        from QILinearEstimator import QILinearEstimator
+        from sklearn.linear_model import LinearRegression
+
+        rng = np.random.RandomState(42)
+        n, d = 200, 5
+        A = rng.randn(n, d)
+        x_true = rng.randn(d)
+        b = A @ x_true + rng.randn(n) * 0.01  # near-noiseless
+
+        # Exact OLS baseline
+        exact = LinearRegression(fit_intercept=False)
+        exact.fit(A, b)
+
+        # Quantum-inspired solver (large sketch for good approximation)
+        qi = QILinearEstimator(rank=5, c=80, rng=0)
+        qi.fit(A, b)
+        x_hat = qi.predict_x()
+
+        # Coefficients should be close to OLS (rough tolerance for a randomized method)
+        self.assertEqual(x_hat.shape, (d,))
+        r2 = np.corrcoef(x_hat, exact.coef_)[0, 1]
+        self.assertGreater(r2, 0.8, msg="QI coefficients should correlate well with OLS coefficients.")
+
+    def test_predict_outputs_correct_shape(self):
+        """predict() should return an array of shape (m,) for m test points."""
+        import sys
+        import numpy as np
+        sys.path.append(self._bst_path())
+        from QILinearEstimator import QILinearEstimator
+
+        rng = np.random.RandomState(7)
+        A = rng.randn(100, 4)
+        b = A @ rng.randn(4)
+        X_test = rng.randn(25, 4)
+
+        qi = QILinearEstimator(rank=4, c=30, rng=7)
+        qi.fit(A, b)
+        y_pred = qi.predict(X_test)
+        self.assertEqual(y_pred.shape, (25,))
+
+    def test_raises_before_fit(self):
+        """predict_x() and predict() must raise RuntimeError before fit."""
+        import sys
+        import numpy as np
+        sys.path.append(self._bst_path())
+        from QILinearEstimator import QILinearEstimator
+
+        qi = QILinearEstimator()
+        with self.assertRaises(RuntimeError):
+            qi.predict_x()
+        with self.assertRaises(RuntimeError):
+            qi.predict(np.ones((5, 3)))
+
+
+
