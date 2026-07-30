@@ -65,16 +65,16 @@ def matchQuality(match, target):
     dB = target[2] - B
     return abs(dR) + abs(dG) + abs(dB)
 
-def main(argv):
-    # Handle input arguments
+def parse_args(argv):
     thumb_size = 200
     target_tiles = 200
     blend_amt = 0.7
     outputfile = 'outfile.jpeg'
-    directory = '/'  # Default directory is current directory
-    # New: Add brightness and contrast factors as optional arguments
+    directory = '/'
     brightness_factor = 1.1
     contrast_factor = 1.1
+    inputfile = None
+
     try:
         opts, args = getopt.getopt(argv, "hi:o:d:t:n:b:B:C:", ["ifile=", "ofile=", "dir", "tilesize=", "numtiles", "blend_amt", "brightness=", "contrast="])
     except getopt.GetoptError:
@@ -101,11 +101,13 @@ def main(argv):
         elif opt in ("-C", "--contrast"):
             contrast_factor = float(arg)
 
-    input_dir = os.path.dirname(os.path.abspath(inputfile))
-    input_dir_save = os.path.dirname(os.path.abspath(inputfile))
-    directory = os.path.join(input_dir, "source")
+    if inputfile is None:
+        print('collage.py -i <inputfile> -d <directory> -o <outputfile> -t <tilesize> -n <numtiles> -b <blend_amt> -B <brightness> -C <contrast>')
+        sys.exit(2)
 
-    # Creates thumbnails for each image in the source set
+    return inputfile, outputfile, directory, thumb_size, target_tiles, blend_amt, brightness_factor, contrast_factor
+
+def create_thumbnails(directory, input_dir_save, thumb_size):
     if not os.path.exists("source/"):
         os.makedirs("source/")
 
@@ -114,21 +116,17 @@ def main(argv):
         try:
             file, ext = os.path.splitext(infile)
 
-            # Strip off the directory
             if "/" in file:
                 file = file[file.rfind("/") + 1:]
 
-            # We don't wanna make anything that is already there
             if os.path.isfile("source/" + file + "_thumb.jpg") or "_thumb" in file:
                 continue
 
-            # Only opens image files
             try:
                 im = Image.open(infile)
             except:
                 continue
 
-            # Rotates the thumbnail to the correct orientation
             try:
                 for orientation in ExifTags.TAGS.keys():
                     if ExifTags.TAGS[orientation] == 'Orientation':
@@ -143,7 +141,6 @@ def main(argv):
             except:
                 pass
 
-            # Square image from the center
             min_dimension = min(im.size)
             if min_dimension == im.size[0]:
                 x = 0
@@ -156,6 +153,14 @@ def main(argv):
             im.thumbnail((thumb_size, thumb_size), Image.LANCZOS)
             
             path_save_img = os.path.join(input_dir_save, "sources")
+
+            # create sources if it doesn't exist to prevent errors
+            if not os.path.exists(path_save_img):
+                 try:
+                      os.makedirs(path_save_img)
+                 except:
+                      pass
+
             path_save_img = os.path.join(path_save_img,  file + "_thumb.jpg")
           
             im.save(path_save_img, "JPEG")
@@ -163,11 +168,12 @@ def main(argv):
         except Exception as err:
             print("Error reading file: ", file, ext, "-", err)
 
+
+def collect_data():
     thumbs_lib = {}
     thumbs_lib_avg = {}
     thumbs_lib_freq = {}
     found_some = False
-    # Collects data on the individual images
     print("Collecting data...")
     for infile in glob.glob("source/*_thumb.jpg"):
         file, ext = os.path.splitext(infile)
@@ -180,22 +186,18 @@ def main(argv):
         except Exception as err:
             print("Error reading file: ", file, ext, "-", err)
 
-    if not found_some:
-        print("There are no thumbnails in this directory!\n")
-        return
+    return found_some, thumbs_lib, thumbs_lib_avg, thumbs_lib_freq
 
+def process_target(inputfile, target_tiles, brightness_factor, contrast_factor):
     print("Resizing target...")
-    # Makes a small copy of the target file (with filtering)
     target = Image.open(inputfile)
 
-    # --- Increase brightness and/or contrast of the original file before collage ---
     if brightness_factor != 1.0:
         enhancer = ImageEnhance.Brightness(target)
         target = enhancer.enhance(brightness_factor)
     if contrast_factor != 1.0:
         enhancer = ImageEnhance.Contrast(target)
         target = enhancer.enhance(contrast_factor)
-    # ------------------------------------------------------------------------------
 
     [x, y] = target.size
     x_ = x / (1.0 * min(x, y))
@@ -205,12 +207,13 @@ def main(argv):
     target_thumb = target.copy()
     target_thumb.thumbnail((x_tiles, y_tiles), Image.LANCZOS)
 
+    return target, target_thumb
+
+def create_collage(target_thumb, thumbs_lib, thumbs_lib_avg, thumbs_lib_freq, thumb_size):
     last_choose = ""
-    # Creates a blank image that needs to be filled by the thumbnails
     final = Image.new("RGB", (thumb_size * target_thumb.size[0], thumb_size * target_thumb.size[1]), "black")
     print("Making collage...")
 
-    # For each tile in the target, find the best matching thumbnail and paste it
     for j in range(target_thumb.size[1]):
         for i in range(target_thumb.size[0]):
             target_pix = target_thumb.getpixel((i, j))
@@ -223,12 +226,11 @@ def main(argv):
 
             N = min(100, len(bestPicks))
             if N == 0:
-                continue  # No thumbnails to choose from
+                continue
 
             choose = topN(bestPicks, N)
             k = random.randint(0, N - 1)
 
-            # Avoid repeating the last chosen thumbnail
             attempts = 0
             while N > 1 and last_choose == choose[k][0] and attempts < 10:
                 k = random.randint(0, N - 1)
@@ -236,12 +238,10 @@ def main(argv):
 
             last_choose = choose[k][0]
 
-            # Ensure the thumbnail is exactly the right size before pasting
             thumb_img = thumbs_lib[last_choose]
             if thumb_img.size != (thumb_size, thumb_size):
                 thumb_img = thumb_img.resize((thumb_size, thumb_size), Image.LANCZOS)
 
-            # Paste the thumbnail at the correct position
             final.paste(
                 thumb_img,
                 (
@@ -249,21 +249,34 @@ def main(argv):
                     j * thumb_size
                 )
             )
+    return final
 
+def blend_and_save(final, target, blend_amt, outputfile):
     print("Saving...")
-
-    # --- WHY DOES THE RESULT LOOK DULL? ---
-    # The result looks dull because of the blending step below.
-    # The line below blends the collage with the original image using the blend_amt parameter.
-    # If blend_amt is high (e.g., 0.5), the original image is strongly blended over the collage,
-    # which reduces the contrast and vibrancy of the collage tiles, making the result look "dull" or "washed out".
-    # To make the result less dull, reduce blend_amt (e.g., 0.2 or 0), or skip blending entirely.
-    # --------------------------------------
-
-    # Resize the target image to match the final collage size for blending
     bigger = target.resize(final.size, Image.LANCZOS)
     final = Image.blend(final, bigger, blend_amt)
     final.save(outputfile, "JPEG")
+
+def main(argv):
+    inputfile, outputfile, directory, thumb_size, target_tiles, blend_amt, brightness_factor, contrast_factor = parse_args(argv)
+
+    input_dir = os.path.dirname(os.path.abspath(inputfile))
+    input_dir_save = os.path.dirname(os.path.abspath(inputfile))
+    directory = os.path.join(input_dir, "source")
+
+    create_thumbnails(directory, input_dir_save, thumb_size)
+
+    found_some, thumbs_lib, thumbs_lib_avg, thumbs_lib_freq = collect_data()
+
+    if not found_some:
+        print("There are no thumbnails in this directory!\n")
+        return
+
+    target, target_thumb = process_target(inputfile, target_tiles, brightness_factor, contrast_factor)
+
+    final = create_collage(target_thumb, thumbs_lib, thumbs_lib_avg, thumbs_lib_freq, thumb_size)
+
+    blend_and_save(final, target, blend_amt, outputfile)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
