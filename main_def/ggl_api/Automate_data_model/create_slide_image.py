@@ -176,6 +176,7 @@ def create_image(presentation_id, new_slide, target_folder_id):
         # print(linkes)
 
         n = 0
+        requests = []
         for i, slide in enumerate(slides[21:]):
             try:
                 link = linkes['CaptureURL'].loc[i]
@@ -204,7 +205,6 @@ def create_image(presentation_id, new_slide, target_folder_id):
             print(IMAGE_URL)
             # IMAGE_URL = "https://drive.google.com/uc?export=download&id=1gLU-3Li79jR4EqBHlypCpXVG4OY_Qs8E"
 
-            requests = []
             requests.append(
                 {
                     "createImage": {
@@ -224,25 +224,6 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     },
                 })
 
-            # Execute the request.
-            for t in range(0, 1):
-                # while True:
-                try:
-                    body = {"requests": requests}
-                    time.sleep(4)
-                    response = (
-                        service.presentations()
-                        .batchUpdate(presentationId=PRESENTATION_ID, body=body)
-                        .execute()
-                    )
-                    time.sleep(4)
-                    create_image_response = response.get("replies")[0].get("createImage")
-                    print(f"Created image with ID: {(create_image_response.get('objectId'))}")
-                except Exception as e:
-                    print(e)
-                    pass
-
-            requests = []
             requests.append(
                 {
                     "createShape": {
@@ -272,10 +253,11 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     }
                 },
             )
-            # Execute the request.
+
+        # Execute the request.
+        if requests:
             try:
                 body = {"requests": requests}
-
                 time.sleep(4)
                 response = (
                     service.presentations()
@@ -283,8 +265,7 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     .execute()
                 )
                 time.sleep(4)
-                create_text_response = response.get("replies")[0].get("createShape")
-                print(f"Created Text with ID: {(create_text_response.get('objectId'))}")
+                print("Batch updated shapes and images.")
             except Exception as e:
                 print(e)
                 pass
