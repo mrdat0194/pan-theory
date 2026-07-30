@@ -46,12 +46,11 @@ within the project
     - For reproducible result, adHoc can use notebook to test and implement beforehand (Eg. SQL flow).
 
 - `Bayesian` &mdash; Reference archive of Bayesian tools. The direct migration source for OmniStats.
-- `omnistats` &mdash; Unified Statistical Analysis Pipeline [Stage 1-5]
-    - Stage 1: Latent Profile Analysis (LPA) via Gaussian Mixture Models (GMM)
-    - Stage 2: A/B Testing (z-test, Welch t-test, and Sequential Bayesian PyMC NUTS / Importance Sampling)
-    - Stage 3: CUPED Variance Reduction (monotonic CatBoost / DecisionTree on profile scores)
-    - Stage 4: Causal Inference (DiD Callaway & Sant'Anna, IV 2SLS, RDD rdrobust, Synthetic Control SCM, Matrix Completion, and Google CausalImpact BSTS)
-    - Stage 5: APA Report consolidation (builds Tables 1–8 in an APA 7th edition Word document)
+- `omnistats` &mdash; Unified Statistical Analysis & Planning Pipeline [Stage 1-4]
+    - Stage 1: Pre-Experiment Design (Power analysis, LPA baseline, CAR randomization schedule via `experiment_design.py`)
+    - Stage 2: Execution (Run live A/B test / field trial on traffic; outside OmniStats)
+    - Stage 3: Post-Experiment Evaluation (Diagnostics, LPA, A/B testing, CUPED variance reduction, Robust Causal Suite, and APA report consolidation via `main.py`)
+    - Stage 4: World Model Planning (JEPA World Model + CEM/MPPI Planner optimizing next experiment plan via `plan_experiment.py`)
     - See the detailed execution guide in [omnistats/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/omnistats/README.md) for Explainable AI (XAI) mapping and future JEPA / Reinforcement Learning roadmap connection.
   
 - `main_def` &mdash; The definition that controls all the connection-wide
@@ -84,7 +83,7 @@ within the project
 - `datastructure` &mdash; The fun coding time
     - CodingGame : complete Genetic Algorithms,..
     - Probability : pure code
-    - Data_Structures : borrowing and improving.
+    - Data_Structures : borrowing and improving. Includes a standalone [BST_MatrixVector.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/datastructure/Data_Structures_Algorithms_In_Python-master/Tree/BinarySearchTree/BST_MatrixVector.py) implementation for quantum-inspired sparse vector/matrix operations.
 
 - `MLModel` &mdash; Components
     - AIModel: Deep Learning, Causal ML, and Joint-Embedding Predictive Architectures (JEPA)

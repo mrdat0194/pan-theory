@@ -195,7 +195,7 @@ def run_cuped(
         print("\n[CUPED] Variance Reduction — Stage 2.5")
         print(f"  Outcome:    {outcome_col}")
         print(f"  Covariate:  {covariate_col}  (LPA profile posterior probability)")
-        print(f"  θ̂ (slope): {theta_hat:.6f}")
+        print(f"  theta_hat (slope): {theta_hat:.6f}")
         print(f"  Var(Y_raw):   {var_raw:.4f}")
         print(f"  Var(Y_cuped): {var_cuped:.4f}")
         print(f"  Reduction:    {reduction_pct:.2f}%  [{backend}]")

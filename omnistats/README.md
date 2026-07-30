@@ -40,6 +40,11 @@ A concise **100% Python** 4-stage experimental statistics and world model planni
 | **Stage 3 — Evaluation** | `main.py` | Run diagnostics, A/B tests, CUPED & Causal Suite | `apa_report.docx` (Tables 1–8) |
 | **Stage 4 — Planning** | `plan_experiment.py` | JEPA World Model plans next experiment | `jepa_experiment_plan.csv` |
 
+> [!NOTE]
+> **Terminology Clarification:** 
+> - `plan_experiment.py` (Stage 4) and `experiment_design.py` (Stage 1) are strictly **Pre-Experiment**. They generate theoretical schedules and plans before any user traffic is routed.
+> - `diagnostics.py` is referred to as "Pre-flight", but chronologically it is **Post-Experiment**. It acts as a pre-analysis safety check (SRM, MMD) on the *collected* data immediately before running Stage 3 statistical evaluations. 
+
 ---
 
 ## Directory Structure

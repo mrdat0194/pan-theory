@@ -792,3 +792,72 @@ class TestSynonymQueries(unittest.TestCase):
             [], [("one two","one")]
         )
         self.assertEqual(result, [False])
+
+
+class TestBSTMatrixVector(unittest.TestCase):
+    def test_bst_vector_operations(self):
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", "Data_Structures_Algorithms_In_Python-master", "Tree", "BinarySearchTree"))
+        from BST_MatrixVector import BSTVector
+        
+        vec = BSTVector(10)
+        vec.set(2, 5.0)
+        vec.set(7, 3.0)
+        
+        # Verify norm2 calculation
+        self.assertEqual(vec.norm2, 34.0)
+        
+        # Verify elements access
+        self.assertEqual(vec.get(2), 5.0)
+        self.assertEqual(vec.get(7), 3.0)
+        self.assertEqual(vec.get(1), 0.0)
+        
+        # Verify bounds check
+        with self.assertRaises(IndexError):
+            vec.get(10)
+            
+        # Verify sampling
+        sampled = vec.sample(seed=42)
+        self.assertIn(sampled, [2, 7])
+
+    def test_bst_matrix_operations(self):
+        import sys
+        import os
+        import numpy as np
+        sys.path.append(os.path.join(os.path.dirname(__file__), "..", "Data_Structures_Algorithms_In_Python-master", "Tree", "BinarySearchTree"))
+        from BST_MatrixVector import BSTVector, BSTMatrix
+        
+        # Test vectors norms validation
+        v = BSTVector(100)
+        a = np.zeros((100,))
+        import random
+        random.seed(42)
+        for _ in range(100):
+            index = random.randint(0, 99)
+            value = random.random()
+            v.set(index, value)
+            a[index] = value
+        self.assertLess(abs(v.norm2 - np.sum(np.square(a))), 1e-9)
+
+        # Test matrix norms validation
+        m = BSTMatrix(50, 20)
+        b = np.zeros((50, 20))
+        for _ in range(500):
+            row = random.randint(0, 49)
+            col = random.randint(0, 19)
+            value = random.random()
+            m.set(row, col, value)
+            b[row, col] = value
+            
+        self.assertLess(abs(m.frob_norm2 - np.sum(np.square(b))), 1e-9)
+        self.assertLess(abs(m.get_row_norm(5) - np.linalg.norm(b[5])), 1e-9)
+        
+        # Verify row sampling
+        row_sampled = m.sample_row_norms()
+        self.assertTrue(0 <= row_sampled < 50)
+        
+        col_sampled = m.sample_row(row_sampled)
+        self.assertTrue(0 <= col_sampled < 20)
+
+
