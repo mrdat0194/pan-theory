@@ -175,18 +175,21 @@ def create_image(presentation_id, new_slide, target_folder_id):
         # print(linkes)
 
         n = 0
+        requests = []
         for i, slide in enumerate(slides[21:]):
             try:
                 link = linkes['CaptureURL'].loc[i]
             except:
-                quit
+                continue
             # print(link)
             name = str(i) + ".png"
             # print(name)
             # print(items)
             filtered_items = filter(lambda x: x['name'] == name, items)
-
-            fileid = list(filtered_items)[0]['id']
+            try:
+                fileid = list(filtered_items)[0]['id']
+            except IndexError:
+                continue
             # print(fileid)
 
             # pylint: disable=invalid-name
@@ -203,7 +206,6 @@ def create_image(presentation_id, new_slide, target_folder_id):
             print(IMAGE_URL)
             # IMAGE_URL = "https://drive.google.com/uc?export=download&id=1gLU-3Li79jR4EqBHlypCpXVG4OY_Qs8E"
 
-            requests = []
             requests.append(
                 {
                     "createImage": {
@@ -223,25 +225,6 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     },
                 })
 
-            # Execute the request.
-            for t in range(0, 1):
-                # while True:
-                try:
-                    body = {"requests": requests}
-                    time.sleep(4)
-                    response = (
-                        service.presentations()
-                        .batchUpdate(presentationId=PRESENTATION_ID, body=body)
-                        .execute()
-                    )
-                    time.sleep(4)
-                    create_image_response = response.get("replies")[0].get("createImage")
-                    print(f"Created image with ID: {(create_image_response.get('objectId'))}")
-                except Exception as e:
-                    print(e)
-                    pass
-
-            requests = []
             requests.append(
                 {
                     "createShape": {
@@ -271,10 +254,11 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     }
                 },
             )
-            # Execute the request.
+
+        # Execute the request.
+        if requests:
             try:
                 body = {"requests": requests}
-
                 time.sleep(4)
                 response = (
                     service.presentations()
@@ -282,8 +266,12 @@ def create_image(presentation_id, new_slide, target_folder_id):
                     .execute()
                 )
                 time.sleep(4)
-                create_text_response = response.get("replies")[0].get("createShape")
-                print(f"Created Text with ID: {(create_text_response.get('objectId'))}")
+                if response.get("replies"):
+                    for reply in response.get("replies"):
+                        if reply.get("createImage"):
+                            print(f"Created image with ID: {(reply.get('createImage').get('objectId'))}")
+                        elif reply.get("createShape"):
+                            print(f"Created Text with ID: {(reply.get('createShape').get('objectId'))}")
             except Exception as e:
                 print(e)
                 pass

@@ -99,20 +99,44 @@ def move_sheet(file_id, folder_id):
     return file.get("parents")
 
 if __name__ == '__main__':
-    option = "Step 0"
-    if option == "Step 0":
+    title = title_sheet
+    from_sheet = "1tzwlqobwa_CWQH5wulsFd2itgywu78NXp2fIn2rSiSQ"
+    to_sheet = create_sheet(title)
+    copy_sheet_tab(from_sheet, to_sheet, 1644599131, "CopyStep")
+    copy_sheet_tab(from_sheet, to_sheet, 19961054, "Step0")
+    copy_sheet_tab(from_sheet, to_sheet, 2092577969, "Dimensions & Metrics")
+    copy_sheet_tab(from_sheet, to_sheet, 1439550923, "Data Model")
+    move_sheet(to_sheet,'1vYGGGvdX7LN3pi4l-5O64_g3YeCGsi6A')
+    save_path = save_path_sheet
 
-        title = title_sheet
-        from_sheet = "1tzwlqobwa_CWQH5wulsFd2itgywu78NXp2fIn2rSiSQ"
+    import csv
+    file = open(save_path, 'w', newline='')
+
+    # Create a CSV writer object
+    csv_writer = csv.writer(file)
+
+    # Write strings to the file
+    csv_writer.writerow([to_sheet])
+
+    # Close the file
+    file.close()
+
+    print(to_sheet)
+
+    # Step 5:
+    if title_test_plan is not None:
+        title = title_test_plan
+        from_sheet = '1H-Th3XdYAZLbzNCPYHAgmu9PL4eqba51YdTfb7w1N6Q'
         to_sheet = create_sheet(title)
-        copy_sheet_tab(from_sheet, to_sheet, 1644599131, "CopyStep")
-        copy_sheet_tab(from_sheet, to_sheet, 19961054, "Step0")
-        copy_sheet_tab(from_sheet, to_sheet, 2092577969, "Dimensions & Metrics")
-        copy_sheet_tab(from_sheet, to_sheet, 1439550923, "Data Model")
-        move_sheet(to_sheet,'1vYGGGvdX7LN3pi4l-5O64_g3YeCGsi6A')
+        copy_sheet_tab(from_sheet, to_sheet, 859547738, "Testplan - Web")
+        copy_sheet_tab(from_sheet, to_sheet, 1520383332, "Testplan - App")
+        copy_sheet_tab(from_sheet, to_sheet, 1505683671, "Pic")
+        copy_sheet_tab(from_sheet, to_sheet, 1628567292, "Resource")
+        move_sheet(to_sheet, '1vYGGGvdX7LN3pi4l-5O64_g3YeCGsi6A')
         save_path = save_path_sheet
 
         import csv
+
         file = open(save_path, 'w', newline='')
 
         # Create a CSV writer object
@@ -125,31 +149,4 @@ if __name__ == '__main__':
         file.close()
 
         print(to_sheet)
-    elif option == "Step 5":
-        # Step 5:
-        if title_test_plan is not None:
-            title = title_test_plan
-            from_sheet = '1H-Th3XdYAZLbzNCPYHAgmu9PL4eqba51YdTfb7w1N6Q'
-            to_sheet = create_sheet(title)
-            copy_sheet_tab(from_sheet, to_sheet, 859547738, "Testplan - Web")
-            copy_sheet_tab(from_sheet, to_sheet, 1520383332, "Testplan - App")
-            copy_sheet_tab(from_sheet, to_sheet, 1505683671, "Pic")
-            copy_sheet_tab(from_sheet, to_sheet, 1628567292, "Resource")
-            move_sheet(to_sheet, '1vYGGGvdX7LN3pi4l-5O64_g3YeCGsi6A')
-            save_path = save_path_sheet
-
-            import csv
-
-            file = open(save_path, 'w', newline='')
-
-            # Create a CSV writer object
-            csv_writer = csv.writer(file)
-
-            # Write strings to the file
-            csv_writer.writerow([to_sheet])
-
-            # Close the file
-            file.close()
-
-            print(to_sheet)
 
