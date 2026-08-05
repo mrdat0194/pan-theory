@@ -71,6 +71,11 @@ In the future, the `face-recognition` repository will be migrated to the V-JEPA 
 
 ## 🚀 Future Improvements
 
+* **Music-JEPA Action-Conditioned Speech Paradigm** (based on [arXiv:2607.22000](https://arxiv.org/abs/2607.22000)):
+  * **Concept:** Condition the JEPA predictor on physical "actions" to learn a causal world model of sound. For speech datasets like IEMOCAP, prosodic parameters (Fundamental Frequency $F_0$ / pitch and RMS energy envelope) act as vocal "actions" that generate the sound waves.
+  * **Architecture:** Update `jepa_backbone.py`'s `LeWMJEPA` by adding an `ActionEncoder1D` that maps action sequences `[B, action_dim, T]` to `latent_dim`. Update `ARPredictor` to accept projected action embeddings and combine them with latent state representations before the Transformer.
+  * **Preprocessing & Training:** Modify `extract_features` in `main_audio_jepa.py` to compute normalized $F_0$ (using `librosa.yin` or simple pitch estimation) and RMS energy, and pass this `[B, 2, T]` action tensor to `model.unroll`.
+  * **Benefit:** By conditioning prediction on prosodic actions, the representation learns to disentangle vocal effort/pitch from emotional state, improving few-shot downstream classification.
 - **Larger Pre-training Datasets**: Scale pre-training to larger unlabeled corpora (e.g., AudioSet or LibriSpeech) to fully unlock the potential of the Transformer-based A-JEPA and C-JEPA.
 - **Task-Specific Slots**: Refine C-JEPA slots to represent specific acoustic events (pitch, rhythm, timbre) rather than arbitrary temporal windows.
 - **Hybrid Backbones**: Integrate the robustness of the CNN baseline (for local features) with the global reasoning of C-JEPA.

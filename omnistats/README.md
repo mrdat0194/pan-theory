@@ -225,6 +225,21 @@ Six core estimators plus DR-OLS for HTE, all operating on `df_cuped` from Stage 
 **CausalImpact (BSTS) Integration:**
 CausalImpact is DiD generalized to continuous time. Instead of a binary pre/post comparison with parallel trends, BSTS models the full counterfactual trajectory. It runs within Stage 4 alongside all other causal estimators, saving results to `causal_results.csv`.
 
+### Optimization Core: Adaptive Proximal Algorithms `[SOLVE]`
+
+Based on recent optimization literature ([Latafat et al., arXiv:2301.04431](https://arxiv.org/abs/2301.04431)), a dedicated solver (`omnistats/modules/optimization/proximal.py`) provides hyperparameter-free adaptive proximal gradient methods. 
+This core drastically accelerates solvers for complex constraints, notably removing compilation overhead for the Synthetic Control Method (SCM) by natively computing simplex projections and locally adapting to the Lipschitz constant.
+
+### Matching & Alignment Suite `[BALANCE]`
+
+A dedicated module (`omnistats/modules/causal/matching.py`) provides algorithms to balance cohorts and align distributions. These are essential preprocessing steps for causal inference when randomization is compromised.
+
+| Algorithm | Purpose | Use Case |
+|---|---|---|
+| **Propensity Score Matching (PSM)** | Reduces selection bias | 1:1 covariate matching based on treatment probability |
+| **Hungarian Algorithm** | Optimal transport / Bipartite matching | Finds the exact optimal 1:1 matching minimizing total distance |
+| **Quantile Matching** | Distribution alignment | Corrects covariate shift by mapping source quantiles to target |
+
 ### Report Generation — APA 7th Edition `[CONSOLIDATE]`
 
 The APA Report (`apa_report.docx`) is generated after all statistical inferential outputs (Stages 1–4) are completed, consolidating results into Tables 1–8 in a single pass.

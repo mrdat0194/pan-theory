@@ -181,6 +181,27 @@ def _solve_weights_scipy(Y_pre_treated: np.ndarray,
     return res.x if res.success else x0
 
 
+def _solve_weights_adpg(Y_pre_treated: np.ndarray,
+                         Y_pre_donors: np.ndarray) -> np.ndarray:
+    """Solve using Adaptive Proximal Gradient (AdPG) for fast local Lipschitz optimization."""
+    from omnistats.modules.optimization.proximal import adaptive_proximal_gradient, prox_simplex
+    
+    n_donors = Y_pre_donors.shape[1]
+    Q = Y_pre_donors.T @ Y_pre_donors
+    c = Y_pre_donors.T @ Y_pre_treated
+    
+    def f(W):
+        diff = Y_pre_donors @ W - Y_pre_treated
+        return 0.5 * np.sum(diff**2)
+        
+    def grad_f(W):
+        return Q @ W - c
+        
+    x0 = np.ones(n_donors) / n_donors
+    W_star = adaptive_proximal_gradient(x0, grad_f, f, prox_simplex, max_iter=2000, tol=1e-5)
+    return W_star
+
+
 # ── Main estimator ─────────────────────────────────────────────────────────────
 def synthetic_control(
     Y_treated: np.ndarray | None = None,
@@ -231,13 +252,18 @@ def synthetic_control(
     Y_post_donors  = Y_donors[T_treat:, :]
 
     # ── Solve weights ──────────────────────────────────────────────────────
-    if _HAS_CVXPY:
-        W_star = _solve_weights_cvxpy(Y_pre_treated, Y_pre_donors)
-        solver_used = "cvxpy_ECOS"
-    else:
-        W_star = _solve_weights_scipy(Y_pre_treated, Y_pre_donors)
-        solver_used = "scipy_SLSQP"
-        warns.append("[WARNING] cvxpy not installed — using scipy SLSQP fallback")
+    try:
+        W_star = _solve_weights_adpg(Y_pre_treated, Y_pre_donors)
+        solver_used = "adpg_proximal"
+    except Exception as e:
+        if _HAS_CVXPY:
+            W_star = _solve_weights_cvxpy(Y_pre_treated, Y_pre_donors)
+            solver_used = "cvxpy_ECOS"
+            warns.append(f"[WARNING] AdPG failed ({e}) — used cvxpy fallback")
+        else:
+            W_star = _solve_weights_scipy(Y_pre_treated, Y_pre_donors)
+            solver_used = "scipy_SLSQP"
+            warns.append(f"[WARNING] AdPG failed ({e}) and cvxpy missing — using scipy SLSQP")
 
     # ── Synthetic control series ───────────────────────────────────────────
     Y_synthetic_pre  = Y_pre_donors  @ W_star
