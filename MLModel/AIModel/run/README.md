@@ -2,9 +2,9 @@
 
 This directory contains all the main executable scripts for training, testing, and comparing the various Deep Learning and Control algorithms in the `AIModel` module.
 
-## 🎵 Audio JEPA Suite
+## 🎵 Audio & Multimodal JEPA Suite
 
-We have implemented three distinct variants of the Joint-Embedding Predictive Architecture (JEPA) for Audio Emotion Recognition (SER), benchmarking them against the IEMOCAP dataset.
+We have implemented three distinct variants of the Joint-Embedding Predictive Architecture (JEPA) for Audio Emotion Recognition (SER), benchmarking them against the IEMOCAP dataset, as well as a full Multimodal fusion architecture.
 
 ### 1. **Baseline Audio JEPA** (`main_audio_jepa.py`)
 The foundational implementation refactored to follow the **LeWorldModel (Le-WM)** architecture.
@@ -23,6 +23,12 @@ A world-model inspired approach focused on object-centric reasoning.
 - **Architecture**: `AudioSlotEncoder` + `MaskedSlotPredictor` (Non-Causal Transformer).
 - **Mechanism**: **Temporal Slot Masking**. Splits audio into windows (slots), masks random slots, and requires the model to reconstruct them.
 - **Key Feature**: Induces relational reasoning between audio segments, modeling the "causal" structure of the sound.
+
+### 4. **Le MuMo JEPA: Multimodal Wrapper** (`model/mumo_wrapper.py`)
+A state-of-the-art multimodal fusion architecture based on [arXiv:2603.24327](https://arxiv.org/abs/2603.24327).
+- **Architecture**: Pruned Cross-Modal Fusion. Uses modality-specific stems (e.g., `AudioPatchEmbed` for spectrograms, `SequenceStem` for 1D actions/prosody, and `VideoStem` for V-JEPA 2) which are fused into learnable bottleneck tokens in Layer 0.
+- **Mechanism**: After Layer 0, all modality tokens are pruned, leaving only the `[CLS]` and fusion tokens to pass through the shared transformer trunk. Regularized using `LeJEPA SIGReg`.
+- **Key Feature**: Enables the **Action-Conditioned Speech Paradigm** (Audio + 1D prosodic actions like $F_0$/RMS) or Audio-Visual tasks, with a massively reduced attention cost (up to 9x faster than early-fusion models).
 
 ---
 
@@ -71,11 +77,6 @@ In the future, the `face-recognition` repository will be migrated to the V-JEPA 
 
 ## 🚀 Future Improvements
 
-* **Music-JEPA Action-Conditioned Speech Paradigm** (based on [arXiv:2607.22000](https://arxiv.org/abs/2607.22000)):
-  * **Concept:** Condition the JEPA predictor on physical "actions" to learn a causal world model of sound. For speech datasets like IEMOCAP, prosodic parameters (Fundamental Frequency $F_0$ / pitch and RMS energy envelope) act as vocal "actions" that generate the sound waves.
-  * **Architecture:** Update `jepa_backbone.py`'s `LeWMJEPA` by adding an `ActionEncoder1D` that maps action sequences `[B, action_dim, T]` to `latent_dim`. Update `ARPredictor` to accept projected action embeddings and combine them with latent state representations before the Transformer.
-  * **Preprocessing & Training:** Modify `extract_features` in `main_audio_jepa.py` to compute normalized $F_0$ (using `librosa.yin` or simple pitch estimation) and RMS energy, and pass this `[B, 2, T]` action tensor to `model.unroll`.
-  * **Benefit:** By conditioning prediction on prosodic actions, the representation learns to disentangle vocal effort/pitch from emotional state, improving few-shot downstream classification.
 - **Larger Pre-training Datasets**: Scale pre-training to larger unlabeled corpora (e.g., AudioSet or LibriSpeech) to fully unlock the potential of the Transformer-based A-JEPA and C-JEPA.
 - **Task-Specific Slots**: Refine C-JEPA slots to represent specific acoustic events (pitch, rhythm, timbre) rather than arbitrary temporal windows.
 - **Hybrid Backbones**: Integrate the robustness of the CNN baseline (for local features) with the global reasoning of C-JEPA.

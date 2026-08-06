@@ -267,3 +267,187 @@ def build_audio_mumo_jepa(
         n_heads=n_heads,
         sigreg_lambda=sigreg_lambda,
     )
+
+
+# ─────────────────────────────────────────────
+#  V-JEPA 2 Video Stem Adapter
+# ─────────────────────────────────────────────
+
+class VideoStem(nn.Module):
+    """
+    Video / Image modality stem for MuMoJEPAWrapper.
+
+    Wraps facebookresearch/vjepa2 (loaded via torch.hub) when available,
+    and falls back to a lightweight Conv2D tokenizer otherwise. This matches
+    the same "pseudo V-JEPA 2 Backbone" pattern already used in
+    main_vjepa2_gun.py and main_vjepa2_fire.py.
+
+    Output: [B, N_patches, embed_dim] token sequence compatible with
+            MuMoJEPAWrapper's stem_a / stem_b interface.
+
+    Args:
+        embed_dim (int):      Token embedding dimension.
+        img_size (int):       Input image spatial resolution (assumes square).
+        patch_size (int):     Patch size for tokenisation.
+        model_name (str):     torch.hub model name for vjepa2
+                              (e.g. 'vjepa2_vit_small'). Used only when
+                              use_real_vjepa2=True.
+        use_real_vjepa2 (bool): If True, attempts torch.hub.load from
+                              'facebookresearch/vjepa2'. Falls back to CNN
+                              stub on failure (matching existing run scripts).
+        freeze_backbone (bool): If True, freezes V-JEPA 2 weights and only
+                              trains the projection head (recommended when
+                              using pretrained V-JEPA 2 weights).
+    """
+
+    def __init__(
+        self,
+        embed_dim: int = 256,
+        img_size: int = 224,
+        patch_size: int = 16,
+        model_name: str = 'vjepa2_vit_small',
+        use_real_vjepa2: bool = True,
+        freeze_backbone: bool = True,
+    ):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.n_patches = (img_size // patch_size) ** 2
+        self._using_real_vjepa2 = False
+
+        if use_real_vjepa2:
+            try:
+                backbone = torch.hub.load(
+                    'facebookresearch/vjepa2',
+                    model_name,
+                    pretrained=True,
+                    trust_repo=True,
+                )
+                # Extract ViT dim from the backbone's head or embed_dim attribute
+                vit_dim = getattr(backbone, 'embed_dim', 384)
+                self.backbone = backbone
+                if freeze_backbone:
+                    for p in self.backbone.parameters():
+                        p.requires_grad = False
+                self.proj = nn.Linear(vit_dim, embed_dim)
+                self._using_real_vjepa2 = True
+                print(f"[VideoStem] Loaded real V-JEPA 2 backbone '{model_name}' (frozen={freeze_backbone})")
+            except Exception as e:
+                print(f"[VideoStem] Could not load V-JEPA 2 via torch.hub ({e}). "
+                      "Falling back to CNN stub (matches main_vjepa2_gun.py behaviour).")
+
+        if not self._using_real_vjepa2:
+            # CNN stub — same approach as main_vjepa2_gun.py / main_vjepa2_fire.py
+            self.backbone = nn.Sequential(
+                nn.Conv2d(3, embed_dim, kernel_size=patch_size, stride=patch_size),
+                nn.GELU(),
+            )
+            self.proj = nn.Identity()
+            self.n_patches = (img_size // patch_size) ** 2
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x: Image/video frame tensor [B, 3, H, W] or [B, T, 3, H, W].
+               If 5D (video), frames are flattened into batch dimension and
+               the token sequence is averaged across time.
+
+        Returns:
+            tokens: [B, N_patches, embed_dim]
+        """
+        # Handle video input [B, T, 3, H, W] by averaging across time
+        is_video = x.dim() == 5
+        if is_video:
+            B, T, C, H, W = x.shape
+            x = x.flatten(0, 1)              # [B*T, 3, H, W]
+
+        if self._using_real_vjepa2:
+            # V-JEPA 2 ViT returns patch tokens [B, N, vit_dim]
+            with torch.no_grad() if not self.training or not any(
+                p.requires_grad for p in self.backbone.parameters()
+            ) else torch.enable_grad():
+                tokens = self.backbone.forward_features(x)  # [B, N, vit_dim]
+                if tokens.dim() == 2:
+                    # Some backbones return CLS only; add a dummy spatial dim
+                    tokens = tokens.unsqueeze(1)
+            tokens = self.proj(tokens)   # [B, N, embed_dim]
+        else:
+            # CNN stub: [B, embed_dim, H/p, W/p] → [B, N, embed_dim]
+            feats = self.backbone(x)     # [B, embed_dim, H_p, W_p]
+            B_eff = feats.shape[0]
+            tokens = feats.flatten(2).transpose(1, 2)  # [B, N, embed_dim]
+
+        if is_video:
+            # Average across time frames to get one token set per original sample
+            tokens = tokens.reshape(B, T, tokens.shape[1], self.embed_dim)
+            tokens = tokens.mean(dim=1)   # [B, N, embed_dim]
+
+        return tokens
+
+
+# ─────────────────────────────────────────────
+#  Audio-Visual MuMo JEPA Factory
+# ─────────────────────────────────────────────
+
+def build_audiovisual_mumo_jepa(
+    embed_dim: int = 256,
+    img_size: int = 224,
+    patch_size: int = 16,
+    audio_in_chans: int = 1,
+    audio_patch_size: tuple = (10, 15),
+    n_fusion_tokens: int = 16,
+    n_layers: int = 4,
+    n_heads: int = 8,
+    sigreg_lambda: float = 1.0,
+    use_real_vjepa2: bool = True,
+    freeze_vjepa2: bool = True,
+    vjepa2_model_name: str = 'vjepa2_vit_small',
+) -> MuMoJEPAWrapper:
+    """
+    Build an Audio-Visual Le MuMo JEPA model combining:
+      - Modality A: Video / Image via VideoStem (wraps facebookresearch/vjepa2
+        when available, falls back to CNN stub matching existing run scripts).
+      - Modality B: Audio Spectrogram via AudioPatchEmbed (from ajepa_backbone).
+
+    This extends the Video-JEPA 2 pattern already present in
+    main_vjepa2_gun.py and main_vjepa2_fire.py to a full multimodal
+    self-supervised setting with learnable fusion tokens and SIGReg.
+
+    Args:
+        embed_dim:           Shared token embedding dimension.
+        img_size:            Input image resolution (square assumed).
+        patch_size:          Spatial patch size for video tokenisation.
+        audio_in_chans:      Channels in audio spectrogram (usually 1).
+        audio_patch_size:    (freq_patch, time_patch) for AudioPatchEmbed.
+        n_fusion_tokens:     Number of learnable fusion bottleneck tokens.
+        n_layers:            Shared transformer depth post-fusion.
+        n_heads:             Attention heads.
+        sigreg_lambda:       SIGReg loss weight.
+        use_real_vjepa2:     Try loading facebookresearch/vjepa2 via torch.hub.
+        freeze_vjepa2:       Freeze V-JEPA 2 weights (train only fusion + proj).
+        vjepa2_model_name:   torch.hub model name for V-JEPA 2.
+
+    Returns:
+        MuMoJEPAWrapper ready for audio-visual self-supervised training.
+    """
+    stem_a = VideoStem(
+        embed_dim=embed_dim,
+        img_size=img_size,
+        patch_size=patch_size,
+        model_name=vjepa2_model_name,
+        use_real_vjepa2=use_real_vjepa2,
+        freeze_backbone=freeze_vjepa2,
+    )
+    stem_b = AudioPatchEmbed(
+        in_chans=audio_in_chans,
+        embed_dim=embed_dim,
+        patch_size=audio_patch_size,
+    )
+    return MuMoJEPAWrapper(
+        stem_a=stem_a,
+        stem_b=stem_b,
+        embed_dim=embed_dim,
+        n_fusion_tokens=n_fusion_tokens,
+        n_layers=n_layers,
+        n_heads=n_heads,
+        sigreg_lambda=sigreg_lambda,
+    )
