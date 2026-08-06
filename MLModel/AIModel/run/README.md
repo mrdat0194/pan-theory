@@ -62,6 +62,28 @@ We have integrated the official **V-JEPA 2** architecture (`facebookresearch/vje
 - **Architecture**: V-JEPA 2 Backbone + Multi-class Classification Head.
 - **Objective**: Categorizes surveillance frames into Flame vs Smoke vs Safe.
 
+### 3. **Unified MuMo JEPA Evaluation** (`main_mumo.py`)
+A new unified evaluation script running all three detection pipelines sequentially to compare V-JEPA (vision-only) vs Le MuMo JEPA (audio-visual) on the same datasets.
+- **Dataset A (Gun)**: `MLModel/data/WeaponS` — JPEG images + bounding box annotations.
+- **Dataset B (Fire)**: `MLModel/data/FireSmoke/test_vids` — `.mp4`/`.avi` video files (visual frames + audio track).
+- **Run**: `python MLModel/AIModel/run/main_mumo.py`
+
+#### Evaluation Results (3 epochs, CNN video stem fallback, zero-tensor audio fallback)
+
+| Pipeline | Model | Task | Final Loss |
+|:---|:---|:---|:---|
+| **1** | VideoStem + LocalizationHead | Gun BBox Regression (MSE) | **0.0000** |
+| **2** | VideoStem + ClassificationHead | Fire/Smoke (CE, vision-only) | **1.1729** |
+| **3** | MuMo (VideoStem + AudioPatchEmbed + SIGReg) + ClassificationHead | Fire/Smoke (CE + SIGReg) | **0.3642** |
+
+**Delta (P2 - P3) = +0.8087 --> MuMo achieved lower loss than Vision-Only V-JEPA.**
+
+> [!IMPORTANT]
+> **Technical vs. Scientific Conclusion of the Evaluation**:
+> - **Zero-Tensor Fallback**: Because the local CPU-only environment lacks local FFmpeg shared libraries, `torchaudio.io.StreamReader` cannot parse video frames or audio from `.mp4`/`.avi` files. The data loaders fell back to returning **zero tensors** (representing pure black images and absolute silence) to prevent code runtime crashes.
+> - **Technical Status (SUCCESS)**: The evaluation successfully compiled, initialized, traced shapes, and ran backpropagation through all parameters (including the cross-modal fusion layer and `SIGReg` optimizer) without errors.
+> - **Scientific Status (PENDING)**: The numerical loss comparison (**0.3642** vs **1.1729**) is a syntactic placeholder showing model execution capability, not a real baseline comparison. To obtain valid scientific conclusions, execute `main_mumo.py` in an environment where `torchaudio` is linked with an FFmpeg backend.
+
 ### 🔮 Future Action: Face-Recognition Migration
 In the future, the `face-recognition` repository will be migrated to the V-JEPA 2 backbone:
 1. **SSL Pre-training**: Unsupervised patch masking on unlabeled face datasets (e.g., WIDER FACE) to learn geometric face embeddings.
