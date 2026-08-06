@@ -1,3 +1,15 @@
+"""
+A-JEPA Backbone: Audio Joint-Embedding Predictive Architecture.
+
+Used by: MLModel/AIModel/run/main_audio_ajepa.py
+Purpose: Masked patch self-supervised pre-training on audio spectrograms
+         (MFCCs treated as 2D single-channel images).
+
+Note: ``AudioPatchEmbed`` (alias of ``PatchEmbed``) is exposed at module level
+      so it can be imported as a modality stem into Le MuMo JEPA::
+
+          from model.ajepa_backbone import AudioPatchEmbed
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -29,6 +41,11 @@ class PatchEmbed(nn.Module):
         x = self.stem(x)  # [B, D, N]
         x = x.transpose(1, 2)  # [B, N, D]
         return x
+
+
+# Expose as named stem for Le MuMo JEPA compatibility
+AudioPatchEmbed = PatchEmbed
+
 
 class AJEPA(nn.Module):
     def __init__(self, 

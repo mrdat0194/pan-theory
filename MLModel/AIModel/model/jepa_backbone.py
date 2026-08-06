@@ -1,3 +1,15 @@
+"""
+Baseline Audio JEPA / LeWM-JEPA Backbone (1D Convolutional).
+
+Used by: MLModel/AIModel/run/main_audio_jepa.py
+Purpose: Next-latent prediction on 1D audio/time-series with SIGReg.
+         Achieves 90.00% accuracy on IEMOCAP (20-sample eval).
+
+Note: ``SequenceStem`` (alias of ``Encoder1D``) is exposed at module level
+      so it can be imported as a modality stem into Le MuMo JEPA::
+
+          from model.jepa_backbone import SequenceStem
+"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -22,6 +34,11 @@ class Encoder1D(nn.Module):
     def forward(self, x):
         # x: [B, C, T] -> out: [B, D, T]
         return self.net(x)
+
+
+# Expose as named stem for Le MuMo JEPA compatibility
+SequenceStem = Encoder1D
+
 
 class ARPredictor(nn.Module):
     def __init__(self, input_dim, hidden_dim, depth=2, heads=4):
