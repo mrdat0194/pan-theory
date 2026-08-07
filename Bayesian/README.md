@@ -67,14 +67,15 @@ the UK. The number of disasters per year pre and post legislations were modeled 
 #### Chapter 18 - Linear regression models
 
 #### Chapter 19 - Generalized  linear models and other animals
+### Computational Probability & Waiting Times
 
-
-
-
-
-
-
-
+#### Unified Waiting-Time Distributions
+We implement a unified framework in [`waiting_time_unification.py`](file:///c:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/waiting_time_unification.py) that covers the progression of discrete and continuous arrival metrics:
+- **Geometric**: Discrete trial success count.
+- **Exponential**: Continuous memoryless waiting time.
+- **Erlang**: Multi-arrival Poisson processes.
+- **Dirac Delta**: Deterministic limit (zero variance) modeled using a smoothed Gaussian kernel (matching the smoothed Dirac representation in [`importance_sampling_bayesian.py`](file:///c:/Users/mrdat/PycharmProjects/pan-theory/Bayesian/importance_sampling_bayesian.py)).
+- **Phase-Type**: Generalized continuous transitions via absorptive continuous-time Markov chains.
 
 
 
