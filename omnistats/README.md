@@ -217,7 +217,7 @@ Six core estimators plus DR-OLS for HTE, all operating on `df_cuped` from Stage 
 | **DiD** (Callaway & Sant'Anna) | Staggered parallel trends | ATT(g,t) | Parallel trends + no anticipation |
 | **IV/2SLS** (linearmodels) | Exclusion restriction | LATE | Instrument relevance + exclusion |
 | **RDD** (rdrobust CCT) | Continuity at cutoff | LATE at cutoff | Continuity of potential outcomes |
-| **SCM** (cvxpy) | Convex donor matching | ATT treated unit | Pre-period fit quality |
+| **SCM** (AdPG/scipy) | Convex donor matching | ATT treated unit | Pre-period fit quality |
 | **Matrix Completion** (SoftImpute) | Missing data / nuclear norm | ATT staggered panel | Low-rank latent factor structure |
 | **CausalImpact** (Pyro BSTS) | State-space Bayesian time-series | Continuous ATT | Unobserved control trajectory |
 | **DR-OLS Subgroups** | Doubly robust interaction regression | Subgroup HTE / PIP | Correct propensity or outcome specification |
@@ -593,7 +593,6 @@ rdrobust     >= 1.2.0    # CCT optimal-bandwidth RDD
 rddensity    >= 2.4.0    # McCrary/Cattaneo manipulation density test
 
 # Causal Inference Stage 3 — advanced panel data
-cvxpy        >= 1.3.0    # Synthetic Control Method convex optimisation
 fancyimpute  >= 0.7.0    # Matrix Completion (SoftImpute)
 
 # Bayesian A/B Testing Stage 2

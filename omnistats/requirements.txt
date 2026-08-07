@@ -16,7 +16,6 @@ rdrobust>=1.2.0         # CCT optimal-bandwidth RDD
 rddensity>=2.4.0        # McCrary/Cattaneo manipulation density test
 
 # ── Causal Inference Stage 3 — advanced panel data ───────────────────────────
-cvxpy>=1.3.0            # Synthetic Control Method convex optimisation
 fancyimpute>=0.7.0      # Matrix Completion (SoftImpute / NuclearNorm)
 
 # ── Bayesian A/B Testing Stage 2 ─────────────────────────────────────────────

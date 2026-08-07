@@ -64,7 +64,7 @@ def run_causal_suite(verbose: bool = True) -> dict:
       1. Staggered DiD (Callaway & Sant-Anna)
       2. IV/2SLS (linearmodels)
       3. RDD (rdrobust CCT)
-      4. Synthetic Control Method (cvxpy)
+      4. Synthetic Control Method (AdPG / scipy SLSQP)
       5. Matrix Completion (SoftImpute)
       6. CausalImpact BSTS (time-series causal — same Stage 4)
       7. Subgroup HTE DR-OLS (demographic HTE, replaces BMA stub)

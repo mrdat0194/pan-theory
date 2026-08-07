@@ -94,7 +94,7 @@ Estimand: Average Treatment Effect on the Treated unit post-intervention
 
 Library strategy
 ----------------
-  Primary:  cvxpy — convex optimisation for constrained weight solve
+  Primary:  Adaptive Proximal Gradient (AdPG) for fast simplex optimization
   Fallback: scipy.optimize.minimize with SLSQP and non-negativity constraints
 """
 
@@ -111,12 +111,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 from config import OUTPUT_DIR, CAUSAL_USE_SYNTHETIC
 
-# ── cvxpy primary ──────────────────────────────────────────────────────────────
-try:
-    import cvxpy as cp
-    _HAS_CVXPY = True
-except ImportError:
-    _HAS_CVXPY = False
 
 
 # ── Synthetic data generator ───────────────────────────────────────────────────
@@ -152,17 +146,6 @@ def _make_synthetic_scm() -> dict:
     }
 
 
-# ── Convex weight solver ───────────────────────────────────────────────────────
-def _solve_weights_cvxpy(Y_pre_treated: np.ndarray,
-                          Y_pre_donors: np.ndarray) -> np.ndarray:
-    """Solve W* = argmin ||Y_pre_treated - Y_pre_donors @ W||²  s.t. W≥0, sum=1"""
-    n_donors = Y_pre_donors.shape[1]
-    W = cp.Variable(n_donors, nonneg=True)
-    objective = cp.Minimize(cp.sum_squares(Y_pre_donors @ W - Y_pre_treated))
-    constraints = [cp.sum(W) == 1]
-    prob = cp.Problem(objective, constraints)
-    prob.solve(solver=cp.ECOS, warm_start=True)
-    return W.value if W.value is not None else np.ones(n_donors) / n_donors
 
 
 def _solve_weights_scipy(Y_pre_treated: np.ndarray,
@@ -256,14 +239,9 @@ def synthetic_control(
         W_star = _solve_weights_adpg(Y_pre_treated, Y_pre_donors)
         solver_used = "adpg_proximal"
     except Exception as e:
-        if _HAS_CVXPY:
-            W_star = _solve_weights_cvxpy(Y_pre_treated, Y_pre_donors)
-            solver_used = "cvxpy_ECOS"
-            warns.append(f"[WARNING] AdPG failed ({e}) — used cvxpy fallback")
-        else:
-            W_star = _solve_weights_scipy(Y_pre_treated, Y_pre_donors)
-            solver_used = "scipy_SLSQP"
-            warns.append(f"[WARNING] AdPG failed ({e}) and cvxpy missing — using scipy SLSQP")
+        W_star = _solve_weights_scipy(Y_pre_treated, Y_pre_donors)
+        solver_used = "scipy_SLSQP"
+        warns.append(f"[WARNING] AdPG failed ({e}) — using scipy SLSQP fallback")
 
     # ── Synthetic control series ───────────────────────────────────────────
     Y_synthetic_pre  = Y_pre_donors  @ W_star
@@ -284,9 +262,10 @@ def synthetic_control(
         if Y_donors_minus_d_pre.shape[1] == 0:
             continue
         try:
-            W_p = (_solve_weights_cvxpy(Y_d_pre, Y_donors_minus_d_pre)
-                   if _HAS_CVXPY
-                   else _solve_weights_scipy(Y_d_pre, Y_donors_minus_d_pre))
+            try:
+                W_p = _solve_weights_adpg(Y_d_pre, Y_donors_minus_d_pre)
+            except Exception:
+                W_p = _solve_weights_scipy(Y_d_pre, Y_donors_minus_d_pre)
             placebo_atts.append(float(np.mean(Y_d_post - Y_donors_minus_d_post @ W_p)))
         except Exception:
             pass
