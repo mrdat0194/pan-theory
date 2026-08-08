@@ -85,3 +85,93 @@ def adaptive_proximal_gradient(x0, grad_f, f, prox_g, max_iter=1000, tol=1e-5, L
         L = max(L0, L / 1.2)
         
     return x
+
+
+def prox_l2_ball(x: np.ndarray, r: float) -> np.ndarray:
+    """
+    Projection onto the L2-ball: ||x||_2 <= r.
+    This corresponds to the proximal operator of the indicator function of the L2-ball.
+    """
+    norm = np.linalg.norm(x)
+    if norm <= r:
+        return x
+    return x * (r / (norm + 1e-15))
+
+
+def prox_block_l2_ball(y: np.ndarray, r: float, block_size: int) -> np.ndarray:
+    """
+    Projection of a stacked vector y onto the product of L2-balls, where each block
+    of size block_size is restricted to have L2-norm <= r.
+    """
+    y_reshaped = y.reshape(-1, block_size)
+    norms = np.linalg.norm(y_reshaped, axis=1, keepdims=True)
+    scale = np.minimum(1.0, r / (norms + 1e-15))
+    return (y_reshaped * scale).flatten()
+
+
+def adaptive_primal_dual(x0, y0, grad_f, prox_g, prox_h_conj, K, K_transpose,
+                         max_iter=1000, tol=1e-5, L_f=1.0, L_K=1.0, adaptive=True):
+    """
+    Adaptive Primal-Dual Hybrid Gradient (APDHG) method with Goldstein residual balancing.
+    Solves:
+        min_x f(x) + g(x) + h(K x)
+    where f is smooth, g is prox-friendly, and h is prox-friendly.
+    """
+    x = np.copy(x0)
+    y = np.copy(y0)
+    
+    K_op = K if callable(K) else (lambda v: K @ v)
+    K_t_op = K_transpose if callable(K_transpose) else (lambda v: K_transpose @ v)
+    
+    # 1. Compute initial steps satisfying the Condat-Vu convergence condition
+    # tau * (L_f/2 + sigma * L_K) < 1
+    tau = 0.99 / L_f if L_f > 1e-5 else 1.0
+    sigma = 0.49 / (tau * L_K) if L_K > 1e-5 else 1.0
+    
+    alpha = 0.5
+    c_ratio = 10.0 # balancing factor
+    
+    for k in range(max_iter):
+        x_old = np.copy(x)
+        y_old = np.copy(y)
+        
+        # Primal step
+        x = prox_g(x_old - tau * grad_f(x_old) - tau * K_t_op(y_old), tau)
+        
+        # Extrapolation
+        x_bar = 2 * x - x_old
+        
+        # Dual step
+        y = prox_h_conj(y_old + sigma * K_op(x_bar), sigma)
+        
+        # Convergence check
+        dx = x - x_old
+        dy = y - y_old
+        norm_dx = np.linalg.norm(dx)
+        norm_dy = np.linalg.norm(dy)
+        
+        if norm_dx < tol and norm_dy < tol:
+            break
+            
+        # Adapt step sizes (Goldstein et al. 2013 residual balancing)
+        if adaptive and norm_dx > 1e-15 and norm_dy > 1e-15:
+            r_p = norm_dx / tau
+            r_d = norm_dy / sigma
+            
+            if r_p > c_ratio * r_d:
+                # decrease tau, increase sigma (keeps tau*sigma constant)
+                gamma = 1.0 - alpha
+                tau *= gamma
+                sigma /= gamma
+            elif r_d > c_ratio * r_p:
+                # increase tau, decrease sigma (keeps tau*sigma constant)
+                gamma = 1.0 - alpha
+                tau /= gamma
+                sigma *= gamma
+                
+            # decay alpha to guarantee convergence
+            alpha *= 0.95
+            
+    return x
+
+

@@ -90,7 +90,7 @@ omnistats/
 | `mcmc_bayesian.py` | Archive/reference — role superseded by PyMC NUTS |
 | `mono_casual.ipynb` | `cuped.py` (CatBoost monotonic regression → Stage 3 CUPED) |
 | `prophet.ipynb` | `timeseries/causal_impact.py` (Archive reference; superseded by Pyro BSTS CausalImpact in Stage 5) |
-| `BMA.ipynb` | `causal/bma.py` — **Stage 4 migration target** for Heterogeneous Treatment Effects (HTE) / subgroup analysis via Bayesian Model Averaging. BMA models `Treatment × Demographic` interactions and outputs Posterior Inclusion Probabilities (PIPs). This is distinct from CUPED (which reduces variance); BMA *explains* who benefits from treatment. |
+| `BMA.ipynb` | `causal/bma.py` — **Stage 4 migration target** for Heterogeneous Treatment Effects (HTE) / subgroup analysis via **Lipschitz-Bounded CATE** optimization. This method estimates a smooth, non-linear treatment effect surface constrained by L2 gradient bounds to ensure robustness and interpretability. |
 
 The `Bayesian/` directory remains **unchanged** as a reference archive.
 
@@ -254,9 +254,9 @@ This pipeline is designed as an **Explainable AI system** for causal inference. 
 
 ## Advanced Experimentation Roadmap
 
-### 1. Bayesian Model Averaging (BMA)
+### 1. Lipschitz-Bounded CATE
 *   **Asset:** `causal/bma.py`
-*   **Advanced Tactic:** Subgroup Analysis & Heterogeneous Treatment Effects (HTE) under model uncertainty.
+*   **Advanced Tactic:** Subgroup Analysis & Heterogeneous Treatment Effects (HTE) under gradient constraint regularization via Adaptive Primal-Dual optimization.
 
 ### 2. MCMC & Importance Sampling (Reference Engines)
 *   **Role in OmniStats:** The mathematical foundations that PyMC NUTS (Stage 2) and IS fallbacks directly implement at a higher level.
@@ -297,7 +297,7 @@ How do we bridge OmniStats' rigorous econometrics with JEPA's abstract latent pl
  │  • Stage 1: LPA Profiles (User Segments)                                │
  │  • Stage 2: Bayesian Loss / P(B>A) (Risk limits)                        │
  │  • Stage 3: CUPED (Noise-reduced baselines)                             │
- │  • Stage 4: Causal ATT & DR-OLS Subgroups (True Lift & Fairness)        │
+ │  • Stage 4: Causal ATT & Lipschitz CATE Subgroups (True Lift & Fairness)│
  └────────────────────────────────────┬────────────────────────────────────┘
                                       │
                                       ▼
