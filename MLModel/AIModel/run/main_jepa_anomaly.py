@@ -1,8 +1,14 @@
 """
-MTS-JEPA Anomaly Detection Inference Script
-===========================================
-Loads a pre-trained JEPA backbone and evaluates latent prediction error (MSE)
-on the Synth_data_20042020_speed40 dataset to detect time-series anomalies.
+MTS-JEPA Anomaly Detection Inference Script (Upgraded: Latent ODE JEPA)
+========================================================================
+Loads a pre-trained **Latent ODE JEPA** backbone and evaluates the ODE
+prediction error (MSE) on the Synth_data_20042020_speed40 dataset to
+detect time-series anomalies.
+
+Upgrade from v1 (MTS-JEPA):
+    BEFORE: Discrete Transformer (ARPredictor) predicts z[t+1] from z[t].
+    AFTER:  Neural ODE integrates dz/dt = f_theta(z, t) continuously
+            via RK4, enabling robust detection on irregular time series.
 
 Usage examples:
     # Evaluate a balanced sample of 20 files per defect type
@@ -31,7 +37,7 @@ import torch
 from scipy.io import loadmat
 from sklearn.preprocessing import normalize
 
-from MLModel.AIModel.model.jepa_backbone import build_jepa, compute_anomaly_score
+from MLModel.AIModel.model.latent_ode_jepa import build_jepa, compute_anomaly_score
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. Configuration & Paths
@@ -200,7 +206,7 @@ def main():
         print("Run with '--train' to train the model first.")
         
     if args.use_rankweight:
-        from MLModel.AIModel.model.jepa_backbone import apply_rankweight
+        from MLModel.AIModel.model.latent_ode_jepa import apply_rankweight
         print("Applying RankWeight surgery to model weights...")
         apply_rankweight(model)
 

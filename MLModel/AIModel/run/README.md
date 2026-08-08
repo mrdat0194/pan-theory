@@ -91,11 +91,17 @@ In the future, the `face-recognition` repository will be migrated to the V-JEPA 
 
 ---
 
-## 🛠️ Other JEPA Implementations
+## 🛠️ Other JEPA & ODE-Based Implementations
 
-- **`main_jepa_anomaly.py`**: MTS-JEPA implementation for anomaly detection (replaces legacy VAE-LSTM). Built for structural vibration data, inspired by the multi-resolution architecture described in [MTS-JEPA (arxiv:2602.04643)](https://arxiv.org/html/2602.04643v1). Utilizes `eb_jepa` backbone with RankFeat/RankWeight noise suppression.
+- **`main_jepa_anomaly.py`** *(Upgraded — Latent ODE JEPA)*: Continuous-time anomaly detection for structural vibration data. The discrete Transformer (ARPredictor) has been replaced by a **Neural ODE** (`dz/dt = f_θ(z, t)`) integrated via a self-contained RK4 solver. Backbone: [latent_ode_jepa.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/latent_ode_jepa.py). Retains RankFeat / RankWeight noise suppression and the full LeJEPA SIGReg collapse-prevention loss.
 - **`main_control_jepa.py`**: Training action-conditioned JEPA for Truck-and-Trailer dynamics.
 - **`main_optimal_jepa.py`**: Benchmarking `CEMPlanner` (Cross-Entropy Method) against standard SGD for optimal control.
+
+## 🔬 New: Diffusion-Based Representation Learning
+
+- **[diffusion_ssl.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/diffusion_ssl.py)**: Diffusion-SSL backbone for self-supervised representation learning on time series. Implements the Probability Flow ODE (linear beta noise schedule), a Transformer-based ScoreNet with sinusoidal time embeddings, and a `forward_features()` method to extract semantically rich representations from the penultimate hidden states without any labels.
+  - **Pre-train**: `model.compute_loss(x)` — noise-prediction (score-matching) SSL objective.
+  - **Inference**: `model.forward_features(x, t_fraction=0.3)` — extract `[B, d_model]` feature vectors.
 
 ## 🚀 Future Improvements
 
