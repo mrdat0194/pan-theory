@@ -306,6 +306,8 @@ class T3sum:
     """
 
     def multiply(A,B):
+        # Note: For the step-by-step mathematical implementation of the Cooley-Tukey FFT 
+        # algorithm used here, see datastructure/fft_polynomial.py
         n = 1
 
         while (n < len(A)+ len(B)):
