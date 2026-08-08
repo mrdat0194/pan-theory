@@ -60,4 +60,11 @@ The project now includes **OmniStats** under [omnistats/](file:///c:/Users/mrdat
 * **Explainable AI (XAI)**: The pipeline rejects opaque black boxes in favor of interpretable econometric models (SCM donor weights, CausalImpact control series inclusion probability, and Bayesian credible intervals).
 
 
+---
 
+### MLModel: State-of-the-Art (SOTA) Convex Optimization
+The machine learning models in `MLModel/model/` have been upgraded from standard `scikit-learn` black-box solvers to custom-built, mathematically rigorous **Convex Optimization** algorithms (inspired by Stephen Becker's optimization literature):
+1. **FISTA (Accelerated Proximal Gradient):** Replaces standard Logistic Regression. Uses Nesterov acceleration and exact soft-thresholding to optimize $L_1$-regularized Sparse Logistic Regression at $O(1/k^2)$ convergence. See [fista_logistic.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/model/fista_logistic.py).
+2. **ADMM (Alternating Direction Method of Multipliers):** Replaces `LinearSVC`. Accurately resolves the non-differentiable Hinge Loss in Support Vector Machines using custom asymmetric proximal operators. See [admm_svm.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/model/admm_svm.py).
+
+These solvers ensure full white-box interpretability and mathematical control over regularization constraints.

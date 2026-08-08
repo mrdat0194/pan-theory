@@ -265,7 +265,10 @@ def run_bma(verbose: bool = True) -> dict:
             )
             boot_marg_atts.append(b_cate.mean())
             for col in dummy_names:
-                mask = dummies.iloc[idx][col].values == 1
+                col_data = dummies.iloc[idx][col]
+                if isinstance(col_data, pd.DataFrame):
+                    col_data = col_data.iloc[:, 0]
+                mask = col_data.values == 1
                 if mask.sum() > 2:
                     boot_subgroup_atts[col].append(b_cate[mask].mean())
                 else:
@@ -288,7 +291,10 @@ def run_bma(verbose: bool = True) -> dict:
     n_tests = max(len(dummy_names), 1)
     
     for col in dummy_names:
-        mask = dummies[col].values == 1
+        col_data = dummies[col]
+        if isinstance(col_data, pd.DataFrame):
+            col_data = col_data.iloc[:, 0]
+        mask = col_data.values == 1
         if mask.sum() > 2:
             coef = float(cate_pred[mask].mean())
             boot_vals = boot_subgroup_atts[col]

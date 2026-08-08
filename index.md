@@ -92,6 +92,9 @@ within the project
     - data_pipeline: helper function nn and ml
     - MLData: dataset
     - model: 
+      - **Convex Optimization Solvers:** Custom SOTA implementations replacing `scikit-learn`:
+        - `fista_logistic.py`: Sparse $L_1$ Logistic Regression via Accelerated Proximal Gradient.
+        - `admm_svm.py`: Hinge Loss Support Vector Machine via Alternating Direction Method of Multipliers.
       - code:
         - xgboost
       - EDA
