@@ -413,9 +413,6 @@ class TestFibonacciCorrectness(unittest.TestCase):
         got = [FibonacciShowcase.bin_fibo(n) for n in range(1, 16)]
         self.assertEqual(got, self.expected_fibs)
 
-    def test_my_fib(self):
-        got = [FibonacciShowcase.my_fib(n, {}) for n in range(1, 16)]
-        self.assertEqual(got, self.expected_fibs)
 
 
 class TestFibonacciBenchmark(unittest.TestCase):

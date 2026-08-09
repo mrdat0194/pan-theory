@@ -1743,7 +1743,6 @@ class FibonacciShowcase:
     │ dyna_fibo2   (top-down array)   │ O(N)       │ O(N)     │ Alternative top-down           │
     │ fibonacci_bu (bottom-up cache)  │ O(N)       │ O(N)     │ Incremental queries            │
     │ simple_fibo  (tail recursion)   │ O(N)       │ O(N)     │ Teaching / elegant recursion   │
-    │ my_fib       (dict memoization) │ O(N)       │ O(N)     │ Teaching top-down memoization  │
     └─────────────────────────────────┴────────────┴──────────┴────────────────────────────────┘
 
     WHY NOT SIEVE FOR FIBONACCI?
@@ -1850,26 +1849,6 @@ class FibonacciShowcase:
             N //= 2
         return r
 
-    def my_fib(N, memo=None):
-        """
-        Top-down memoized Fibonacci (dict, explicit None guard).
-        Teaching version — shows the memoization pattern clearly.
-
-        Example:
-            FibonacciShowcase.my_fib(10)  # -> 55
-        """
-        if memo is None:
-            memo = {}
-        if memo.get(N):
-            return memo[N]
-        if N == 1 or N == 2:
-            result = 1
-        else:
-            result = FibonacciShowcase.my_fib(N - 1, memo) + \
-                     FibonacciShowcase.my_fib(N - 2, memo)
-        memo[N] = result
-        return result
-
     @staticmethod
     def fib_dn(N, memo=None):
         """
@@ -1906,8 +1885,6 @@ class FibonacciShowcase:
              lambda: FibonacciShowcase.dyna_fibo2(N)),
             ("fibonacci_bu (bottom-up O(N))",
              lambda: FibonacciShowcase.fibonacci_bu(N)),
-            ("my_fib (dict memo O(N))",
-             lambda: FibonacciShowcase.my_fib(N, {})),
             ("simple_fibo (tail-recursion O(N))",
              None),  # may hit recursion limit
         ]
