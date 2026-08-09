@@ -44,6 +44,13 @@ BASE_DIR = Path(__file__).resolve().parents[2]   # omnistats/
 sys.path.insert(0, str(BASE_DIR))
 from config import OUTPUT_DIR, AB_METRIC_COL, AB_GROUP_COL, DEMOGRAPHIC_COLS
 
+# ── XAI: Information Theory module (Quantum-Inspired) ─────────────────────
+try:
+    from omnistats.modules.information_theory import compute_xai_metrics
+    _XAI_AVAILABLE = True
+except ImportError:
+    _XAI_AVAILABLE = False
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 1.  STATE CONTEXT LOADER
@@ -185,7 +192,15 @@ def load_state_context(
 
 class APADecoder(nn.Module):
     """
-    Lightweight MLP that decodes a JEPA latent vector → APA scalars.
+    Quantum-Inspired APA Decoder: JEPA latent vector → APA scalars + XAI metrics.
+
+    Extends the standard (ATT, Risk) decoder with two new output heads:
+      - energy_hat  : Boltzmann Energy E_n of the latent state
+      - beta_hat    : Inverse Temperature β (model confidence / precision)
+
+    These outputs directly correspond to the thermodynamic quantities
+    from your notes (π(x,n) ∝ e^{-βE_n} ψ_n(x)) and enable full XAI
+    reporting via the information_theory module.
 
     Inputs
     ------
@@ -194,8 +209,11 @@ class APADecoder(nn.Module):
     Outputs
     -------
     dict with:
-        att_hat   : [B]   predicted Average Treatment Effect
-        risk_hat  : [B]   predicted Bayesian Expected Loss (≥ 0)
+        att_hat    : [B]   predicted Average Treatment Effect
+        risk_hat   : [B]   predicted Bayesian Expected Loss (≥ 0)
+        energy_hat : [B]   predicted Boltzmann Energy of latent state
+        beta_hat   : [B]   predicted Inverse Temperature (≥ 0)
+        entropy    : [B]   Shannon Entropy of latent activations
     """
 
     def __init__(
@@ -203,8 +221,10 @@ class APADecoder(nn.Module):
         d_latent: int,
         hidden_dim: int = 64,
         dropout: float = 0.1,
+        beta_init: float = 1.0,
     ):
         super().__init__()
+        self.d_latent = d_latent
         self.net = nn.Sequential(
             nn.Linear(d_latent, hidden_dim),
             nn.LayerNorm(hidden_dim),
@@ -213,24 +233,62 @@ class APADecoder(nn.Module):
             nn.Linear(hidden_dim, hidden_dim),
             nn.GELU(),
         )
+        # Original APA heads
         self.att_head  = nn.Linear(hidden_dim, 1)
         self.risk_head = nn.Sequential(
             nn.Linear(hidden_dim, 1),
             nn.Softplus(),          # risk ≥ 0
         )
+        # XAI: Quantum-Inspired heads
+        self.energy_head = nn.Sequential(
+            nn.Linear(hidden_dim, 1),
+            nn.Softplus(),          # energy ≥ 0
+        )
+        self.beta_head = nn.Sequential(
+            nn.Linear(hidden_dim, 1),
+            nn.Softplus(),          # β ≥ 0
+        )
 
-    def forward(self, z: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(
+        self,
+        z: torch.Tensor,
+        reference_embeddings: torch.Tensor | None = None,
+    ) -> dict[str, torch.Tensor]:
         """
         Args:
             z: [B, D_latent]  — flattened latent (see _flatten_latent helper)
+            reference_embeddings: [N, D_latent] optional concept anchors for
+                Bayesian Inverse Scoring (JKL from prior)
         Returns:
-            {"att_hat": [B], "risk_hat": [B]}
+            dict with att_hat, risk_hat, energy_hat, beta_hat, entropy, [jkl]
         """
         h = self.net(z)
-        return {
-            "att_hat":  self.att_head(h).squeeze(-1),
-            "risk_hat": self.risk_head(h).squeeze(-1),
+        energy_hat = self.energy_head(h).squeeze(-1)   # [B]
+        beta_hat   = self.beta_head(h).squeeze(-1)     # [B]
+
+        # Shannon Entropy of latent activations (XAI: uncertainty of state)
+        latent_probs = torch.softmax(z, dim=-1)                     # [B, D]
+        p_clamped = latent_probs.clamp(min=1e-10)
+        entropy = -(p_clamped * p_clamped.log() / torch.log(torch.tensor(2.0))).sum(-1)  # [B]
+
+        out = {
+            "att_hat":    self.att_head(h).squeeze(-1),   # [B]
+            "risk_hat":   self.risk_head(h).squeeze(-1),  # [B]
+            "energy_hat": energy_hat,                      # [B]
+            "beta_hat":   beta_hat,                        # [B]
+            "entropy":    entropy,                         # [B]
         }
+
+        # Bayesian Inverse Score (JKL from uniform prior)
+        if reference_embeddings is not None and _XAI_AVAILABLE:
+            xai = compute_xai_metrics(
+                z.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1),   # fake [B,D,1,1,1]
+                reference_embeddings=reference_embeddings,
+            )
+            out["jkl_from_prior"] = xai["jkl_from_prior"]  # [B]
+            out["posterior"]      = xai["posterior"]         # [B, N]
+
+        return out
 
 
 def _flatten_latent(z: torch.Tensor) -> torch.Tensor:
