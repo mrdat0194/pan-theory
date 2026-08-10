@@ -55,3 +55,7 @@ MLModel/AIModel/run/deep_rdd_model/
 *.xml
 *.mp4
 *.avi
+
+# Antigravity local overrides
+.agents/local/
+.agents/scratch/
