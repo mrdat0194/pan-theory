@@ -1,4 +1,67 @@
-Read index.md instead, this is just teaching note. 
+Read [index.md](index.md) for the full library tour. This README tracks major milestones.
+
+---
+
+## 🚀 Latest: Quantum-Inspired XAI for JEPA (Phase 1 & 2 — Complete)
+
+The repo now includes a full **Quantum-Inspired Explainable AI (XAI)** pipeline for the JEPA world model, grounded in Boltzmann thermodynamics, path integral theory (Nov-2022 notes), and Tang (2023) ℓ₂ dequantization.
+
+See **[omnistats/XAI_JEPA_ROADMAP.md](omnistats/XAI_JEPA_ROADMAP.md)** for the complete concept map, architecture diagrams, usage examples, and P2–P3 next-step frontier.
+
+### Phase 1 — Core XAI (✅ Complete — 21/21 unit tests pass)
+
+| File | What It Does |
+|---|---|
+| [`omnistats/modules/information_theory.py`](omnistats/modules/information_theory.py) | Shannon Entropy, JKL Divergence, Bayesian Inverse Score via ℓ₂ sampling, Boltzmann Energy, Partition Function Z(β) |
+| [`datastructure/Lesson/dequantized_jepa_predictor.py`](datastructure/Lesson/dequantized_jepa_predictor.py) | `DequantizedLatentTransition` — ℓ₂ importance sampling replaces deterministic MLP; `path_integral_rollout()` |
+| [`omnistats/modules/xai_visualisation.py`](omnistats/modules/xai_visualisation.py) | Dark-mode XAI plots: Energy Landscape, JKL Decision Boundary, Partition Function evolution |
+| [`omnistats/modules/jepa_bridge.py`](omnistats/modules/jepa_bridge.py) | `APADecoder` extended with `energy_hat`, `beta_hat`, `entropy` output heads |
+
+### Phase 2 — Frontier P0 / P1 (✅ Complete — 5/5 verified)
+
+| File | Priority | What It Does |
+|---|---|---|
+| [`datastructure/Lesson/chebyshev_qsvt.py`](datastructure/Lesson/chebyshev_qsvt.py) | **P0** | Chebyshev-QSVT (Tang Ch.6 Clenshaw recursion) — SOTA spectral heat-kernel / low-pass filter of JEPA eigenstate bank; `ChebyshevDequantizedTransition` |
+| [`eb_jepa/eb_jepa/quantum_mppi.py`](eb_jepa/eb_jepa/quantum_mppi.py) | **P0** | `QuantumMPPIPlanner` — Boltzmann-weighted action noise + JKL cost regularization + β annealing schedule |
+| [`omnistats/modules/bayesian/maxwell_prior.py`](omnistats/modules/bayesian/maxwell_prior.py) | **P1** | Maxwell-Boltzmann prior for `energy_hat`; `maxwell_prior_loss()` for APADecoder training |
+| [`omnistats/modules/bayesian/waic_loo.py`](omnistats/modules/bayesian/waic_loo.py) | **P1** | WAIC + PSIS-LOO + `compare_models()` — SOTA Bayesian model selection replacing AIC/BIC |
+| [`omnistats/modules/timeseries/quantum_kalman.py`](omnistats/modules/timeseries/quantum_kalman.py) | **P1** | `QuantumKalmanFilter` + RTS smoother — density-matrix prediction step; robust to non-Gaussian shocks |
+
+---
+
+### Class Imbalance Mitigation Notes
+* **Imbalance Sweep**: SMOTEENN on Random Forest increased F1 from **0.2326 → 0.7119** (+206%). See [MLModel/run/README.md](MLModel/run/README.md).
+
+---
+
+### OmniStats: Causal & Experimentation Pipeline
+
+[omnistats/](omnistats/) is a production-grade 5-stage pipeline:
+
+1. **Stage 1 — LPA**: GMM user segmentation → `profile_prob_max` for variance reduction.
+2. **Stage 2 — Sequential Bayesian A/B**: Beta-Binomial + StudentT on PyMC NUTS. Stops via Expected Loss.
+3. **Stage 3 — CUPED**: Monotonic regression on LPA posteriors as pre-experiment covariates.
+4. **Stage 4 — Causal Suite**: Staggered DiD · IV · RDD · SCM · Matrix Completion · **Quantum Kalman BSTS** ✅
+5. **Stage 5 — APA Report**: APA 7th edition Word doc with **WAIC/LOO model selection** ✅.
+
+**XAI:** `APADecoder` outputs `energy_hat`, `beta_hat`, Shannon Entropy, JKL — every decision grounded in measurable physical quantities.
+
+**Next:** 
+- **Hardware/GPU Scaling**: Migrate CPU fallbacks to GPU using `torch.compile` (Triton) for JEPA transitions, `vmap` for MPPI rollouts, and **JAX/NumPyro** for XLA-compiled Bayesian sampling.
+- **Algorithms**: Quantum β-VAE · Marchenko-Pastur spectral regularizer · story_teller XAI embeddings.
+→ See [omnistats/XAI_JEPA_ROADMAP.md §5](omnistats/XAI_JEPA_ROADMAP.md) for the full P2–P3 plan.
+
+---
+
+### MLModel: SOTA Convex Optimization
+
+1. **FISTA** — L1 Sparse Logistic Regression, O(1/k²) convergence. See [fista_logistic.py](MLModel/model/fista_logistic.py).
+2. **ADMM** — Hinge Loss SVM. See [admm_svm.py](MLModel/model/admm_svm.py).
+3. **Marchenko-Pastur Spectral Regularization** *(P2 upcoming)* — penalize weight matrices deviating from the MP bulk.
+
+---
+
+### Legacy Teaching Notes
 
 1) bai tap. mo folder bang commandline
 
@@ -21,11 +84,9 @@ Read index.md instead, this is just teaching note.
 +   https://github.com/TheAlgorithms/Python
 +    https://github.com/keon/algorithms.git
    
-   
 5) Solid coding/ Clean code:
 + https://github.com/PacktPublishing/Clean-Code-in-Python-Second-Edition.git
 + https://github.com/mynameisfiber/high_performance_python_2e.git
-
 
 6) ML/AI: 
 + https://probml.github.io/pml-book/
@@ -33,38 +94,4 @@ Read index.md instead, this is just teaching note.
 + https://github.com/eriklindernoren/ML-From-Scratch.git
 + https://github.com/ageron/handson-ml2.git
 
-
 Note: Do not duplicate story or lesson. Created.
-
----
-
-### Class Imbalance Mitigation Notes
-* **Imbalance Sweep Improvements**: Applying SMOTEENN to Random Forest increased the F1-Score from **0.2326** to **0.7119** (a **+206%** improvement). Detailed sweep results can be found in [MLModel/run/README.md](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/run/README.md).
-
----
-
-### Stage-by-Stage Causal & Experimentation Pipeline: OmniStats (v3)
-The project now includes **OmniStats** under [omnistats/](file:///c:/Users/mrdat/PycharmProjects/pan-theory/omnistats/), a production-grade 5-stage causal inference and sequential experimentation pipeline:
-1. **Stage 1 — Latent Profile Analysis (LPA)**: Describes the population by segmenting users into Gaussian Mixture Model classes. Outputs `profile_prob_max` for variance reduction.
-2. **Stage 2 — Sequential Bayesian A/B Testing**: Compares variants using Beta-Binomial conjugate updates and StudentT means models running on PyMC NUTS (with Importance Sampling fallback). Decides to stop using Expected Loss.
-3. **Stage 3 — CUPED Variance Reduction**: Sharpens subsequent estimations using monotonic regression (CatBoost/DecisionTree) on the LPA posterior class probabilities as pre-experiment covariates.
-4. **Stage 4 — Causal Inference Suite**: Attributes causation using econometric estimators operating on CUPED-adjusted outcome data:
-   * Staggered DiD (Callaway & Sant'Anna)
-   * Instrumental Variables (linearmodels 2SLS)
-   * Regression Discontinuity Design (rdrobust CCT)
-   * Synthetic Control Method (Adaptive Proximal Gradient weight optimization with Scipy SLSQP fallback)
-   * Matrix Completion (SoftImpute Nuclear Norm regularization)
-   * Bayesian Structural Time Series (Google CausalImpact BSTS with spike-and-slab selection)
-5. **Stage 5 — APA Report Consolidation**: Assembles all findings into an APA 7th edition Word document (Tables 1-8).
-
-* **Explainable AI (XAI)**: The pipeline rejects opaque black boxes in favor of interpretable econometric models (SCM donor weights, CausalImpact control series inclusion probability, and Bayesian credible intervals).
-
-
----
-
-### MLModel: State-of-the-Art (SOTA) Convex Optimization
-The machine learning models in `MLModel/model/` have been upgraded from standard `scikit-learn` black-box solvers to custom-built, mathematically rigorous **Convex Optimization** algorithms (inspired by Stephen Becker's optimization literature):
-1. **FISTA (Accelerated Proximal Gradient):** Replaces standard Logistic Regression. Uses Nesterov acceleration and exact soft-thresholding to optimize $L_1$-regularized Sparse Logistic Regression at $O(1/k^2)$ convergence. See [fista_logistic.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/model/fista_logistic.py).
-2. **ADMM (Alternating Direction Method of Multipliers):** Replaces `LinearSVC`. Accurately resolves the non-differentiable Hinge Loss in Support Vector Machines using custom asymmetric proximal operators. See [admm_svm.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/model/admm_svm.py).
-
-These solvers ensure full white-box interpretability and mathematical control over regularization constraints.
