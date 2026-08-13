@@ -282,4 +282,269 @@ def plot_partition_function_evolution(
     plt.savefig(path, dpi=250, bbox_inches="tight", facecolor=_DARK_BG)
     plt.close()
     if verbose:
-        print("[Viz/XAI] Partition function evolution saved -> {}".format(path))
+        print("[Viz/XAI] Partition function evolution saved -> {}\n".format(path))
+
+
+# =============================================================================
+# 8. XAI — TCAV: Concept Probing for MatrAIx Persona Concepts
+# =============================================================================
+
+def plot_tcav_concept_probing(
+    model_encode_fn,
+    concept_examples: dict,
+    non_concept_examples,
+    query_examples,
+    concept_names: list | None = None,
+    title: str = "TCAV: Persona Concept Probing (MUMO-JEPA)",
+    verbose: bool = True,
+) -> dict:
+    """
+    Testing with Concept Activation Vectors (TCAV) for MUMO-JEPA.
+
+    Probes the multimodal latent space to find which human-interpretable
+    persona concepts (e.g. 'High Income', 'Risk Averse', 'Tech-Savvy')
+    are directionally embedded in the model's CLS representation.
+
+    Algorithm
+    ---------
+    1. For each concept C:
+       a. Encode concept_examples[C] and non_concept_examples via model_encode_fn.
+       b. Fit a linear binary classifier (CAV) to separate concept from non-concept
+          embeddings. The CAV direction is the normal vector of the decision boundary.
+       c. Compute TCAV score = fraction of query examples for which the directional
+          derivative of the model output w.r.t. the CAV direction is positive.
+
+    Parameters
+    ----------
+    model_encode_fn    : Callable  Takes (mod_a, mod_b) tensors, returns [B, D] embeddings.
+    concept_examples   : dict      Maps concept_name -> (mod_a, mod_b) tensors.
+    non_concept_examples: tuple    (mod_a, mod_b) tensors for non-concept "random" examples.
+    query_examples     : tuple     (mod_a, mod_b) tensors for the target population.
+    concept_names      : list[str] Labels for x-axis (defaults to concept_examples keys).
+    title              : str
+    verbose            : bool
+
+    Returns
+    -------
+    dict mapping concept_name -> TCAV score (0.0–1.0).
+    """
+    try:
+        import torch
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.preprocessing import StandardScaler
+    except ImportError:
+        print("[Viz/XAI/TCAV] scikit-learn or torch not installed — skipping TCAV.")
+        return {}
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    # Encode non-concept baseline
+    with torch.no_grad():
+        non_emb = model_encode_fn(*non_concept_examples).cpu().numpy()   # [N_neg, D]
+        query_emb = model_encode_fn(*query_examples).cpu().numpy()        # [N_q, D]
+
+    tcav_scores = {}
+    names = concept_names or list(concept_examples.keys())
+
+    for name, (cmod_a, cmod_b) in concept_examples.items():
+        with torch.no_grad():
+            concept_emb = model_encode_fn(cmod_a, cmod_b).cpu().numpy()  # [N_pos, D]
+
+        # Combine positives and negatives for CAV training
+        X = np.concatenate([concept_emb, non_emb], axis=0)
+        y = np.concatenate([
+            np.ones(len(concept_emb)),
+            np.zeros(len(non_emb)),
+        ])
+
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        query_scaled = scaler.transform(query_emb)
+
+        # Fit linear classifier — CAV direction is its weight vector
+        clf = LogisticRegression(max_iter=500, C=1.0)
+        clf.fit(X_scaled, y)
+        cav = clf.coef_[0]  # [D]
+
+        # TCAV score: fraction of query examples with positive directional projection
+        projections = query_scaled @ cav   # [N_q]
+        tcav_score = float((projections > 0).mean())
+        tcav_scores[name] = tcav_score
+
+        if verbose:
+            print(f"[Viz/XAI/TCAV] '{name}': TCAV score = {tcav_score:.4f}")
+
+    # ── Plot ─────────────────────────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(max(8, 2 * len(tcav_scores)), 5))
+    fig.patch.set_facecolor(_DARK_BG)
+    ax.set_facecolor(_PANEL_BG)
+
+    sorted_items = sorted(tcav_scores.items(), key=lambda x: x[1], reverse=True)
+    bars_x = [k for k, _ in sorted_items]
+    bars_h = [v for _, v in sorted_items]
+    colors = [_GREEN if h > 0.5 else _RED for h in bars_h]
+
+    ax.bar(bars_x, bars_h, color=colors, edgecolor=_DARK_BG, alpha=0.9)
+    ax.axhline(0.5, color=_WHITE, linestyle="--", linewidth=1.5, label="Random (0.5)")
+    ax.set_ylim(0.0, 1.0)
+    ax.set_ylabel("TCAV Score", color=_WHITE)
+    ax.set_xlabel("MatrAIx Persona Concept", color=_WHITE)
+    ax.set_title(title, color=_WHITE)
+    ax.tick_params(colors=_WHITE, axis="both")
+    for spine in ax.spines.values():
+        spine.set_edgecolor(_BORDER)
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="right", color=_WHITE)
+    ax.legend(facecolor=_BORDER, labelcolor=_WHITE)
+
+    plt.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "xai_tcav_concept_probing.png")
+    plt.savefig(path, dpi=250, bbox_inches="tight", facecolor=_DARK_BG)
+    plt.close()
+    if verbose:
+        print("[Viz/XAI] TCAV concept probing saved -> {}".format(path))
+
+    return tcav_scores
+
+
+# =============================================================================
+# 9. XAI — Vector-Target Attribution for MUMO Modalities
+# =============================================================================
+
+def plot_vector_target_attribution(
+    model_encode_fn,
+    mod_a_examples,
+    mod_b_examples,
+    target_col: np.ndarray,
+    modality_names: list | None = None,
+    title: str = "Vector-Target Attribution: MUMO Modality Contributions",
+    verbose: bool = True,
+) -> dict:
+    """
+    Vector-Target Attribution for MUMO-JEPA Multimodal Embeddings.
+
+    Measures how much each MUMO modality's sub-embedding contributes
+    to predicting the target outcome (e.g., simulated A/B metric lift).
+
+    Method
+    ------
+    For each modality M:
+    1. Encode the full population using model_encode_fn (both modalities → CLS).
+    2. Zero-out / ablate modality M by replacing its input with zero tensors.
+    3. Re-encode. The drop in alignment with the target direction is the
+       attribution score of modality M.
+
+    This is a model-agnostic ablation-based attribution technique suited for
+    the MUMO fusion architecture, where modalities interact through the
+    CrossModalFusionLayer before being pruned.
+
+    Parameters
+    ----------
+    model_encode_fn : Callable (mod_a, mod_b) -> [B, D] CLS embedding.
+    mod_a_examples  : torch.Tensor  [B, 1, H, W]  (Modality A: Psychographic).
+    mod_b_examples  : torch.Tensor  [B, C, T]     (Modality B: Demographic/AB).
+    target_col      : np.ndarray    [B]  Target outcome (e.g., AB_METRIC_COL values).
+    modality_names  : list[str]     Labels for each modality.
+    title           : str
+    verbose         : bool
+
+    Returns
+    -------
+    dict mapping modality_name -> attribution_score (0.0–1.0, higher = more important).
+    """
+    try:
+        import torch
+    except ImportError:
+        print("[Viz/XAI/Attribution] torch not installed — skipping.")
+        return {}
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    names = modality_names or ["Psychographic (Mod A)", "Demographic+Metric (Mod B)"]
+
+    target = torch.tensor(target_col, dtype=torch.float32)
+
+    # Full encoding
+    with torch.no_grad():
+        full_emb = model_encode_fn(mod_a_examples, mod_b_examples)   # [B, D]
+
+    # Compute correlation of full CLS with target direction
+    def _corr_with_target(emb: "torch.Tensor") -> float:
+        # Project embedding onto the direction most correlated with target
+        emb_np = emb.cpu().numpy()
+        tgt_np = target.cpu().numpy()
+        # Simple cosine alignment of first PC with target
+        from sklearn.linear_model import Ridge
+        from sklearn.preprocessing import StandardScaler
+        sc = StandardScaler()
+        X = sc.fit_transform(emb_np)
+        reg = Ridge(alpha=1.0).fit(X, tgt_np)
+        preds = reg.predict(X)
+        corr = float(np.corrcoef(preds, tgt_np)[0, 1])
+        return max(corr, 0.0)
+
+    full_score = _corr_with_target(full_emb)
+
+    attributions = {}
+    zero_a = torch.zeros_like(mod_a_examples)
+    zero_b = torch.zeros_like(mod_b_examples)
+
+    # Ablate Modality A (zero-out psychographic)
+    with torch.no_grad():
+        ablated_a_emb = model_encode_fn(zero_a, mod_b_examples)
+    score_no_a = _corr_with_target(ablated_a_emb)
+    attr_a = max(full_score - score_no_a, 0.0)
+
+    # Ablate Modality B (zero-out demographics)
+    with torch.no_grad():
+        ablated_b_emb = model_encode_fn(mod_a_examples, zero_b)
+    score_no_b = _corr_with_target(ablated_b_emb)
+    attr_b = max(full_score - score_no_b, 0.0)
+
+    total = attr_a + attr_b + 1e-9
+    attributions[names[0]] = attr_a / total
+    attributions[names[1]] = attr_b / total
+
+    if verbose:
+        for n_, v_ in attributions.items():
+            print(f"[Viz/XAI/Attribution] '{n_}': {v_:.4f}")
+
+    # ── Pie Chart ────────────────────────────────────────────────────────────
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig.patch.set_facecolor(_DARK_BG)
+
+    # Left: Pie chart
+    ax = axes[0]
+    ax.set_facecolor(_PANEL_BG)
+    pie_vals = list(attributions.values())
+    pie_labs = [f"{n_}\n{v_:.1%}" for n_, v_ in attributions.items()]
+    colors_pie = [_BLUE, _GREEN, _RED, "#c792ea", "#f78c6c"][:len(pie_vals)]
+    wedges, texts = ax.pie(
+        pie_vals, labels=pie_labs, colors=colors_pie[:len(pie_vals)],
+        startangle=140, textprops={"color": _WHITE, "fontsize": 10},
+        wedgeprops={"edgecolor": _DARK_BG, "linewidth": 2},
+    )
+    ax.set_title("Modality Attribution (Ablation)", color=_WHITE, fontsize=12)
+
+    # Right: Bar chart
+    ax2 = axes[1]
+    ax2.set_facecolor(_PANEL_BG)
+    x_pos = np.arange(len(attributions))
+    bar_vals = list(attributions.values())
+    ax2.bar(x_pos, bar_vals, color=colors_pie[:len(bar_vals)],
+            edgecolor=_DARK_BG, alpha=0.9, width=0.5)
+    ax2.set_xticks(x_pos)
+    ax2.set_xticklabels(list(attributions.keys()), color=_WHITE, rotation=15, ha="right")
+    ax2.set_ylabel("Normalised Attribution Score", color=_WHITE)
+    ax2.set_ylim(0.0, 1.0)
+    ax2.tick_params(colors=_WHITE)
+    for spine in ax2.spines.values():
+        spine.set_edgecolor(_BORDER)
+
+    plt.suptitle(title, fontsize=13, fontweight="bold", color=_WHITE, y=1.02)
+    plt.tight_layout()
+    path = os.path.join(OUTPUT_DIR, "xai_vector_target_attribution.png")
+    plt.savefig(path, dpi=250, bbox_inches="tight", facecolor=_DARK_BG)
+    plt.close()
+    if verbose:
+        print("[Viz/XAI] Vector-target attribution saved -> {}".format(path))
+
+    return attributions
