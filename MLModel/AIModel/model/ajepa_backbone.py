@@ -211,3 +211,20 @@ class AJEPA(nn.Module):
         out = self.encoder_norm(out)
         # Return CLS token
         return out[:, 0, :]
+
+    def encode_sequence(self, x):
+        """
+        For downstream tasks (like diarization): encode full input without masking.
+        Returns the full sequence of representations: [B, T, D]
+        (skipping the CLS token at index 0).
+        """
+        B = x.shape[0]
+        x_embed = self.patch_embed(x)
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x_embed = torch.cat((cls_tokens, x_embed), dim=1)
+        x_embed = x_embed + self.pos_embed
+        
+        out = self.context_encoder(x_embed)
+        out = self.encoder_norm(out)
+        # Return all patch tokens (skip CLS token at index 0)
+        return out[:, 1:, :]
