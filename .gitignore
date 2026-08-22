@@ -4,6 +4,7 @@
 *.txt
 !ignored_files_log.txt
 !**/requirements.txt
+!eval_sandbox/*.json
 *.xlsx
 *.parquet
 *.bin
@@ -24,7 +25,6 @@
 # Image files
 *.png
 *.jpg
-*.json 
 *.wav
 
 # Python
@@ -38,6 +38,10 @@ VAE/iVAE/
 VAE/Beta-VAE/
 datastructure/problem/
 espnet_artifact/
+
+# log
+*.eval
+*.log
 
 # IDEs
 .idea/

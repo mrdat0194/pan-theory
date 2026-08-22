@@ -1,0 +1,14 @@
+[
+  {
+    "input": "What is the capital of France?",
+    "target": "Paris"
+  },
+  {
+    "input": "Solve step-by-step: If a train travels at 60 mph for 2.5 hours, how far does it go?",
+    "target": "150 miles"
+  },
+  {
+    "input": "Explain the difference between a process and a thread in 2 concise sentences.",
+    "target": "A process is an independent execution program with its own dedicated memory space, whereas a thread is a lightweight execution unit within a process that shares memory with sibling threads."
+  }
+]
