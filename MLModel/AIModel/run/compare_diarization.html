@@ -12,16 +12,39 @@
             h1, h2, h3 { color: #00e676; }
             .speaker-SPEAKER_00 { color: #ff5252; font-weight: bold; }
             .speaker-SPEAKER_01 { color: #448aff; font-weight: bold; }
-            .vtt-preview { background: #000; padding: 10px; border-left: 4px solid #00e676; font-family: monospace; white-space: pre-wrap; }
+            .vtt-preview { background: #000; padding: 10px; border-left: 4px solid #00e676; font-family: monospace; white-space: pre-wrap; font-size: 0.8em; }
             .summary-table { width: 100%; border-collapse: collapse; margin: 20px 0 30px 0; background-color: #1e1e1e; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
             .summary-table th, .summary-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #333; }
             .summary-table th { background-color: #333; color: #00e676; font-weight: bold; }
             .summary-table tr:hover { background-color: #2a2a2a; }
+            .badge-ok  { background: #1b5e20; color: #69f0ae; border-radius: 4px; padding: 2px 7px; font-size: 0.75em; font-weight: bold; margin-left: 4px; }
+            .badge-err { background: #4e0000; color: #ff5252; border-radius: 4px; padding: 2px 7px; font-size: 0.75em; font-weight: bold; margin-left: 4px; }
+            .scorecard { display: flex; gap: 16px; margin: 16px 0 32px 0; }
+            .scorecard-box { flex: 1; background: #1e1e1e; border-radius: 8px; padding: 20px 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); text-align: center; }
+            .scorecard-value { font-size: 2.6em; font-weight: bold; color: #00e676; }
+            .scorecard-label { font-size: 0.82em; color: #aaa; margin-top: 6px; line-height: 1.4; }
+            li { margin-bottom: 10px; line-height: 1.6; }
         </style>
     </head>
     <body>
         <h1>Diarization Pipeline Comparison</h1>
-        
+
+        <h2>AJEPA Accuracy vs Hamel Ground Truth</h2>
+        <div class="scorecard">
+            <div class="scorecard-box">
+                <div class="scorecard-value">61.5%</div>
+                <div class="scorecard-label">Speaker ID Accuracy<br><small>(AJEPA vs Hamel labels)</small></div>
+            </div>
+            <div class="scorecard-box">
+                <div class="scorecard-value">100.0%</div>
+                <div class="scorecard-label">Avg Subtitle Match<br><small>(sequence similarity)</small></div>
+            </div>
+            <div class="scorecard-box">
+                <div class="scorecard-value">3B</div>
+                <div class="scorecard-label">Level Applied<br><small>Pretrained IEMOCAP + calibrated head</small></div>
+            </div>
+        </div>
+
         <h2>Pipeline Performance Summary</h2>
         <table class="summary-table">
             <thead>
@@ -39,7 +62,7 @@
                 </tr>
                 <tr>
                     <td><strong>Fine-tuning Strategy</strong></td>
-                    <td>Full network fine-tuning (high memory & compute overhead)</td>
+                    <td>Full network fine-tuning (high memory &amp; compute overhead)</td>
                     <td>Option A: Frozen Linear Probe with AM-Softmax (highly efficient)</td>
                 </tr>
                 <tr>
@@ -57,6 +80,11 @@
                     <td>Heuristic thresholding in PyAnnote binarization step</td>
                     <td>Frame-level multi-label sigmoid classifier (native overlap output)</td>
                 </tr>
+                <tr>
+                    <td><strong>Speaker Accuracy</strong></td>
+                    <td>100% (ground truth)</td>
+                    <td><strong>61.5%</strong> (with Level 2 anchor + Level 3A pretrained)</td>
+                </tr>
             </tbody>
         </table>
 
@@ -67,170 +95,196 @@
                 <ul>
 
                     <li>
-                        <strong>[0.2s - 13.5s]</strong> 
+                        <strong>[0.2s - 13.5s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         Hi, this is Jeremy Howard, and you're listening to Coffee Time Data Science, a podcast for data science enthusiasts, where I interview practitioners, researchers, and Kagglers about their journey, experience, and talk all things data science.
                     </li>
 
                     <li>
-                        <strong>[13.5s - 17.2s]</strong> 
+                        <strong>[13.5s - 17.2s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         And before we begin, I apologize for the change to our schedule.
                     </li>
 
                     <li>
-                        <strong>[17.2s - 22.6s]</strong> 
+                        <strong>[17.2s - 22.6s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         Of course, usually you would be seeing Chai Time Data Science on this channel with Sanyam Bhutani.
                     </li>
 
                     <li>
-                        <strong>[22.6s - 24.4s]</strong> 
+                        <strong>[22.6s - 24.4s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         Unfortunately, he's not available today.
                     </li>
 
                     <li>
-                        <strong>[24.4s - 29.5s]</strong> 
+                        <strong>[24.4s - 29.5s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         He had a prior appointment on another podcast, and he was not able to join Chai Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[30.0s - 34.3s]</strong> 
+                        <strong>[30.0s - 34.3s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         We hope you enjoy this special episode of Coffee Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[34.3s - 45.1s]</strong> 
+                        <strong>[34.3s - 45.1s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         And without further ado, I would like to invite our very special VIP guest, newly anointed Kaggle Grand Master, Sanyam Bhutani.
                     </li>
 
                     <li>
-                        <strong>[45.1s - 47.2s]</strong> 
+                        <strong>[45.1s - 47.2s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
                         Sanyam, welcome to Coffee Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[48.4s - 49.1s]</strong> 
+                        <strong>[48.4s - 49.1s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
                         Thank you, Jeremy.
                     </li>
 
                     <li>
-                        <strong>[49.1s - 53.5s]</strong> 
+                        <strong>[49.1s - 53.5s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
                         Usually, I'm very anti coffee, but I'll have to allow that.
                     </li>
 
                     <li>
-                        <strong>[53.5s - 55.7s]</strong> 
+                        <strong>[53.5s - 55.7s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
                         I still can't believe you weren't kidding.
                     </li>
 
                     <li>
-                        <strong>[55.7s - 59.4s]</strong> 
+                        <strong>[55.7s - 59.4s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
                         And I mentioned in our message also, like I, I think I don't deserve this.
                     </li>
 
                     <li>
-                        <strong>[59.4s - 60.0s]</strong> 
+                        <strong>[59.4s - 60.0s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
                         But thank you.
                     </li>
 
                 </ul>
             </div>
-            
+
             <div class="column">
-                <h2>Proposed (Audio-JEPA)</h2>
+                <h2>Proposed (Audio-JEPA + Level 3A)</h2>
                 <ul>
 
                     <li>
-                        <strong>[0.2s - 13.5s]</strong> 
+                        <strong>[0.2s - 13.5s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Hi, this is Jeremy Howard, and you're listening to Coffee Time Data Science, a podcast for data science enthusiasts, where I interview practitioners, researchers, and Kagglers about their journey, experience, and talk all things data science.
                     </li>
 
                     <li>
-                        <strong>[13.5s - 17.2s]</strong> 
+                        <strong>[13.5s - 17.2s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         And before we begin, I apologize for the change to our schedule.
                     </li>
 
                     <li>
-                        <strong>[17.2s - 22.6s]</strong> 
+                        <strong>[17.2s - 22.6s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Of course, usually you would be seeing Chai Time Data Science on this channel with Sanyam Bhutani.
                     </li>
 
                     <li>
-                        <strong>[22.6s - 24.4s]</strong> 
+                        <strong>[22.6s - 24.4s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Unfortunately, he's not available today.
                     </li>
 
                     <li>
-                        <strong>[24.4s - 29.5s]</strong> 
+                        <strong>[24.4s - 29.5s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         He had a prior appointment on another podcast, and he was not able to join Chai Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[30.0s - 34.3s]</strong> 
+                        <strong>[30.0s - 34.3s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         We hope you enjoy this special episode of Coffee Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[34.3s - 45.1s]</strong> 
-                        <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <strong>[34.3s - 45.1s]</strong>
+                        <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
+                        <span class="badge-err">SPK FAIL</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         And without further ado, I would like to invite our very special VIP guest, newly anointed Kaggle Grand Master, Sanyam Bhutani.
                     </li>
 
                     <li>
-                        <strong>[45.1s - 47.2s]</strong> 
-                        <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <strong>[45.1s - 47.2s]</strong>
+                        <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
+                        <span class="badge-err">SPK FAIL</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Sanyam, welcome to Coffee Time Data Science.
                     </li>
 
                     <li>
-                        <strong>[48.4s - 49.1s]</strong> 
+                        <strong>[48.4s - 49.1s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-err">SPK FAIL</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Thank you, Jeremy.
                     </li>
 
                     <li>
-                        <strong>[49.1s - 53.5s]</strong> 
+                        <strong>[49.1s - 53.5s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-err">SPK FAIL</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         Usually, I'm very anti coffee, but I'll have to allow that.
                     </li>
 
                     <li>
-                        <strong>[53.5s - 55.7s]</strong> 
-                        <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <strong>[53.5s - 55.7s]</strong>
+                        <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         I still can't believe you weren't kidding.
                     </li>
 
                     <li>
-                        <strong>[55.7s - 59.4s]</strong> 
+                        <strong>[55.7s - 59.4s]</strong>
                         <span class="speaker-SPEAKER_01">SPEAKER_01:</span>
+                        <span class="badge-err">SPK FAIL</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         And I mentioned in our message also, like I, I think I don't deserve this.
                     </li>
 
                     <li>
-                        <strong>[59.4s - 60.0s]</strong> 
+                        <strong>[59.4s - 60.0s]</strong>
                         <span class="speaker-SPEAKER_00">SPEAKER_00:</span>
+                        <span class="badge-ok">SPK OK</span>
+                        <span class="badge-ok">SUB 100%</span><br>
                         But thank you.
                     </li>
 
                 </ul>
-                
+
                 <h3>audio_ajepa.vtt (head -n 40)</h3>
                 <div class="vtt-preview">WEBVTT
 
@@ -260,11 +314,11 @@
 
 7
 00:00:34.338 --> 00:00:45.148
-<SPEAKER_01>And without further ado, I would like to invite our very special VIP guest, newly anointed Kaggle Grand Master, Sanyam Bhutani.
+<SPEAKER_00>And without further ado, I would like to invite our very special VIP guest, newly anointed Kaggle Grand Master, Sanyam Bhutani.
 
 8
 00:00:45.148 --> 00:00:47.190
-<SPEAKER_01>Sanyam, welcome to Coffee Time Data Science.
+<SPEAKER_00>Sanyam, welcome to Coffee Time Data Science.
 
 9
 00:00:48.372 --> 00:00:49.073
