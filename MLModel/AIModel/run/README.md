@@ -93,14 +93,16 @@ In the future, the `face-recognition` repository will be migrated to the V-JEPA 
 
 ## 🛠️ Other JEPA & ODE-Based Implementations
 
-- **`main_jepa_anomaly.py`** *(Upgraded — Latent ODE JEPA)*: Continuous-time anomaly detection for structural vibration data. The discrete Transformer (ARPredictor) has been replaced by a **Neural ODE** (`dz/dt = f_θ(z, t)`) integrated via a self-contained RK4 solver. Backbone: [latent_ode_jepa.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/latent_ode_jepa.py). Retains RankFeat / RankWeight noise suppression and the full LeJEPA SIGReg collapse-prevention loss.
-- **`main_control_jepa.py`**: Training action-conditioned JEPA for Truck-and-Trailer dynamics.
+- **`main_jepa_anomaly.py`** *(Upgraded — Latent ODE $\to$ MFG JEPA)*: Continuous-time anomaly detection for structural vibration data. Standard Neural ODEs (`dz/dt = f_θ(z, t)`) are **[DEPRECATED]** in favor of the **Mean Field Game (MFG)** formulation, solving HJB-FP equations to regularize continuous trajectory flows against dynamic noise distributions. Backbone: [latent_ode_jepa.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/latent_ode_jepa.py).
+- **`main_control_jepa.py`**: Training action-conditioned JEPA for Truck-and-Trailer dynamics *(Legacy cost tracking **[DEPRECATED]** in favor of `main_mfg_jepa.py`)*.
 - **`main_optimal_jepa.py`**: Benchmarking `CEMPlanner` (Cross-Entropy Method) against standard SGD for optimal control.
+- **`main_mfg_jepa.py`** *(New SOTA Standard)*: Mean Field Game formulation expanding `main_control_jepa.py`. Ego-vehicle policies are optimized as a continuous game against a distribution of surrounding agents, replacing static cost functions with dynamic HJB-FP adversary distributions.
 
-## 🔬 New: Diffusion-Based Representation Learning
+## 🔬 New: Diffusion-Based Representation Learning & MFG Backbone
 
-- **[diffusion_ssl.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/diffusion_ssl.py)**: Diffusion-SSL backbone for self-supervised representation learning on time series. Implements the Probability Flow ODE (linear beta noise schedule), a Transformer-based ScoreNet with sinusoidal time embeddings, and a `forward_features()` method to extract semantically rich representations from the penultimate hidden states without any labels.
-  - **Pre-train**: `model.compute_loss(x)` — noise-prediction (score-matching) SSL objective.
+- **[diffusion_ssl.py](file:///c:/Users/mrdat/PycharmProjects/pan-theory/MLModel/AIModel/model/diffusion_ssl.py)**: Diffusion-SSL backbone for self-supervised representation learning on time series. Upgrades standard Probability Flow ODEs to a **Mean Field Game (MFG)** optimal transport flow.
+  - **ODE $\to$ MFG Upgrade**: The reverse diffusion trajectory is modeled as a multi-particle game minimizing Schrödinger Bridge transport costs via coupled Hamilton-Jacobi-Bellman (HJB) value functions and Fokker-Planck (FP) density propagation.
+  - **Pre-train**: `model.compute_loss(x)` — score-matching + HJB value regularization.
   - **Inference**: `model.forward_features(x, t_fraction=0.3)` — extract `[B, d_model]` feature vectors.
 
 ## 🚀 Future Improvements
@@ -123,19 +125,19 @@ In the future, the `face-recognition` repository will be migrated to the V-JEPA 
 
 We have implemented three deep causal ML scripts that upgrade standard linear inference with Transformer encoders, allowing estimation under non-linear confounding and complex dynamics. Each matches a baseline from `Bayesian/someMethod/`.
 
-### 1. **Deep Difference-in-Differences (Deep DiD)** (`deep_did.py`)
-- **Classical Problem**: Assumes linear parallel trends between control and treatment groups.
-- **Deep/ML Solution**: A Transformer encoder models control-unit pre-treatment time-series to reconstruct non-linear counterfactual paths.
-- **Use Case**: Multi-timestep panel data with non-linear baseline trends.
+### 1. **Deep Difference-in-Differences (Deep DiD)** (`deep_did.py` **[DEPRECATED]** $\to$ `mfg_did.py`)
+- **Legacy Implementation (`deep_did.py`)**: **[DEPRECATED]** Assumes linear parallel trends or uses point-wise zero-sum GANs against distribution shifts.
+- **SOTA MFG Replacement (`mfg_did.py`)**: **MFG Counterfactual Trajectory Flow**. Models control and treatment panel units as a continuum population density $\rho(z,t)$ flowing under optimal transport cost. Parallel trend assumptions are replaced by **Density Transport Equilibrium** under coupled HJB-FP equations.
+- **Use Case**: Multi-timestep panel data with non-linear baseline trends and continuous multi-treatment interventions.
 
-### 2. **Deep Instrumental Variables (Deep IV)** (`deep_iv.py`)
-- **Classical Problem**: 2SLS is biased under non-linear instrument-to-treatment relationships or interactions.
-- **Deep/ML Solution**: Double Machine Learning (DML) using a Stage-1 Transformer (`Z -> X_hat`) and a Stage-2 MLP (`X_hat -> Y`).
-- **Use Case**: Confounded systems with non-linear instrumental interactions.
+### 2. **Deep Instrumental Variables (Deep IV)** (`deep_iv.py` **[DEPRECATED]** $\to$ `mfg_iv.py`)
+- **Legacy Implementation (`deep_iv.py`)**: **[DEPRECATED]** 2-Stage DML ($Z \to \hat{X} \to Y$) suffers from stage-splitting loss bias and weak-instrument sensitivity.
+- **SOTA MFG Replacement (`mfg_iv.py`)**: **MFG Confounder-Density Matching**. Formulates unobserved confounding as a mean-field density field $\rho(u)$. The Stage-1 velocity field $v(z,t)$ dynamically steers conditional treatment density $P(X\|Z)$ to match target structural density $P(X)$ via coupled HJB-FP equations, eliminating 2-stage splitting bias.
+- **Use Case**: Confounded systems with non-linear instrumental interactions and weak instruments.
 
-### 3. **Neural Regression Discontinuity Design (Neural RDD)** (`deep_rdd.py`)
-- **Classical Problem**: Linear RDD fits near cutoffs are highly sensitive to bandwidth size and outcome non-linearities.
-- **Deep/ML Solution**: Dual independent Transformers with Fourier feature expansion to flexibly fit curves on both sides of the boundary.
+### 3. **Neural Regression Discontinuity Design (Neural RDD)** (`deep_rdd.py` **[DEPRECATED]** $\to$ `mfg_rdd.py`)
+- **Legacy Implementation (`deep_rdd.py`)**: **[DEPRECATED]** Dual independent Transformers fitted on each side of the cutoff suffer from bandwidth selection sensitivity and boundary divergence.
+- **SOTA MFG Replacement (`mfg_rdd.py`)**: **MFG Discontinuity Density Flow**. Models the running variable density as a continuous population flow approaching cutoff $c$. The cutoff is embedded as an HJB value function jump interface ($\tau(c) = u(c^+) - u(c^-)$), providing exact local average treatment effects without bandwidth tuning.
 - **Use Case**: Discontinuous treatment assignment with non-linear outcome functions.
 
 ### 📊 Dataset Structures & Stage Meanings

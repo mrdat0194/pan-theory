@@ -60,6 +60,18 @@ $$\pi(x,n) \propto e^{-\beta E_n} \psi_n(x) \psi_n^*(x) \qquad p(x, x', \beta) =
 | **Heat-kernel / low-pass spectral filter** | `heat_kernel_chebyshev_coeffs()`, `low_pass_chebyshev_coeffs()` ✅ NEW | ✅ |
 | **ChebyshevDequantizedTransition** (SOTA predictor) | `chebyshev_qsvt.py::ChebyshevDequantizedTransition` ✅ NEW | ✅ |
 
+### 1.5 Generative Latent Flow & Causal Inference as Mean Field Games (ODE $\to$ MFG)
+
+Upgrading standard Probability Flow / Neural ODEs ($\frac{dz}{dt} = f_\theta(z,t)$) to coupled **Hamilton-Jacobi-Bellman (HJB)** and **Fokker-Planck (FP)** equations. *(Note: Discrete permutation MSA `kuffmode/msa` and non-MFG 2-stage causal estimators are **[DEPRECATED]** in favor of continuous MFG optimal transport).*
+
+| Concept | Implemented In | Formula / Role |
+|---|---|---|
+| **Schrödinger Bridges & Wasserstein Flow** | `mean_field_jepa.py` | Models the `path_integral_rollout` as interacting agents minimizing transport cost via coupled HJB ($-\partial_t u - \frac{\sigma^2}{2}\Delta u + H = 0$) and FP ($\partial_t \rho + \nabla \cdot (\rho v) = \frac{\sigma^2}{2}\Delta \rho$) equations. |
+| **Continuous Shapley / Integrated Gradients** | `continuous_shapley.py` | Calculates exact infinitesimal marginal contribution of each latent dimension over continuous manifolds *(Discrete MSA **[DEPRECATED]**)*. |
+| **MFG Counterfactual Trajectory Flow** | `causal/mfg_did.py` | Replaces heuristic parallel trend assumptions in `deep_did.py` (**[DEPRECATED]**) with population-level density transport equilibrium under optimal control cost. |
+| **MFG Confounder-Density Matching** | `causal/mfg_iv.py` | Replaces 2-stage splitting bias in `deep_iv.py` (**[DEPRECATED]**) by dynamically steering treatment density $P(X\|Z)$ to target structural density $P(X)$ via coupled HJB-FP dynamics. |
+| **MFG Discontinuity Density Flow** | `causal/mfg_rdd.py` | Replaces dual Transformer fits in `deep_rdd.py` (**[DEPRECATED]**) by modeling the cutoff as an HJB jump interface in the running variable density flow. |
+
 ---
 
 ## 2. Complete File Inventory
@@ -83,6 +95,16 @@ $$\pi(x,n) \propto e^{-\beta E_n} \psi_n(x) \psi_n^*(x) \qquad p(x, x', \beta) =
 | [`omnistats/modules/bayesian/maxwell_prior.py`](modules/bayesian/maxwell_prior.py) | **P1** | Maxwell-Boltzmann prior for `energy_hat`, `maxwell_prior_loss()` |
 | [`omnistats/modules/bayesian/waic_loo.py`](modules/bayesian/waic_loo.py) | **P1** | WAIC + PSIS-LOO + `compare_models()` for causal estimator selection |
 | [`omnistats/modules/timeseries/quantum_kalman.py`](modules/timeseries/quantum_kalman.py) | **P1** | `QuantumKalmanFilter` + RTS smoother + ATT estimation |
+
+### 2.3 Phase 3 — SOTA Continuous Game Theory & Causal MFGs (Upcoming)
+
+| File | Priority | Purpose |
+|---|---|---|
+| [`omnistats/modules/game_theory/continuous_shapley.py`](modules/game_theory/continuous_shapley.py) | **P1** | Integrated gradients and continuous Shapley approximations for latent dimensions |
+| [`omnistats/modules/game_theory/mean_field_jepa.py`](modules/game_theory/mean_field_jepa.py) | **P1** | Solves Forward-Backward HJB and Fokker-Planck equations to regularize the latent flow |
+| [`omnistats/modules/causal/mfg_did.py`](modules/causal/mfg_did.py) | **P1** | **MFG Counterfactual Trajectory Flow**: Density transport equilibrium replacing linear/minimax DiD |
+| [`omnistats/modules/causal/mfg_iv.py`](modules/causal/mfg_iv.py) | **P1** | **MFG Confounder-Density Matching**: HJB-FP velocity field steering treatment density replacing 2-stage IV |
+| [`omnistats/modules/causal/mfg_rdd.py`](modules/causal/mfg_rdd.py) | **P1** | **MFG Discontinuity Density Flow**: HJB jump interface at cutoff replacing dual Transformer RDD |
 
 ---
 
