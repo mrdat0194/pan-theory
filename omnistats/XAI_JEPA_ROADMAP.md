@@ -308,3 +308,101 @@ Stirling's approximation is the saddle-point approximation of $\log Z(\beta)$.
 | Williams et al. (2017) | Information Theoretic MPC / MPPI — baseline for QuantumMPPIPlanner |
 | Feynman & Hibbs (1965) | Path integral formalism, partition function |
 | Marchenko & Pastur (1967) | Random Matrix Theory spectral law (P2) |
+
+---
+
+## 8. Phase VI — Open Research Directions
+
+> **Status:** Not yet implemented. These are open questions and design paths that naturally emerge from the completed Phase V autonomous loop.
+
+### 8.1 Real-Traffic Closing the Loop (Human-in-the-Loop Safety Gate)
+
+Phase V simulates personas via MatrAIx. The next frontier is routing the winning feature candidate to **real users** and feeding the live ATT back as a training signal.
+
+**Open design questions:**
+- **Safety gate:** How do we prevent the World Model from proposing harmful experiments? Propose a `SafetyOracle` module that gates actions against a hard constraint: `ATT_lower_CI > 0` and `Bayesian Expected Loss < epsilon`.
+- **Conformal Prediction wrapper:** Wrap the APADecoder's `att_hat` with a conformal prediction interval calibrated on historical OmniStats results so the World Model has uncertainty-aware reward signals.
+- **Gradual rollout:** Integrate with feature flagging systems (LaunchDarkly, Unleash) to progressively ramp the winning feature from 1% → 10% → 50% with automated checkpoints at each stage.
+
+```
+[Phase VI Ideal Loop]
+  Sim (MatrAIx)  →  A/B Test  →  Best  →  Train JEPA  →  XAI
+       ↑                                                    │
+       └──── Real Traffic ATT (human-approved gate) ────────┘
+```
+
+---
+
+### 8.2 Multi-Objective ATT Pareto Frontier
+
+The current cost function is a scalar weighted sum:
+
+$$Cost = -w_{att} \cdot ATT + w_{risk} \cdot Risk + w_{disp} \cdot Disparity$$
+
+**Open direction:** Replace with a **Pareto front optimizer** (NSGA-II or MOEA/D) that maintains a population of Pareto-optimal experiment designs — allowing decision-makers to pick their own trade-off point between ATT lift, risk tolerance, and fairness constraints at deployment time.
+
+**Files to create:**
+- `omnistats/modules/optimization/pareto_cem.py` — Multi-objective CEM with Pareto front tracking
+- `omnistats/modules/optimization/fairness_constraint.py` — Subgroup disparity constraint (DR-OLS ATT parity)
+
+---
+
+### 8.3 Causal MFG Closing the Loop (Density-Level Feedback)
+
+Phases I–V operate on **sample-level** ATT estimates. Mean Field Game (MFG) extensions in Phase 2.3 (`mfg_did.py`, `mfg_iv.py`, `mfg_rdd.py`) open a path to **density-level** causal inference:
+
+**Open direction:** After each autonomous iteration, fit a `MFGCounterfactualFlow` on the winning population's density $\rho(x, t)$ and use it as a regularizer for the JEPA predictor's transition kernel — enforcing that the World Model's imagined counterfactuals are consistent with the observed equilibrium density.
+
+**Key equation to implement:**
+$$\min_{\theta} \underbrace{\mathcal{L}_{JEPA}}_{\text{latent prediction}} + \lambda \underbrace{W_2(\hat{\rho}_{t+1}, \rho^*_{t+1})}_{\text{Wasserstein density consistency}}$$
+
+---
+
+### 8.4 Adaptive Concept Bank (Online TCAV)
+
+The current TCAV implementation uses a **fixed** concept bank defined by demographic quantiles (High Income, Risk Averse, etc.). After each autonomous loop iteration, the model's latent geometry shifts as JEPA is fine-tuned.
+
+**Open direction:** Build an **online concept bank** that automatically re-discovers the top-k most predictive directions in latent space after each JEPA fine-tuning step using:
+1. `PCA(n_components=k)` on the delta-embeddings between winning and losing feature populations.
+2. Cluster the PC directions into semantically coherent concepts via `bayesian_inverse_score()` against a lexicon of known demographic features.
+3. Replace the TCAV fixed concept set with these discovered directions for the next iteration.
+
+**File to create:** `omnistats/modules/simulation/adaptive_concept_bank.py`
+
+---
+
+### 8.5 Experiment Graph Memory (Episodic Causal Replay)
+
+Each autonomous loop iteration produces a `leaderboard_iterN.csv` and `autonomous_loop_log.csv`, but these are treated as flat logs. A richer episodic memory would enable:
+
+**Open direction:** Build a **Causal Experiment Knowledge Graph** where:
+- Each **node** = an experiment (feature candidate) with attributes: ATT, SE, personas tested, XAI concept scores.
+- Each **edge** = "parent experiment that proposed this one" (provenance chain).
+- New feature candidates are proposed by a **graph neural network** that encodes the full experiment history and predicts which unexplored feature directions maximize expected ATT gain.
+
+**Connects to:** `datastructure/story_teller.py` (existing graph narration engine) and `MLModel/AIModel/run/mst_msa_interaction.py` (Kruskal MST + Multi-Perturbation Shapley Analysis for identifying the most structurally important experiment nodes in the history graph).
+
+---
+
+### 8.6 Foundation Model Integration (LLM-Driven Hypothesis Generation)
+
+The current `_build_feature_candidates()` generates hypotheses by perturbing a numeric ATE parameter. A more powerful direction:
+
+**Open direction:** Use an **LLM as a hypothesis generator** — prompt it with the current XAI TCAV concept scores and APA report summary, and ask it to propose natural-language feature hypotheses. A structured output parser maps these to numeric experiment parameters passed to `run_multi_feature_sim()`.
+
+**Architecture sketch:**
+```
+TCAV scores + APA Table 8 summary
+        │
+        ▼  (prompt)
+   LLM (GPT-4o / Gemini)
+        │
+        ▼  (structured JSON output)
+   Feature Candidates = [{name, ate, target_segment, description}, ...]
+        │
+        ▼
+   MatrAIx Simulation → A/B Test → ...
+```
+
+This closes the loop between **human-readable explanations** (XAI + APA) and **machine-generated experimental hypotheses**, creating a true human-AI collaborative experimentation agent.
+

@@ -39,6 +39,12 @@ A concise **100% Python** 4-stage experimental statistics and world model planni
 | **Stage 2 — Execution** | *(Outside OmniStats)* | Run live A/B test / field trial | Raw experiment dataset |
 | **Stage 3 — Evaluation** | `main.py` | Run diagnostics, A/B tests, CUPED & Causal Suite | `apa_report.docx` (Tables 1–8) |
 | **Stage 4 — Planning** | `plan_experiment.py` | JEPA World Model plans next experiment | `jepa_experiment_plan.csv` |
+| **★ Stage 5 — Autonomous Loop** | **`run_autonomous_loop.py`** | **Sim → A/B → Best → Train JEPA → XAI → Loop** | `leaderboard_iterN.csv`, `autonomous_loop_log.csv`, XAI plots |
+
+> [!IMPORTANT]
+> **Orchestrator vs. Standalone Utility:**
+> - **`run_autonomous_loop.py`** is the **Master Entry Point** for the end-to-end autonomous cycle (MatrAIx simulation $\to$ OmniStats A/B test $\to$ Pick Best $\to$ MUMO-JEPA fine-tuning $\to$ XAI explanation $\to$ Iterative loop).
+> - **`main.py`** is retained as a **Standalone Utility Script** for running manual, single-pass evaluations (`python main.py --mode eval`) directly on a static offline `.csv` dataset (generating `apa_report.docx`) without running simulation or deep learning loops.
 
 > [!NOTE]
 > **Terminology Clarification:** 
@@ -51,30 +57,40 @@ A concise **100% Python** 4-stage experimental statistics and world model planni
 
 ```
 omnistats/
-├── config.py               ← Edit settings and parameters
-├── data_manager.py         ← Centralised data loading & preparation
-├── experiment_design.py    ← Stage 1: Power analysis + CAR randomization schedule
-├── main.py                 ← Stage 3: Post-experiment evaluation & APA report
-├── plan_experiment.py      ← Stage 4: JEPA World Model experiment planner
+├── config.py                    ← Edit settings and parameters
+├── data_manager.py              ← Centralised data loading & preparation
+├── experiment_design.py         ← Stage 1: Power analysis + CAR randomization schedule
+├── run_autonomous_loop.py       ← ★ PRIMARY ENTRY POINT: Full autonomous loop orchestrator
+├── main.py                      ← Legacy: standalone Stage 3 post-experiment evaluation
+├── plan_experiment.py           ← Stage 4: JEPA World Model experiment planner (called by loop)
 ├── requirements.txt
 ├── modules/
-│   ├── diagnostics.py      ← Pre-flight diagnostics (MMD, SVD, Rank, SRM)
-│   ├── lpa.py              ← Gaussian Mixture Model (LPA) fitting
-│   ├── anova.py            ← Welch ANOVA + Games-Howell post-hoc
-│   ├── chi_square.py       ← Chi-square test + Cramér's V
-│   ├── ab_testing.py       ← Frequentist z-test & Welch t-test
-│   ├── bayesian/           ← Bayesian Sequential A/B (PyMC NUTS, Expected Loss)
-│   ├── cuped.py            ← CUPED variance reduction (CatBoost monotonic)
-│   ├── causal/             ← Robust Causal Suite (DiD, IV, RDD, SCM, MC, HTE)
-│   ├── timeseries/         ← Time-series causal (CausalImpact BSTS)
-│   ├── jepa_bridge.py      ← OmniStats ↔ JEPA state encoder & decoder
-│   ├── visualisation.py    ← Visualization plots
-│   └── apa_report.py       ← APA 7th edition Word report generator
-└── outputs/                ← Saved CSVs, PNGs, and .docx report
-```
-    ├── ...                 ← (existing outputs from Phases I–III)
-    ├── jepa_experiment_plan.csv  ← Phase IV: optimal continuous experiment plan
-    └── jepa_planning_losses.csv  ← Phase IV: CEM/MPPI cost convergence curve
+│   ├── diagnostics.py           ← Pre-flight diagnostics (MMD, SVD, Rank, SRM)
+│   ├── lpa.py                   ← Gaussian Mixture Model (LPA) fitting
+│   ├── anova.py                 ← Welch ANOVA + Games-Howell post-hoc
+│   ├── chi_square.py            ← Chi-square test + Cramér's V
+│   ├── ab_testing.py            ← Frequentist z-test & Welch t-test
+│   ├── bayesian/                ← Bayesian Sequential A/B (PyMC NUTS, Expected Loss)
+│   ├── cuped.py                 ← CUPED variance reduction (CatBoost monotonic)
+│   ├── causal/                  ← Robust Causal Suite (DiD, IV, RDD, SCM, MC, HTE)
+│   ├── timeseries/              ← Time-series causal (CausalImpact BSTS)
+│   ├── jepa_bridge.py           ← OmniStats ↔ JEPA state encoder & decoder
+│   ├── visualisation.py         ← Visualization plots
+│   ├── xai_visualisation.py     ← XAI: TCAV Concept Probing + Vector-Target Attribution
+│   ├── information_theory.py    ← Shannon Entropy, JKL, Bayesian Inverse Score, Boltzmann Energy
+│   ├── apa_report.py            ← APA 7th edition Word report generator
+│   └── simulation/              ← Phase V: Autonomous loop support modules
+│       ├── matraix_loader.py    ←   MatrAIx persona population loader
+│       ├── matraix_bridge.py    ←   Multi-feature simulation bridge (Chạy Sim)
+│       ├── mumo_ab_tester.py    ←   OmniStats A/B runner + Best Feature selector
+│       └── mumo_jepa_trainer.py ←   MUMO-JEPA fine-tuner on best simulated data
+└── outputs/                     ← Saved CSVs, PNGs, and .docx report
+    ├── leaderboard_iterN.csv    ← Per-iteration feature ranking by ATT
+    ├── autonomous_loop_log.csv  ← Full multi-iteration run log
+    ├── jepa_experiment_plan.csv ← Stage 4: optimal continuous experiment plan
+    ├── jepa_planning_losses.csv ← Stage 4: CEM/MPPI cost convergence curve
+    ├── xai_tcav_concept_probing.png     ← TCAV concept sensitivity scores
+    └── xai_vector_target_attribution.png ← Modality attribution to target metric
 ```
 
 ---
@@ -123,42 +139,88 @@ DESIGN_MDE_RELATIVE  = 0.05          # 5% Minimum Detectable Effect
 DESIGN_STRATIFY_COLS = ["sex", "region"]  # covariates to balance via CAR
 ```
 
-### 3. Run Pipeline via `main.py`
+### 3. Run the Autonomous Loop (Primary Entry Point)
 
-Run any stage or the entire pipeline using `main.py`:
+The complete **Sim → A/B Test → Best → Train JEPA → Explain AI → Loop** cycle:
+
+```powershell
+# 1 iteration — 3 feature candidates, 5,000 MatrAIx personas
+python run_autonomous_loop.py
+
+# 3 full autonomous cycles (escalating ATT search)
+python run_autonomous_loop.py --iterations 3 --n-personas 5000 --features 5
+
+# Skip JEPA fine-tuning (run Sim + A/B Test + XAI only)
+python run_autonomous_loop.py --no-train-jepa
+
+# GPU-accelerated JEPA training
+python run_autonomous_loop.py --iterations 5 --device cuda --epochs 10
+```
+
+### 3b. Run Individual Stages via `main.py` (Legacy / Manual)
 
 ```powershell
 # Stage 1 — Pre-Experiment Design (Power analysis & CAR randomization)
 python main.py --mode design
 
-# Stage 3 — Post-Experiment Evaluation (Diagnostics, LPA, A/B, CUPED, Causal Suite, APA Report) [DEFAULT]
+# Stage 3 — Post-Experiment Evaluation (Diagnostics, LPA, A/B, CUPED, Causal Suite, APA Report)
 python main.py --mode eval
 
 # Stage 4 — World Model Planning (JEPA experiment design search)
 python main.py --mode plan --planner cem --epochs 50
-
-# Run all stages end-to-end (Stage 1 -> Stage 3 -> Stage 4)
-python main.py --mode all
 ```
 
 ---
 
-## 4-Stage Pipeline Workflow
+## Autonomous Experimentation Loop (Primary Workflow)
+
+The complete closed-loop pipeline is orchestrated by `run_autonomous_loop.py`.
+Each iteration runs all 6 stages automatically and feeds results into the next cycle:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   AUTONOMOUS LOOP  (run_autonomous_loop.py)              │
+│                                                                          │
+│  [1] Chạy Sim ──── MatrAIx personas + Mock Outcome Function             │
+│        │            modules/simulation/matraix_bridge.py                 │
+│        │            → simulated_experiment_data  (N personas × K features)│
+│        ▼                                                                 │
+│  [2] Feature A/B ─ OmniStats CUPED + Causal Inference per feature       │
+│        │            modules/simulation/mumo_ab_tester.py                  │
+│        │            → ATT estimates, p-values, Expected Loss per feature  │
+│        ▼                                                                 │
+│  [3] Test ra Best ─ Rank leaderboard by ATT, extract winning dataset    │
+│        │            → leaderboard_iterN.csv                              │
+│        ▼                                                                 │
+│  [4] Train JEPA ── Fine-tune MUMO-JEPA on best feature's data           │
+│        │            modules/simulation/mumo_jepa_trainer.py              │
+│        │            → JEPA latent space updated toward winning dynamics  │
+│        ▼                                                                 │
+│  [5] Explain AI ── TCAV Concept Probing + Vector-Target Attribution     │
+│        │            modules/xai_visualisation.py                         │
+│        │            → xai_tcav_concept_probing.png                       │
+│        │            → xai_vector_target_attribution.png                  │
+│        ▼                                                                 │
+│  [6] Loop ──────── Propose next features from explained model           │
+│                     ATT search space escalates each iteration            │
+└──────────────────────────────────────────────────────────────────────────┘
+        │  autonomous_loop_log.csv  (all iterations summary)
+        └─ Feed back → World Model improves → Next Iteration N+1
+```
+
+### Legacy Manual Stages (accessed via `main.py`)
 
 ```
 Stage 1: Pre-Experiment Design  (experiment_design.py / main.py --mode design)
-  └─ outputs randomization_schedule.csv → Share with Engineering
-       │
-       ▼
-Stage 2: Execution (Outside OmniStats / Field Trial by Engineering)
-  └─ Engineering routes traffic and collects experimental dataset
-       │
-       ▼
-Stage 3: Post-Experiment Evaluation (main.py / main.py --mode eval)
+  └─ Power analysis + CAR randomization → randomization_schedule.csv
+
+Stage 2: Execution (Outside OmniStats / Engineering)
+  └─ Routes real traffic and collects experimental dataset
+
+Stage 3: Post-Experiment Evaluation (main.py --mode eval)
   └─ Diagnostics → LPA → A/B Testing → CUPED → Causal Suite → apa_report.docx
-       │
-       ▼
-Stage 4: World Model Planning (plan_experiment.py / main.py --mode plan)
+
+Stage 4: World Model Planning (main.py --mode plan)
   └─ JEPA Bridge → APADecoder → CEM/MPPI Planner → jepa_experiment_plan.csv
 ```
 
@@ -425,7 +487,7 @@ experiment design space**:
 
 ### Phased Roadmap
 
-All implementation phases (Phases I through IV) are now fully complete, integrated, and verified. Only Phase V (Autonomous Experimentation Loop) remains planned for future development.
+All implementation phases (Phases I through V) are now **fully complete, integrated, and verified**.
 
 ```
 Phase I  ✅  DONE — OmniStats generates interpretable causal ground truth
@@ -449,10 +511,17 @@ Phase IV ✅  DONE — Energy-Based Experiment Planning
   │           Cost   = -w_att·ATT_hat + w_risk·Risk_hat + w_disp·Disparity_hat
   │         Outputs: jepa_experiment_plan.csv, jepa_planning_losses.csv
   │
-Phase V  🔲  Autonomous Experimentation Loop (Future)
-            World Model proposes → OmniStats validates → human approves
-            → real experiment runs → results feed back → World Model improves.
-            Human remains in the loop for safety and regulatory compliance.
+Phase V  ✅  DONE — Autonomous Experimentation Loop
+            run_autonomous_loop.py orchestrates the full closed-loop cycle:
+              [1] Chạy Sim   → MatrAIx personas × K feature candidates
+              [2] A/B Test   → mumo_ab_tester.py: CUPED + Causal ATT per feature
+              [3] Best       → rank by ATT, extract winning dataset
+              [4] Train JEPA → mumo_jepa_trainer.py: MUMO-JEPA fine-tuning
+              [5] Explain AI → TCAV Concept Probing + Vector-Target Attribution
+              [6] Loop       → escalate ATT search space for iteration N+1
+            Outputs: leaderboard_iterN.csv, autonomous_loop_log.csv,
+                     xai_tcav_concept_probing.png, xai_vector_target_attribution.png
+            See XAI_JEPA_ROADMAP.md for Phase VI open research directions.
 ```
 
 ### Reinforcement Learning Connection (OmniStats as Critic Network)
@@ -539,11 +608,17 @@ If you want to quickly understand what the tables are telling you in plain Engli
 | `scm_weights.csv` | 4 | SCM donor unit weights |
 | `scm_gaps.csv` | 4 | SCM gap series (treated − synthetic) |
 | `mc_gaps.csv` | 4 | Matrix Completion counterfactual gaps |
-| `timeseries_causal_results.csv` | 5 | CausalImpact / BSTS lift + credible band |
-| `ts_causalimpact.png` | 5 | CausalImpact summary plot |
-| `ts_counterfactual.png` | 5 | Prophet fallback counterfactual plot |
-| `ts_lift.csv` | 5 | Pointwise lift (observed − counterfactual) |
-| `apa_report.docx` | 5 | Full APA 7th edition Word document (Tables 1–8) |
+| `timeseries_causal_results.csv` | 4 | CausalImpact / BSTS lift + credible band |
+| `ts_causalimpact.png` | 4 | CausalImpact summary plot |
+| `ts_counterfactual.png` | 4 | Prophet fallback counterfactual plot |
+| `ts_lift.csv` | 4 | Pointwise lift (observed − counterfactual) |
+| `apa_report.docx` | 4 | Full APA 7th edition Word document (Tables 1–8) |
+| `jepa_experiment_plan.csv` | 4 | CEM/MPPI optimal continuous experiment plan |
+| `jepa_planning_losses.csv` | 4 | CEM/MPPI cost convergence curve |
+| `leaderboard_iterN.csv` | 5 | Feature ranking by ATT per loop iteration |
+| `autonomous_loop_log.csv` | 5 | Summary log of all autonomous loop iterations |
+| `xai_tcav_concept_probing.png` | 5 | TCAV concept sensitivity heatmap |
+| `xai_vector_target_attribution.png` | 5 | Modality contribution to target metric |
 
 ---
 
