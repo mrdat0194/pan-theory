@@ -325,7 +325,7 @@ Phase V simulates personas via MatrAIx. The next frontier is routing the winning
 - **Gradual rollout:** Integrate with feature flagging systems (LaunchDarkly, Unleash) to progressively ramp the winning feature from 1% → 10% → 50% with automated checkpoints at each stage.
 
 ```
-[Phase VI Ideal Loop]
+[Phase VI Autonomous Loop]
   Sim (MatrAIx)  →  A/B Test  →  Best  →  Train JEPA  →  XAI
        ↑                                                    │
        └──── Real Traffic ATT (human-approved gate) ────────┘
