@@ -313,7 +313,7 @@ Stirling's approximation is the saddle-point approximation of $\log Z(\beta)$.
 
 ## 8. Phase VI — Open Research Directions
 
-> **Status:** Not yet implemented. These are open questions and design paths that naturally emerge from the completed Phase V autonomous loop.
+> **Status:** Open research directions (Section 8.6 **Completed**: Off-Policy Trajectory Evaluation & LLM Narrator integration).
 
 ### 8.1 Real-Traffic Closing the Loop (Human-in-the-Loop Safety Gate)
 
@@ -382,23 +382,4 @@ Each autonomous loop iteration produces a `leaderboard_iterN.csv` and `autonomou
 
 **Connects to:** `datastructure/story_teller.py` (existing graph narration engine) and `MLModel/AIModel/run/mst_msa_interaction.py` (Kruskal MST + Multi-Perturbation Shapley Analysis for identifying the most structurally important experiment nodes in the history graph).
 
----
-
-### 8.6 Off-Policy Trajectory Evaluation (Safe World Model Planning)
-
-The current `_build_feature_candidates()` generates hypotheses by perturbing a numeric ATE parameter. Originally, we considered using an LLM to prompt for hypotheses. However, a more mathematically robust and causally grounded direction based on Frauen et al. (KDD 2026):
-
-**Open direction:** Use an **Off-Policy Trajectory Evaluator** on historical logs (`leaderboard_iter*.csv`) to debias logging policy $\hat{\mu}(a|s)$ using DoubleML. The JEPA World Model + CEM/MPPI Planner explores the continuous action space, and trajectories are scored using a Doubly Robust (DR) objective $\hat{V}^{DR}$. 
-
-**Architecture sketch:**
-```
-Historical Logs ──> [DoubleML / AIPW] ──> Debias Logging Policy μ(a|s)
-                                                  │
-JEPA World Model ──> CEM/MPPI Rollout ──> [Off-Policy Evaluator V_DR] ──> Best Action a*
-                                                                               │
-                                                                       [LLM XAI Narrator]
-                                                                  (Translates a* to APA text)
-```
-
-In this framework, the LLM is downgraded from a fragile hypothesis generator to a reliable **XAI Narrator** — translating the numeric optimal action vector $a^*$ (treatment fraction, target segment) and IPW-debiased TCAV scores into human-readable APA narrative text. This creates a true, causally-safe autonomous experimentation agent.
 

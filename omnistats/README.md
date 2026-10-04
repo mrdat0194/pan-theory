@@ -73,7 +73,11 @@ omnistats/
 │   ├── bayesian/                ← Bayesian Sequential A/B (PyMC NUTS, Expected Loss)
 │   ├── cuped.py                 ← CUPED variance reduction (CatBoost monotonic)
 │   ├── causal/                  ← Robust Causal Suite (DiD, IV, RDD, SCM, MC, HTE)
+│   │   ├── ope_history_evaluator.py ← DoubleML Off-Policy Trajectory Evaluator
+│   │   └── ope_tcav_debiaser.py     ← IPW debiaser for TCAV concept vectors
 │   ├── timeseries/              ← Time-series causal (CausalImpact BSTS)
+│   ├── xai/                     ← XAI Narrator & Explanation modules
+│   │   └── llm_xai_narrator.py  ← LLM APA Narrator for continuous optimal actions
 │   ├── jepa_bridge.py           ← OmniStats ↔ JEPA state encoder & decoder
 │   ├── visualisation.py         ← Visualization plots
 │   ├── xai_visualisation.py     ← XAI: TCAV Concept Probing + Vector-Target Attribution
@@ -511,14 +515,15 @@ Phase IV ✅  DONE — Energy-Based Experiment Planning
   │           Cost   = -w_att·ATT_hat + w_risk·Risk_hat + w_disp·Disparity_hat
   │         Outputs: jepa_experiment_plan.csv, jepa_planning_losses.csv
   │
-Phase V  ✅  DONE — Autonomous Experimentation Loop
+Phase V  ✅  DONE — Autonomous Experimentation Loop (Deconfounded via OPE & DoubleML)
             run_autonomous_loop.py orchestrates the full closed-loop cycle:
-              [1] Chạy Sim   → MatrAIx personas × K feature candidates
-              [2] A/B Test   → mumo_ab_tester.py: CUPED + Causal ATT per feature
-              [3] Best       → rank by ATT, extract winning dataset
-              [4] Train JEPA → mumo_jepa_trainer.py: MUMO-JEPA fine-tuning
-              [5] Explain AI → TCAV Concept Probing + Vector-Target Attribution
-              [6] Loop       → escalate ATT search space for iteration N+1
+              [1] OPE Proposal → DoubleML (ope_history_evaluator.py) debiases logging policy μ(a|s)
+                                 and scores CEM/MPPI candidate actions via Doubly Robust V_DR
+              [2] Chạy Sim     → MatrAIx personas × K feature candidates
+              [3] A/B Test     → mumo_ab_tester.py: CUPED + Causal ATT per feature
+              [4] Train JEPA   → mumo_jepa_trainer.py: MUMO-JEPA fine-tuning
+              [5] Debias XAI   → ope_tcav_debiaser.py: IPW-debiased TCAV Concept Probing
+              [6] LLM Narrator → llm_xai_narrator.py: translates optimal action a* into APA text
             Outputs: leaderboard_iterN.csv, autonomous_loop_log.csv,
                      xai_tcav_concept_probing.png, xai_vector_target_attribution.png
             See XAI_JEPA_ROADMAP.md for Phase VI open research directions.
