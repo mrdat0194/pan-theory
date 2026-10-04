@@ -384,25 +384,21 @@ Each autonomous loop iteration produces a `leaderboard_iterN.csv` and `autonomou
 
 ---
 
-### 8.6 Foundation Model Integration (LLM-Driven Hypothesis Generation)
+### 8.6 Off-Policy Trajectory Evaluation (Safe World Model Planning)
 
-The current `_build_feature_candidates()` generates hypotheses by perturbing a numeric ATE parameter. A more powerful direction:
+The current `_build_feature_candidates()` generates hypotheses by perturbing a numeric ATE parameter. Originally, we considered using an LLM to prompt for hypotheses. However, a more mathematically robust and causally grounded direction based on Frauen et al. (KDD 2026):
 
-**Open direction:** Use an **LLM as a hypothesis generator** — prompt it with the current XAI TCAV concept scores and APA report summary, and ask it to propose natural-language feature hypotheses. A structured output parser maps these to numeric experiment parameters passed to `run_multi_feature_sim()`.
+**Open direction:** Use an **Off-Policy Trajectory Evaluator** on historical logs (`leaderboard_iter*.csv`) to debias logging policy $\hat{\mu}(a|s)$ using DoubleML. The JEPA World Model + CEM/MPPI Planner explores the continuous action space, and trajectories are scored using a Doubly Robust (DR) objective $\hat{V}^{DR}$. 
 
 **Architecture sketch:**
 ```
-TCAV scores + APA Table 8 summary
-        │
-        ▼  (prompt)
-   LLM (GPT-4o / Gemini)
-        │
-        ▼  (structured JSON output)
-   Feature Candidates = [{name, ate, target_segment, description}, ...]
-        │
-        ▼
-   MatrAIx Simulation → A/B Test → ...
+Historical Logs ──> [DoubleML / AIPW] ──> Debias Logging Policy μ(a|s)
+                                                  │
+JEPA World Model ──> CEM/MPPI Rollout ──> [Off-Policy Evaluator V_DR] ──> Best Action a*
+                                                                               │
+                                                                       [LLM XAI Narrator]
+                                                                  (Translates a* to APA text)
 ```
 
-This closes the loop between **human-readable explanations** (XAI + APA) and **machine-generated experimental hypotheses**, creating a true human-AI collaborative experimentation agent.
+In this framework, the LLM is downgraded from a fragile hypothesis generator to a reliable **XAI Narrator** — translating the numeric optimal action vector $a^*$ (treatment fraction, target segment) and IPW-debiased TCAV scores into human-readable APA narrative text. This creates a true, causally-safe autonomous experimentation agent.
 

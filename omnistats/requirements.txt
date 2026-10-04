@@ -32,3 +32,4 @@ pyro-ppl>=1.8.6         # Pyro probabilistic programming library for BSTS
 # ── Phase V: Autonomous Experimentation Loop ──────────────────────────────────
 datasets>=2.14.0        # HuggingFace datasets — stream MatrAIx Persona 1M coreset
 pyarrow>=12.0.0         # Parquet caching for MatrAIx persona cache files
+doubleml>=0.7.0         # DoubleML for Off-Policy Trajectory Evaluator

@@ -581,11 +581,25 @@ class APACausalMPCObjective:
         disp = att_stack.std(dim=1, correction=0).clamp(min=0.0) if T > 1 else torch.zeros(B, device=att_stack.device)  # [B]
 
         # ── Composite APA cost ────────────────────────────────────────────────
-        cost = (
-            - self.w_att  * (att_mean  / self.att_baseline)
-            + self.w_risk * risk_mean
-            + self.w_disp * disp
-        )
+        # ── Composite APA cost ────────────────────────────────────────────────
+        cost_att = - self.w_att * (att_mean / self.att_baseline)
+        cost_risk = self.w_risk * risk_mean
+        cost = cost_att + cost_risk + self.w_disp * disp
+
+        # ── DR Correction Term (OPE) ──────────────────────────────────────────
+        try:
+            import sys
+            if "C:/Users/mrdat/PycharmProjects/pan-theory/omnistats" not in sys.path:
+                sys.path.insert(0, "C:/Users/mrdat/PycharmProjects/pan-theory/omnistats")
+            from modules.causal.ope_history_evaluator import compute_importance_weights
+            iw = compute_importance_weights(None, None, clip_max=10.0)
+            iw_tensor = torch.tensor(iw, device=cost.device, dtype=cost.dtype)
+            w_ope = 1.0
+            jepa_q_values = att_mean
+            cost = cost_att + cost_risk - w_ope * iw_tensor.mean() * jepa_q_values + self.w_disp * disp
+        except ImportError:
+            pass
+
         return cost   # [B]
 
 

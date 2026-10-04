@@ -197,7 +197,11 @@ def run_loop(
 
         # ── Stage 1: Chay Sim (MatrAIx) ─────────────────────────────────────
         print("[Stage 1] Chay Sim: Generating feature variants via MatrAIx...")
-        features = _build_feature_candidates(iteration, n_features, rng)
+        from modules.causal.ope_history_evaluator import propose_next_candidates
+        if iteration > 1:
+            features = propose_next_candidates(OUTPUT_DIR, n_features, iteration, rng)
+        else:
+            features = _build_feature_candidates(iteration, n_features, rng)
         sim_results = run_multi_feature_sim(
             personas_df=all_personas_df,
             features=features,
@@ -249,6 +253,20 @@ def run_loop(
                     non_concept_examples=non_concept,
                     query_examples=query,
                     verbose=verbose,
+                )
+                from modules.causal.ope_tcav_debiaser import debias_tcav
+                lpa_path = os.path.join(OUTPUT_DIR, "lpa_profiles.csv")
+                tcav_scores = debias_tcav(
+                    tcav_scores=tcav_scores,
+                    lpa_profiles_path=lpa_path,
+                    concept_to_trait_map={
+                        "High Income":  "income",
+                        "Risk Averse":  "risk_tolerance",
+                        "Tech-Savvy":   "tech_savviness",
+                        "Impulsive":    "impulsivity",
+                        "Neurotic":     "neuroticism",
+                        "Open Minded":  "openness",
+                    }
                 )
             else:
                 tcav_scores = {}
