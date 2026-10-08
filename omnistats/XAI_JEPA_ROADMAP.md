@@ -72,6 +72,17 @@ Upgrading standard Probability Flow / Neural ODEs ($\frac{dz}{dt} = f_\theta(z,t
 | **MFG Confounder-Density Matching** | `causal/mfg_iv.py` | Replaces 2-stage splitting bias in `deep_iv.py` (**[DEPRECATED]**) by dynamically steering treatment density $P(X\|Z)$ to target structural density $P(X)$ via coupled HJB-FP dynamics. |
 | **MFG Discontinuity Density Flow** | `causal/mfg_rdd.py` | Replaces dual Transformer fits in `deep_rdd.py` (**[DEPRECATED]**) by modeling the cutoff as an HJB jump interface in the running variable density flow. |
 
+### 1.6 Buckmaster Fluid Dynamics & Computer-Assisted Verification (2023–2026)
+
+Applying Tristan Buckmaster's PDE discovery & computer-assisted proof methodology to continuous-time latent world models (`latent_ode_jepa.py`).
+
+| Concept | Implemented / Planned In | Role in XAI Pipeline |
+|---|---|---|
+| **PINNs as Discovery Tool** | `latent_ode_jepa.py::ODEDynamicsNet` | Resolves sharp gradients in latent state dynamics $\frac{dz(t)}{dt} = f_\theta(z(t), t)$ using neural ODE parameterization. |
+| **Gradient-Normalized Residual Re-Weighting** | `latent_ode_jepa.py::LatentODE_JEPA` | Loss re-weighting scheme penalizing ODE residual gradients to achieve machine-precision prediction. |
+| **Spectral Basis (FFT / Chebyshev)** | `spectral_ode_solver.py`, `chebyshev_qsvt.py` | Exact spatial derivatives and Clenshaw polynomial expansions for operator matrices. |
+| **Computer-Assisted Proofs (CAP) & Interval Bounds** | `omnistats/modules/simulation/pinn_safety_oracle.py` ✅ NEW | Validates neural trajectories via interval enclosures and Neumann series contraction bounds for safe rollouts. |
+
 ---
 
 ## 2. Complete File Inventory
@@ -308,6 +319,7 @@ Stirling's approximation is the saddle-point approximation of $\log Z(\beta)$.
 | Williams et al. (2017) | Information Theoretic MPC / MPPI — baseline for QuantumMPPIPlanner |
 | Feynman & Hibbs (1965) | Path integral formalism, partition function |
 | Marchenko & Pastur (1967) | Random Matrix Theory spectral law (P2) |
+| Buckmaster, T. et al. (2023–2026) | PINNs for unstable PDE blow-up, machine-precision gradient-normalized residual re-weighting, computer-assisted proofs via interval enclosures |
 
 ---
 
@@ -381,5 +393,20 @@ Each autonomous loop iteration produces a `leaderboard_iterN.csv` and `autonomou
 - New feature candidates are proposed by a **graph neural network** that encodes the full experiment history and predicts which unexplored feature directions maximize expected ATT gain.
 
 **Connects to:** `datastructure/story_teller.py` (existing graph narration engine) and `MLModel/AIModel/run/mst_msa_interaction.py` (Kruskal MST + Multi-Perturbation Shapley Analysis for identifying the most structurally important experiment nodes in the history graph).
+
+---
+
+### 8.6 PINN Residual Re-Weighting & Computer-Assisted Trajectory Verification (`PINNSafetyOracle`)
+
+**Open direction:** Integrate Tristan Buckmaster's high-precision PINN residual re-weighting and computer-assisted proof (CAP) enclosures into the autonomous loop safety pipeline:
+
+1. **Gradient-Normalized Residual Re-Weighting:** Train `LatentODE_JEPA` using adaptive loss weights inverse to residual gradient norms:
+   $$\mathcal{L}_{ODE} = \sum_{k} w_k \| \dot{z}_k - f_\theta(z_k, t_k) \|^2 \qquad w_k = \frac{1}{\| \nabla_z \mathcal{R}_k \| + \epsilon}$$
+   This resolves sharp gradient transitions and prevents trajectory drift across long prediction horizons.
+
+2. **Computer-Assisted Trajectory Proofs (`PINNSafetyOracle`):** Before routing feature candidates to real users (Section 8.1), construct an interval enclosure $[z_{lower}(t), z_{upper}(t)]$ around the imagined trajectory. Verify that the contraction mapping radius $r < 1$ (Neumann series bound) holds, proving mathematically that counterfactual rollouts will not explode or enter unsafe latent regions.
+
+**File to create:** `omnistats/modules/simulation/pinn_safety_oracle.py`
+
 
 
