@@ -1,21 +1,32 @@
-# Quantum-Inspired XAI for JEPA: Concepts, Implementation & Next Steps
+# Unified XAI-JEPA & XAI-DoE for OmniStats: Concepts, Implementation & Roadmap
 
-> **Location:** `omnistats/XAI_JEPA_ROADMAP.md`
-> **Status:** ✅ Phase 1 & 2 complete — all P0/P1 modules verified.
-> **Covers:** All concepts from handwritten notes (Aug-2020, Feb-2022, Nov-2022),
-> Tang (2023) dequantization, what was implemented, and the full next-step frontier.
-
-## 🎯 The Core Mission: Bridging JEPA with OmniStats
-
-**The core philosophy of OmniStats is to make complex probabilistic profiles approachable for human decision-making.** 
-
-Traditionally, OmniStats Stage 1 (Latent Profile Analysis) clusters users into interpretable segments for A/B testing and Causal Impact. **XAI JEPA extends this philosophy directly into deep learning.** 
-
-By mapping opaque, continuous JEPA embeddings onto a discrete *Eigenstate Bank* (or *Concept Bank*), we turn a black-box world model into structured, human-readable **Latent Profiles**. Decision-makers can now query the model using `bayesian_inverse_score` to see exactly which "profiles" drove a prediction. This unifies deep learning world models with OmniStats's rigorous, transparent causal decision-making pipeline.
+> **Location:** `omnistats/XAI_JEPA_ROADMAP.md`  
+> **Status:** ✅ Phase 1 & 2 complete — all P0/P1 modules verified. XAI-DoE (Gendex DoE suite) integrated.  
+> **Covers:** All concepts from handwritten notes (Aug-2020, Feb-2022, Nov-2022), Tang (2023) dequantization,  
+> Nam-Ky Nguyen (VIASM, 2018) Gendex DoE suite (`C:\Users\mrdat\Downloads\workhop`), Incomplete Block Designs (IBD/CIBD),  
+> Alpha Designs, Row-Column Designs (RCD/RRCD), Definitive Screening Designs (DSD), Response Surface Methodology (RSM),  
+> Mean Field Games (MFG), and Buckmaster PINN verification.
 
 ---
 
-## 1. Theoretical Foundation (Your Notes → Code)
+## 🎯 The Core Mission: Bridging JEPA World Models & Rigorous DoE with OmniStats
+
+**The core philosophy of OmniStats is to make complex probabilistic profiles and high-dimensional experimental spaces approachable, interpretable, and optimal for human decision-making.**
+
+Traditionally, OmniStats Stage 1 (Latent Profile Analysis) clusters users into interpretable segments for A/B testing and Causal Impact. **XAI-JEPA** and **XAI-DoE** extend this philosophy directly into deep learning world models and multi-factor experimental design:
+
+1. **XAI-JEPA (Explainable Latent World Models):** Maps opaque, continuous JEPA embeddings onto a discrete *Eigenstate Bank* (or *Concept Bank*), converting black-box world models into structured, human-readable **Latent Profiles**. Decision-makers query the model using `bayesian_inverse_score` to see exactly which concepts drive predictions.
+2. **XAI-DoE (Explainable Design of Experiments):** Integrates Nam-Ky Nguyen's Gendex algorithms (Alpha designs, Row-Column blocking, Definitive Screening Designs, and Response Surface Optimization) directly into OmniStats:
+   - **Screen $N$ factors in $2N+1$ runs** without aliasing main effects with 2-factor interactions (Definitive Screening Designs).
+   - **Eliminate 1D and 2D nuisance variability** across user cohorts, server batches, and time windows (Alpha Designs & Row-Column Designs).
+   - **Map continuous non-linear response surfaces** to pinpoint optimal feature configurations using minimal experimental units (Second-Order Designs / RSM).
+   - **Sample continuous JEPA latent state spaces systematically** by replacing random noise perturbations with orthogonal response surface grids.
+
+Unifying XAI-JEPA continuous world models with XAI-DoE experimental design creates a closed-loop autonomous intelligence pipeline for OmniStats.
+
+---
+
+## 1. Theoretical Foundation (Notes & Workshop Materials → Code)
 
 ### 1.1 Probability → Decision → Information Theory (Aug 2020)
 
@@ -62,15 +73,15 @@ $$\pi(x,n) \propto e^{-\beta E_n} \psi_n(x) \psi_n^*(x) \qquad p(x, x', \beta) =
 
 ### 1.5 Generative Latent Flow & Causal Inference as Mean Field Games (ODE $\to$ MFG)
 
-Upgrading standard Probability Flow / Neural ODEs ($\frac{dz}{dt} = f_\theta(z,t)$) to coupled **Hamilton-Jacobi-Bellman (HJB)** and **Fokker-Planck (FP)** equations. *(Note: Discrete permutation MSA `kuffmode/msa` and non-MFG 2-stage causal estimators are **[DEPRECATED]** in favor of continuous MFG optimal transport).*
+Upgrading standard Probability Flow / Neural ODEs ($\frac{dz}{dt} = f_\theta(z,t)$) to coupled **Hamilton-Jacobi-Bellman (HJB)** and **Fokker-Planck (FP)** equations.
 
 | Concept | Implemented In | Formula / Role |
 |---|---|---|
-| **Schrödinger Bridges & Wasserstein Flow** | `mean_field_jepa.py` | Models the `path_integral_rollout` as interacting agents minimizing transport cost via coupled HJB ($-\partial_t u - \frac{\sigma^2}{2}\Delta u + H = 0$) and FP ($\partial_t \rho + \nabla \cdot (\rho v) = \frac{\sigma^2}{2}\Delta \rho$) equations. |
-| **Continuous Shapley / Integrated Gradients** | `continuous_shapley.py` | Calculates exact infinitesimal marginal contribution of each latent dimension over continuous manifolds *(Discrete MSA **[DEPRECATED]**)*. |
-| **MFG Counterfactual Trajectory Flow** | `causal/mfg_did.py` | Replaces heuristic parallel trend assumptions in `deep_did.py` (**[DEPRECATED]**) with population-level density transport equilibrium under optimal control cost. |
-| **MFG Confounder-Density Matching** | `causal/mfg_iv.py` | Replaces 2-stage splitting bias in `deep_iv.py` (**[DEPRECATED]**) by dynamically steering treatment density $P(X\|Z)$ to target structural density $P(X)$ via coupled HJB-FP dynamics. |
-| **MFG Discontinuity Density Flow** | `causal/mfg_rdd.py` | Replaces dual Transformer fits in `deep_rdd.py` (**[DEPRECATED]**) by modeling the cutoff as an HJB jump interface in the running variable density flow. |
+| **Schrödinger Bridges & Wasserstein Flow** | `mean_field_jepa.py` | Models `path_integral_rollout` as interacting agents minimizing transport cost via coupled HJB ($-\partial_t u - \frac{\sigma^2}{2}\Delta u + H = 0$) and FP ($\partial_t \rho + \nabla \cdot (\rho v) = \frac{\sigma^2}{2}\Delta \rho$). |
+| **Continuous Shapley / Integrated Gradients** | `continuous_shapley.py` | Infinitesimal marginal contribution of each latent dimension over continuous manifolds. |
+| **MFG Counterfactual Trajectory Flow** | `causal/mfg_did.py` | Population-level density transport equilibrium replacing linear DiD. |
+| **MFG Confounder-Density Matching** | `causal/mfg_iv.py` | Steering treatment density $P(X\|Z)$ to target structural density $P(X)$ via coupled HJB-FP. |
+| **MFG Discontinuity Density Flow** | `causal/mfg_rdd.py` | HJB jump interface in running variable density flow at cutoff. |
 
 ### 1.6 Buckmaster Fluid Dynamics & Computer-Assisted Verification (2023–2026)
 
@@ -78,26 +89,62 @@ Applying Tristan Buckmaster's PDE discovery & computer-assisted proof methodolog
 
 | Concept | Implemented / Planned In | Role in XAI Pipeline |
 |---|---|---|
-| **PINNs as Discovery Tool** | `latent_ode_jepa.py::ODEDynamicsNet` | Resolves sharp gradients in latent state dynamics $\frac{dz(t)}{dt} = f_\theta(z(t), t)$ using neural ODE parameterization. |
-| **Gradient-Normalized Residual Re-Weighting** | `latent_ode_jepa.py::LatentODE_JEPA` | Loss re-weighting scheme penalizing ODE residual gradients to achieve machine-precision prediction. |
-| **Spectral Basis (FFT / Chebyshev)** | `spectral_ode_solver.py`, `chebyshev_qsvt.py` | Exact spatial derivatives and Clenshaw polynomial expansions for operator matrices. |
-| **Computer-Assisted Proofs (CAP) & Interval Bounds** | `omnistats/modules/simulation/pinn_safety_oracle.py` ✅ NEW | Validates neural trajectories via interval enclosures and Neumann series contraction bounds for safe rollouts. |
+| **PINNs as Discovery Tool** | `latent_ode_jepa.py::ODEDynamicsNet` | Resolves sharp gradients in latent state dynamics $\frac{dz(t)}{dt} = f_\theta(z(t), t)$. |
+| **Gradient-Normalized Residual Re-Weighting** | `latent_ode_jepa.py::LatentODE_JEPA` | Penalizes ODE residual gradients for machine-precision trajectory prediction. |
+| **Spectral Basis (FFT / Chebyshev)** | `spectral_ode_solver.py`, `chebyshev_qsvt.py` | Spatial derivatives and Clenshaw polynomial expansions for operator matrices. |
+| **Computer-Assisted Proofs (CAP) & Interval Bounds** | `omnistats/modules/simulation/pinn_safety_oracle.py` ✅ NEW | Validates neural trajectories via interval enclosures and Neumann series contraction bounds. |
+
+### 1.7 Advanced Design of Experiments (DoE) & Sequential Experimentation (Nguyen 2018, VIASM)
+
+Derived from Nam-Ky Nguyen's Gendex algorithms (`C:\Users\mrdat\Downloads\workhop`).
+
+#### 1.7.1 Incomplete Block Designs (IBD & Cyclic CIBD)
+When treatments $v$ exceed block size $k < v$, full replication per block is impossible.
+- **Incidence Matrix ($N$):** $N_{ij} = 1$ if treatment $i$ in block $j$, else $0$.
+- **C-Matrix (Information Matrix):** $C = r I - \frac{1}{k} N N^T$.
+- **Canonical Efficiency Factor ($E$):** $E = \frac{v-1}{v \cdot \text{Tr}(C^+)}$, used to rank candidate designs in Stage 2.
+
+#### 1.7.2 Resolvable Alpha Designs (Alpha-Modules)
+Resolvable designs group $b$ incomplete blocks into $r$ complete replicates of all $v$ treatments ($v = k \cdot s$).
+- **Intra-Block & Inter-Block Variance:** $\text{Var}(\hat{\tau}_i - \hat{\tau}_j) = \frac{2\sigma^2}{r E}$, minimizing variance across multi-arm UI variant tests.
+
+#### 1.7.3 Row-Column Designs (RCD & Resolvable RRCD)
+Controls **two independent sources of nuisance variability** (e.g., User Cohort $\times$ Time Window):
+$$y_{ijk} = \mu + \tau_i + \alpha_j + \beta_k + \varepsilon_{ijk}$$
+- Eliminates 2D background noise in batch user allocations via orthogonal swap search.
+
+#### 1.7.4 Definitive Screening Designs (DSD - Jones & Nachtsheim 2011)
+3-level factor screening (levels $-1, 0, +1$) requiring only $2m + 1$ runs for $m$ factors.
+- **Main Effect Orthogonality:** $\text{Cov}(\hat{\beta}_i, \hat{\beta}_j) = 0$ for $i \neq j$.
+- **Zero Aliasing with 2FIs:** $\text{Cov}(\hat{\beta}_i, \hat{\beta}_{jk}) = 0$. Main effects are unconfounded with any 2-factor interaction.
+- Fits quadratic curvature $y = \beta_0 + \sum \beta_i x_i + \sum \beta_{ii} x_i^2$ in a single screening pass.
+
+#### 1.7.5 Second-Order Response Surface Methodology (SOD / RSM)
+Fits 3-level second-order polynomial response surfaces:
+$$y = \beta_0 + \sum_{i=1}^k \beta_i x_i + \sum_{i=1}^k \beta_{ii} x_i^2 + \sum_{i<j}^k \beta_{ij} x_i x_j + \varepsilon$$
+Includes Central Composite (CCD), Box-Behnken (BBD), Small Composite (SCD), and Augmented-Pair (APD) designs constructed via swap-permutation search ($f$ and $g$ orthogonality criteria).
+
+#### 1.7.6 Sequential Experimentation (Fisher's 3 R's)
+Stage 1: Primary Screening (DSD) $\to$ Stage 2: Augmentation (SCD/APD) $\to$ Stage 3: Response Surface Optimization (CCD/BBD/SOD) to locate the stationary optimum $x^* = -\frac{1}{2} B^{-1} b$.
 
 ---
 
 ## 2. Complete File Inventory
 
-### 2.1 Phase 1 — Core XAI Modules (Complete ✅)
+### 2.1 Phase 1 — Core Modules (Complete ✅ & In Progress 🚀)
 
-| File | Purpose |
-|---|---|
-| [`omnistats/modules/information_theory.py`](information_theory.py) | Shannon Entropy, JKL, Bayesian Inverse Score, Boltzmann Energy, Partition Function, `compute_xai_metrics()` |
-| [`datastructure/Lesson/dequantized_jepa_predictor.py`](../datastructure/Lesson/dequantized_jepa_predictor.py) | `L2ImportanceSampler`, `DequantizedLatentTransition`, `free_density_matrix()`, `path_integral_rollout()` |
-| [`omnistats/modules/xai_visualisation.py`](xai_visualisation.py) | `plot_energy_landscape()`, `plot_information_decision_boundary()`, `plot_partition_function_evolution()` |
-| [`omnistats/modules/jepa_bridge.py`](jepa_bridge.py) | `APADecoder` extended: `energy_hat`, `beta_hat`, `entropy` heads |
-| [`omnistats/tests/test_information_theory.py`](../tests/test_information_theory.py) | **21/21 unit tests PASS** ✅ |
+| File | Type | Status | Purpose |
+|---|---|---|---|
+| [`omnistats/modules/information_theory.py`](information_theory.py) | XAI | ✅ Complete | Shannon Entropy, JKL, Bayesian Inverse Score, Boltzmann Energy |
+| [`datastructure/Lesson/dequantized_jepa_predictor.py`](../datastructure/Lesson/dequantized_jepa_predictor.py) | JEPA | ✅ Complete | `L2ImportanceSampler`, `DequantizedLatentTransition`, `free_density_matrix()` |
+| [`omnistats/modules/xai_visualisation.py`](xai_visualisation.py) | Vis | ✅ Complete | Energy landscape, JKL boundary, and partition function plots |
+| [`omnistats/modules/jepa_bridge.py`](jepa_bridge.py) | Bridge | ✅ Complete | `APADecoder` extended: `energy_hat`, `beta_hat`, `entropy` heads |
+| [`omnistats/modules/doe/alpha_design.py`](modules/doe/alpha_design.py) | DoE | 🚀 Phase 1 | `AlphaDesignBuilder`, `compute_intra_block_variance()` |
+| [`omnistats/modules/doe/incomplete_block.py`](modules/doe/incomplete_block.py) | DoE | 🚀 Phase 1 | `CyclicIBDBuilder`, `compute_c_matrix()`, `calculate_efficiency_factor()` |
+| [`omnistats/modules/doe/row_column_design.py`](modules/doe/row_column_design.py) | DoE | 🚀 Phase 1 | `RowColumnDesignBuilder`, `ResolvableRCDBuilder` |
+| [`omnistats/modules/doe/definitive_screening.py`](modules/doe/definitive_screening.py) | DoE | 🚀 Phase 1 | `DefinitiveScreeningBuilder`, `fit_screening_model()` |
 
-### 2.2 Phase 2 — Frontier P0/P1 (Complete ✅)
+### 2.2 Phase 2 — Frontier P0/P1 Modules (Complete ✅ & Planned 🟡)
 
 | File | Priority | Purpose |
 |---|---|---|
@@ -106,16 +153,20 @@ Applying Tristan Buckmaster's PDE discovery & computer-assisted proof methodolog
 | [`omnistats/modules/bayesian/maxwell_prior.py`](modules/bayesian/maxwell_prior.py) | **P1** | Maxwell-Boltzmann prior for `energy_hat`, `maxwell_prior_loss()` |
 | [`omnistats/modules/bayesian/waic_loo.py`](modules/bayesian/waic_loo.py) | **P1** | WAIC + PSIS-LOO + `compare_models()` for causal estimator selection |
 | [`omnistats/modules/timeseries/quantum_kalman.py`](modules/timeseries/quantum_kalman.py) | **P1** | `QuantumKalmanFilter` + RTS smoother + ATT estimation |
+| [`omnistats/modules/doe/response_surface.py`](modules/doe/response_surface.py) | **P1** | `ResponseSurfaceBuilder` (CCD, BBD, SCD, APD) + stationary point search |
+| [`omnistats/modules/doe/sod_optimizer.py`](modules/doe/sod_optimizer.py) | **P1** | `SwapPermuteSOD` for algorithmic 3-level design generation |
 
-### 2.3 Phase 3 — SOTA Continuous Game Theory & Causal MFGs (Upcoming)
+### 2.3 Phase 3 — SOTA Latent Games & DoE Sampling (Upcoming 🟣)
 
 | File | Priority | Purpose |
 |---|---|---|
-| [`omnistats/modules/game_theory/continuous_shapley.py`](modules/game_theory/continuous_shapley.py) | **P1** | Integrated gradients and continuous Shapley approximations for latent dimensions |
-| [`omnistats/modules/game_theory/mean_field_jepa.py`](modules/game_theory/mean_field_jepa.py) | **P1** | Solves Forward-Backward HJB and Fokker-Planck equations to regularize the latent flow |
-| [`omnistats/modules/causal/mfg_did.py`](modules/causal/mfg_did.py) | **P1** | **MFG Counterfactual Trajectory Flow**: Density transport equilibrium replacing linear/minimax DiD |
-| [`omnistats/modules/causal/mfg_iv.py`](modules/causal/mfg_iv.py) | **P1** | **MFG Confounder-Density Matching**: HJB-FP velocity field steering treatment density replacing 2-stage IV |
-| [`omnistats/modules/causal/mfg_rdd.py`](modules/causal/mfg_rdd.py) | **P1** | **MFG Discontinuity Density Flow**: HJB jump interface at cutoff replacing dual Transformer RDD |
+| [`omnistats/modules/game_theory/continuous_shapley.py`](modules/game_theory/continuous_shapley.py) | **P1** | Integrated gradients and continuous Shapley approximations |
+| [`omnistats/modules/game_theory/mean_field_jepa.py`](modules/game_theory/mean_field_jepa.py) | **P1** | Forward-Backward HJB and Fokker-Planck equations |
+| [`omnistats/modules/causal/mfg_did.py`](modules/causal/mfg_did.py) | **P1** | **MFG Counterfactual Trajectory Flow**: Density transport equilibrium |
+| [`omnistats/modules/causal/mfg_iv.py`](modules/causal/mfg_iv.py) | **P1** | **MFG Confounder-Density Matching**: HJB-FP velocity field steering |
+| [`omnistats/modules/causal/mfg_rdd.py`](modules/causal/mfg_rdd.py) | **P1** | **MFG Discontinuity Density Flow**: HJB jump interface |
+| [`omnistats/modules/doe/xai_doe_bridge.py`](modules/doe/xai_doe_bridge.py) | **P1** | **Latent DoE Sampler**: Orthogonal DSD/RSM grids in JEPA latent space |
+| [`omnistats/modules/doe/latent_rsms.py`](modules/doe/latent_rsms.py) | **P1** | Maps JEPA energy landscape $V(z)$ via second-order response surface |
 
 ---
 
@@ -190,117 +241,159 @@ Quantum Kalman prediction:    p(x_{t+1}|x_t) ∝ p^{free}(x_t, x_{t+1}, β)
 Forward filter → RTS smoother → ATT estimation
 ```
 
+### 3.5 Sequential DoE Execution Flow
+
+```
+Raw Candidate Factors (x_1, x_2, ..., x_m)  [Large m]
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────────┐
+│ Stage 1: Definitive Screening Design (DSD)               │
+│ • Runs: 2m + 1                                          │
+│ • Zero main-effect / 2FI aliasing                       │
+│ • Identifies top-k significant active factors            │
+└─────────────────────────┬───────────────────────────────┘
+                          │ Active Factors (k << m)
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ Stage 2: Incomplete Block / Row-Column Execution        │
+│ • Allocates k factors across blocks/cohorts/time windows │
+│ • Resolvable Alpha or Row-Column Design (RCD)           │
+│ • Absorbs 1D/2D nuisance variance                        │
+└─────────────────────────┬───────────────────────────────┘
+                          │ Balanced Multi-Arm Data
+                          ▼
+┌─────────────────────────────────────────────────────────┐
+│ Stage 3: Response Surface Optimization (RSM)            │
+│ • Fits Quadratic Model: y = β_0 + Σ β_i x_i + Σ β_ij x_i x_j + Σ β_ii x_i² │
+│ • Solves stationary point x* = -1/2 B⁻¹ b               │
+│ • Pinpoints optimal feature configuration               │
+└─────────────────────────┴───────────────────────────────┘
+```
+
+### 3.6 Dual Nuisance Variance Blocking (Row-Column Design)
+
+```
+                  Column Blocking Factor (Time Slot / Device Type)
+                   Col 1       Col 2       Col 3       Col 4
+                 ┌───────────┬───────────┬───────────┬───────────┐
+         Row 1   │ Variant A │ Variant B │ Variant C │ Variant D │
+Row      ────────┼───────────┼───────────┼───────────┼───────────┤
+Blocking Row 2   │ Variant C │ Variant D │ Variant A │ Variant B │
+Factor   ────────┼───────────┼───────────┼───────────┼───────────┤
+(User    Row 3   │ Variant B │ Variant A │ Variant D │ Variant C │
+Cohort)  ────────┼───────────┼───────────┼───────────┼───────────┤
+         Row 4   │ Variant D │ Variant C │ Variant B │ Variant A │
+                 └───────────┴───────────┴───────────┴───────────┘
+```
+
+### 3.7 Unified Closed-Loop Autonomous System Architecture
+
+```
+                      ┌───────────────────────────────────────────┐
+                      │    JEPA Latent World Model (Predictor)    │
+                      │   • Density matrix ρ(z, z', β)            │
+                      │   • Energy landscape V(z)                 │
+                      └─────────────────────┬─────────────────────┘
+                                            │ Latent Space Representation
+                                            ▼
+                      ┌───────────────────────────────────────────┐
+                      │      XAI-DoE Latent Grid Generator        │
+                      │   • Definitive Screening (DSD) in Latent  │
+                      │   • Orthogonal Concept Grid Sample        │
+                      └─────────────────────┬─────────────────────┘
+                                            │ Factorial Experiment Plan
+                                            ▼
+                      ┌───────────────────────────────────────────┐
+                      │     OmniStats Stage 2 Execution Engine    │
+                      │   • Resolvable Alpha & Row-Column Blocking│
+                      │   • CUPED Variance Reduction              │
+                      └─────────────────────┬─────────────────────┘
+                                            │ Live Trial Data
+                                            ▼
+                      ┌───────────────────────────────────────────┐
+                      │     Response Surface & MFG Causal Fit     │
+                      │   • Fit Quadratic Model y(x) & HJB-FP     │
+                      │   • Compute Stationary Point x*           │
+                      │   • Fine-tune Concept Bank & JEPA Weights │
+                      └───────────────────────────────────────────┘
+```
+
 ---
 
-## 4. How to Use the Full XAI Pipeline
+## 4. How to Use the Integrated Pipeline
 
 ```python
 import torch, numpy as np
 import sys; sys.path.insert(0, 'datastructure/Lesson')
 
-# ── Core XAI metrics ─────────────────────────────────────────────────────────
+# ── Core XAI & Predictors ───────────────────────────────────────────────────
 from omnistats.modules.information_theory import compute_xai_metrics
-from omnistats.modules.xai_visualisation import (
-    plot_energy_landscape, plot_information_decision_boundary,
-    plot_partition_function_evolution,
-)
-
-# ── SOTA Chebyshev predictor (P0) ─────────────────────────────────────────────
 from chebyshev_qsvt import ChebyshevDequantizedTransition
-from dequantized_jepa_predictor import path_integral_rollout
-
-# ── Bayesian model selection (P1) ─────────────────────────────────────────────
-from omnistats.modules.bayesian.maxwell_prior import maxwell_prior_loss
-from omnistats.modules.bayesian.waic_loo import compare_models
-
-# ── Quantum causal impact (P1) ────────────────────────────────────────────────
 from omnistats.modules.timeseries.quantum_kalman import QuantumKalmanFilter
 
-# Step 1: Build SOTA predictor
-predictor = ChebyshevDequantizedTransition(
-    d_latent=128, rank_k=32, cheb_degree=8, filter_type='heat'
-)
+# ── DoE Generators ───────────────────────────────────────────────────────────
+from omnistats.modules.doe.definitive_screening import DefinitiveScreeningBuilder
+from omnistats.modules.doe.row_column_design import ResolvableRCDBuilder
+from omnistats.modules.doe.response_surface import ResponseSurfaceBuilder
 
-# Step 2: Encode and get XAI metrics
-z = jepa_encoder(context_frames)           # [B, D, T, H, W]
+# Step 1: DSD Screening for 6 candidate feature factors (2m+1 = 13 runs)
+dsd_builder = DefinitiveScreeningBuilder(n_factors=6)
+dsd_grid = dsd_builder.generate()
+
+# Step 2: Row-Column Nuisance Blocking for trial deployment
+rcd_builder = ResolvableRCDBuilder(v_treatments=8, n_rows=4, n_cols=2, n_replicates=3)
+schedule = rcd_builder.generate_schedule()
+
+# Step 3: Encode JEPA latents and obtain XAI metrics
+z = jepa_encoder(context_frames)
 metrics = compute_xai_metrics(z, reference_embeddings=concept_bank, beta=1.0)
 
-# Step 3: Path integral rollout
-rollout = path_integral_rollout(predictor, z_flat, T=5)
-
-# Step 4: Visualize
-plot_energy_landscape(z_np, metrics['energy'].numpy())
-plot_information_decision_boundary(z_np, metrics['jkl_from_prior'].numpy(),
-                                   metrics['entropy'].numpy())
-plot_partition_function_evolution(rollout['energies'].numpy().T)
-
-# Step 5: Causal impact with Quantum Kalman
+# Step 4: Quantum Kalman Causal Impact
 qkf = QuantumKalmanFilter(beta=1.0, diffusion_sigma=0.3)
 att = qkf.estimate_att(y_tensor, X_tensor, T_treat=40)
 print(f"ATT = {att['estimate']:.3f}  [{att['ci_lower']:.3f}, {att['ci_upper']:.3f}]")
 
-# Step 6: WAIC model comparison
-results = compare_models({'DiD': ll_did, 'RDD': ll_rdd, 'QuantumKalman': ll_qkf})
-print(f"Best causal model: {results['winner']}")
+# Step 5: Fit Response Surface Methodology (RSM) Quadratic Model
+rsm = ResponseSurfaceBuilder()
+rsm.fit(X=dsd_grid, y=observed_conversions)
+optimum = rsm.find_stationary_point()
+print(f"Optimal Factor Setting (x*): {optimum['x_star']}")
 ```
 
 ---
 
-## 5. Next Steps (P2–P3, Not Yet Implemented)
+## 5. Next Steps (P2–P3)
 
 ### 🟡 P2 — Quantum β-VAE
+Replace isotropic Gaussian prior in iVAE with Boltzmann prior `p(z) ∝ exp(-β V(z))`.
+- File: `VAE/Beta-VAE/quantum_beta_vae.py`
 
-**File:** `VAE/Beta-VAE/quantum_beta_vae.py` *(new)*
+### 🟡 P2 — Active GP-DoE & Micro-Batch Split-Plot Designs
+Use DSD as initial seed design for Gaussian Process surrogate modeling. Implement Split-Plot designs for hard-to-change vs. easy-to-change server parameters.
+- Files: `omnistats/modules/doe/active_gp_doe.py`, `omnistats/modules/doe/split_plot.py`
 
-Replace the isotropic Gaussian prior in iVAE with the Boltzmann prior `p(z) ∝ exp(-β V(z))`.
+### 🟡 P2 — Hardware Acceleration & GPU Fallback Mitigation
+Wrap `chebyshev_qsvt.py` using `torch.compile()` or OpenAI Triton kernels. Migrate Bayesian causal components from PyMC to NumPyro (JAX).
 
-- Low β → fully disentangled, high-entropy latent space (explores)
-- High β → collapsed, low-entropy attractor states (exploits)
-
-### 🟡 P2 — Marchenko-Pastur Spectral Regularization
-
-**File:** `MLModel/AIModel/model/spectral_regularizer.py` *(new)*
-
-Add a loss term penalizing neural network weight matrices whose eigenvalue
-distribution departs from the Marchenko-Pastur bulk:
-
-$$\mathcal{L}_{spectral} = KL(\rho_{empirical} \| \rho_{MP})$$
-
-Connect to `concept_integrator.py::analyze_spectral_properties()`.
-
-### 🟣 P2 — Hardware Acceleration & GPU Fallback Mitigation
-
-**Current Fallbacks**: The pipeline currently relies on CPU-bound loops (e.g., PyMC NUTS sampling, Python `for` loops in Clenshaw recursion) and unoptimized PyTorch matrix multiplications.
-**Next Step Plans**:
-- **Triton / PyTorch Compile**: Wrap `chebyshev_qsvt.py` using `torch.compile(mode="reduce-overhead")` or custom OpenAI Triton kernels to fuse the recursion operations into a single CUDA graph.
-- **JAX / NumPyro**: Migrate the Bayesian causal components (Stage 2 A/B Testing, Stage 4 Quantum Kalman) from PyMC to NumPyro. This allows parallel XLA-compiled NUTS sampling on the GPU, yielding a 10x–100x speedup.
-- **Vectorization (vmap)**: Use PyTorch `vmap` inside `QuantumMPPIPlanner` to parallelize thousands of action rollouts on GPU without sequential bottlenecks.
-
-### 🟢 P3 — story_teller.py XAI Node Embedding
-
-Embed each story graph node as a JEPA latent vector.
-Use `bayesian_inverse_score()` to attribute each event to its closest concept anchor.
-Visualize with `plot_information_decision_boundary()`.
-
-### 🟢 P3 — Path Integral ODE Solver
-
-**File:** `datastructure/Lesson/stirling_partition.py` *(new)*
-
-Unify `Stirling_solution.py` with the partition function formalism.
-Stirling's approximation is the saddle-point approximation of $\log Z(\beta)$.
+### 🟢 P3 — Heavy-Tailed Robust DoE & Path Integral ODE Solvers
+Extend RSM fitting to Generalized Linear Models (GLM) for heavy-tailed metrics (e.g. revenue). Unify `stirling_partition.py` with partition function formalism.
 
 ---
 
 ## 6. Open Questions
 
 > [!IMPORTANT]
-> **Q1 — Rank `k`:** What is the effective intrinsic dimension of the JEPA latent space on your datasets? Run PCA and check explained variance — this sets `rank_k` for `ChebyshevDequantizedTransition`.
+> **Q1 — Rank `k`:** What is the effective intrinsic dimension of the JEPA latent space? Run PCA to set `rank_k` for `ChebyshevDequantizedTransition`.
 
 > [!IMPORTANT]
-> **Q2 — β Annealing Direction for MPPI:** `QuantumMPPIPlanner` currently uses cold→hot (precise short-term, exploratory long-term). Should this be reversed for your planning task?
+> **Q2 — Latent DSD Step Size:** When sampling a DSD grid $x_i \in \{-1, 0, +1\}$ along concept vectors $v_i$, what step size $\delta$ maintains valid, in-distribution latent states?
+
+> [!IMPORTANT]
+> **Q3 — Block Size $k$ vs. Latent Profile Count $K_{LPA}$:** Should the number of incomplete blocks $b$ in an Alpha design equal $K_{LPA}$?
 
 > [!WARNING]
-> **Q3 — iVAE Identifiability:** Quantum β-VAE (P2) changes the prior. Verify that the Boltzmann prior factorizes across coordinates before implementing to preserve Khemakhem et al. (2020) guarantees.
+> **Q4 — Stationary Point Classification:** Second-order response surfaces often yield saddle points. Should automatic ridge analysis be triggered when Hessian $B$ has mixed eigenvalues?
 
 ---
 
@@ -308,105 +401,364 @@ Stirling's approximation is the saddle-point approximation of $\log Z(\beta)$.
 
 | Source | Key Contribution |
 |---|---|
-| Handwritten notes (Aug 2020) | JKL, Shannon Entropy, Bayesian inverse problems, Beta-Binomial |
-| Handwritten notes (Feb 2022) | Maxwell, Gaussian, Exponential distributions; kinetic energy analogy |
-| Handwritten notes (Nov 2022) | Density matrix $p(x,x',\beta)$, path integral convolution, $Z(\beta)$ |
-| Tang, E. (2023). *Quantum ML Without Any Quantum*. UW PhD Thesis | ℓ₂ importance sampling, QSVT dequantization, **Chebyshev/Clenshaw recursion** (Ch.6) |
-| Kalman, R.E. (1960) | Classical linear filter — baseline for Quantum Kalman |
-| Watanabe, S. (2010) | WAIC theory for singular statistical models |
-| Vehtari, Gelman, Gabry (2017) | PSIS-LOO cross-validation, Pareto k-hat diagnostic |
-| Khemakhem et al. (2020) | iVAE identifiability theory (relevant to P2 Q3) |
-| Williams et al. (2017) | Information Theoretic MPC / MPPI — baseline for QuantumMPPIPlanner |
-| Feynman & Hibbs (1965) | Path integral formalism, partition function |
-| Marchenko & Pastur (1967) | Random Matrix Theory spectral law (P2) |
-| Buckmaster, T. et al. (2023–2026) | PINNs for unstable PDE blow-up, machine-precision gradient-normalized residual re-weighting, computer-assisted proofs via interval enclosures |
+| **Nguyen, N.-K. (2018)** | *Definitive Screening, Response Surface & Incomplete Block Designs*. VIASM Workshop |
+| **Jones & Nachtsheim (2011)** | 3-level Definitive Screening Designs (DSD) |
+| **Box & Wilson (1951)** | Central Composite Designs (CCD) & Response Surface Methodology |
+| **Box & Behnken (1960)** | Box-Behnken 3-level Designs (BBD) |
+| **Draper & Lin (1990)** | Small Composite Designs (SCD) |
+| **Morris, M.D. (2000)** | Augmented-Pair Designs (APD) |
+| **Tang, E. (2023)** | ℓ₂ importance sampling, QSVT dequantization, **Chebyshev/Clenshaw recursion** |
+| **Kalman, R.E. (1960)** | Classical linear filter baseline for Quantum Kalman |
+| **Buckmaster et al. (2023–2026)** | PINNs for unstable PDE blow-up, machine-precision gradient-normalized re-weighting |
 
 ---
 
-## 8. Phase VI — Open Research Directions
+## 8. Phase VI — Open Research Directions & Unified Synergy Matrix
 
-> **Status:** Open research directions (Section 8.6 **Completed**: Off-Policy Trajectory Evaluation & LLM Narrator integration).
+### 8.1 Synergy Matrix
 
-### 8.1 Real-Traffic Closing the Loop (Human-in-the-Loop Safety Gate)
+| Dimension | XAI-JEPA Component | XAI-DoE Component | Combined Synergy |
+|---|---|---|---|
+| **Representation** | Continuous Latent Space $z \in \mathbb{R}^D$ | Discrete Factorial Matrix $x \in \{-1, 0, +1\}^m$ | Discrete DoE Grids in Continuous Manifolds |
+| **Uncertainty** | Boltzmann Energy $V(z)$, Shannon Entropy | Block / Row-Column Variance Components | Joint Latent-Physical Variance Reduction |
+| **Optimization** | Quantum MPPI Planner | RSM Stationary Search ($x^* = -\frac{1}{2} B^{-1} b$) | Physics-Informed Experimental Policy Synthesis |
 
-Phase V simulates personas via MatrAIx. The next frontier is routing the winning feature candidate to **real users** and feeding the live ATT back as a training signal.
+### 8.2 Real-Traffic Closing the Loop & PINN Safety Gate (`PINNSafetyOracle`)
+Route winning feature candidates to real users. Gate World Model actions using `PINNSafetyOracle`: verify `ATT_lower_CI > 0` and Neumann contraction radius $r < 1$ around latent trajectories before deployment.
 
-**Open design questions:**
-- **Safety gate:** How do we prevent the World Model from proposing harmful experiments? Propose a `SafetyOracle` module that gates actions against a hard constraint: `ATT_lower_CI > 0` and `Bayesian Expected Loss < epsilon`.
-- **Conformal Prediction wrapper:** Wrap the APADecoder's `att_hat` with a conformal prediction interval calibrated on historical OmniStats results so the World Model has uncertainty-aware reward signals.
-- **Gradual rollout:** Integrate with feature flagging systems (LaunchDarkly, Unleash) to progressively ramp the winning feature from 1% → 10% → 50% with automated checkpoints at each stage.
+### 8.3 Causal MFG & Density-Level Feedback
+Fit `MFGCounterfactualFlow` on density $\rho(x, t)$ after each iteration and add Wasserstein density consistency $W_2(\hat{\rho}_{t+1}, \rho^*_{t+1})$ to the JEPA loss.
+
+### 8.4 Adaptive Concept Bank & Causal Experiment Graph
+Re-discover top-k predictive concept directions online after fine-tuning. Store experimental history as a Causal Knowledge Graph for graph neural network candidate proposal.
+
+---
+
+## 9. Autonomous Harness Engineering for Recursive Self-Improvement
+
+> **Inspired by:** Lilian Weng (2026). *Harness Engineering for Self-Improvement.* https://lilianweng.github.io/posts/2026-07-04-harness/  
+> **Status:** 🚀 Architecture Design — Defines how the OmniStats autonomous loop achieves Recursive Self-Improvement (RSI) by treating the harness (workflow + memory + sub-agents + evaluators) as an **optimizable artifact**, not a static script.
+
+---
+
+### 9.1 Core Principle: The Harness IS the Optimization Target
+
+Weng (2026) defines a **harness** as the layer between the raw model and the real world that determines *how* the model thinks, plans, calls tools, perceives context, stores artifacts, and evaluates its own results. In the OmniStats XAI-JEPA context:
+
+> The harness = `run_autonomous_loop.py` + `experiment_design.py` + all Stage 1–5 orchestration code + the DoE schedule generator + the PINN safety oracle + the sub-agent configs.
+
+**Key insight from Weng (2026):** The progression of what gets optimized is:
+```
+instruction prompts → structured context → workflow → harness code → optimizer code
+```
+
+OmniStats is currently at the **workflow** layer. The roadmap below moves it toward **self-optimizing harness code**.
+
+---
+
+### 9.2 Four Harness Design Patterns Applied to OmniStats
+
+#### Pattern 1: Goal-Oriented Workflow Automation
+
+Map the OmniStats 5-stage pipeline onto an explicit goal-directed loop:
 
 ```
-[Phase VI Autonomous Loop]
-  Sim (MatrAIx)  →  A/B Test  →  Best  →  Train JEPA  →  XAI
-       ↑                                                    │
-       └──── Real Traffic ATT (human-approved gate) ────────┘
+┌───────────────────────────────────────────────────────────────────┐
+│  OmniStats Autonomous Harness Loop (OAHL)                        │
+│                                                                   │
+│  GOAL: Maximize ATT lift on target metric within safety bounds   │
+│                                                                   │
+│  PLAN  ──► EXECUTE  ──► OBSERVE / TEST  ──► IMPROVE  ──► REPEAT │
+│  (DSD)    (Stage 2)    (QKF ATT + PINN)   (JEPA FT)             │
+│                                                  │               │
+│              ◄──── human-approved gate ──────────┘               │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**Implementation:** `omnistats/modules/harness/oahl_controller.py` *(new)*
+- Accepts a structured goal spec: `{target_metric, mde, safety_threshold, max_iterations}`.
+- Emits structured status records after every stage to the file system (not just print statements).
+
+#### Pattern 2: File System as Persistent Harness Memory
+
+Weng (2026) emphasizes that long-horizon agents must **never carry full workflow state in context**. Instead, durable state lives as files that outlast any single LLM call. Map this directly to OmniStats:
+
+| Artifact | Current State | Harness-Memory Upgrade |
+|---|---|---|
+| Experiment leaderboard | `leaderboard_iterN.csv` (flat) | `harness/memory/experiment_graph.json` — full provenance DAG |
+| ATT history | `autonomous_loop_log.csv` | `harness/memory/att_timeline.parquet` — queryable by QKF |
+| DoE schedule | Generated once, discarded | `harness/memory/doe_schedules/` — indexed by iteration & design type |
+| PINN safety oracle results | Not persisted | `harness/memory/safety_certificates/` — interval enclosures per rollout |
+| Failure traces | Print logs | `harness/memory/failure_traces/` — structured JSON per failure mode |
+
+**Key rule from Weng (2026):** *"If subagent outputs only live in transient context, they become obsolete. If stored as files, the model can recover after interruptions and reason over its own execution history."*
+
+#### Pattern 3: Sub-Agent Parallelism & Backend Job Management
+
+The harness spawns specialized sub-agents for isolated subtasks without polluting the main experiment context:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           OmniStats Harness — Sub-Agent Registry               │
+├──────────────────┬──────────────────────────────────────────────┤
+│ Sub-Agent        │ Role & Integration                           │
+├──────────────────┼──────────────────────────────────────────────┤
+│ service-agent    │ Google ADK LlmAgent (Gemini 2.0)             │
+│ (service-agent/) │ • Queries ChromaDB RAG for domain context    │
+│                  │ • Firecrawl MCP: scrapes competitor metrics  │
+│                  │ • Tavily MCP: real-time market benchmarks    │
+│                  │ → Feeds verified context into DSD factor     │
+│                  │   definitions before experiment launch       │
+├──────────────────┼──────────────────────────────────────────────┤
+│ growmetrics-     │ Manim + Edge-TTS video generation agent      │
+│ agent            │ • Receives winning experiment ATT report     │
+│ (growmetrics/)   │ • Generates educational animation of XAI    │
+│                  │   concept attribution (concept bank → video) │
+│                  │ • 4-gate quality validation + self-correction│
+│                  │ → Produces human-readable XAI briefing video │
+├──────────────────┼──────────────────────────────────────────────┤
+│ jepa-trainer     │ Fine-tunes JEPA world model on winning       │
+│ (eb_jepa/)       │ population embeddings from Stage 4 causal   │
+│                  │ evaluation; updates Concept Bank             │
+├──────────────────┼──────────────────────────────────────────────┤
+│ doe-optimizer    │ Runs SwapPermuteSOD / DSD generation for the │
+│ (modules/doe/)   │ next iteration's experimental design based   │
+│                  │ on RSM stationary point x* from current iter │
+└──────────────────┴──────────────────────────────────────────────┘
+```
+
+**Implementation:** `omnistats/modules/harness/subagent_manager.py` *(new)*
+- `launch_subagent(name, task_spec, output_dir)` — spawns job, writes PID + spec to `harness/jobs/`.
+- `poll_subagent(job_id)` — checks completion by reading `output_dir/status.json`.
+- `merge_results(job_ids)` — aggregates sub-agent outputs into main harness memory.
+
+#### Pattern 4: Agentic Context Engineering (ACE / MCE)
+
+Adapting Weng (2026) ACE (Zhang et al. 2025) and MCE (Ye et al. 2026) to OmniStats:
+
+```python
+# harness/context_playbook.json — structured, itemized, de-duplicated
+{
+  "experiment_goal": "Maximize checkout conversion ATT > 0.02",
+  "active_concepts": ["Price Sensitivity", "Trust Signal", "Urgency"],
+  "safety_constraints": ["ATT_lower_CI > 0", "pinn_radius < 1.0"],
+  "doe_strategy": "DSD(m=6) → Alpha(v=8,b=4) → CCD",
+  "failure_patterns": [
+    {"id": "FP-001", "pattern": "DSD saddle point", "fix": "ridge_analysis()"},
+    {"id": "FP-002", "pattern": "PINN radius > 1", "fix": "reduce beta annealing"}
+  ],
+  "skill_history": [...]   // MCE outer-loop skill evolution log
+}
+```
+
+**Key rule:** The curator updates `context_playbook.json` incrementally with `(identifier, description)` bullets — it never rewrites the full blob. Prevents context collapse between long-horizon iterations.
+
+---
+
+### 9.3 Self-Harness Evolution Loop (Weng Pattern — Self-Harness, Zhang et al. 2026)
+
+Adapt the **weakness mining → harness proposal → validation** loop to OmniStats:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│            OmniStats Self-Harness Evolution Loop                    │
+└──────────────────────────────────────────────────────────────────────┘
+
+Step 1: WEAKNESS MINING
+  • Run N=k iterations of the autonomous loop
+  • Collect failure traces: {stage_failed, root_cause, causal_status}
+  • Cluster failure patterns:
+      - "DSD identifies non-significant factors" → DoE hyperparameter issue
+      - "PINN oracle rejects all rollouts"       → β schedule too aggressive
+      - "RSM stationary point is saddle"         → insufficient axial runs
+      - "Quantum Kalman ATT CI too wide"         → pre-period too short
+      - "service-agent RAG returns empty"        → ChromaDB index stale
+
+Step 2: HARNESS PROPOSAL (bounded edits)
+  • Propose targeted harness code edits, each grounded by a failure record
+  • Edits scoped to: `oahl_controller.py`, `doe/definitive_screening.py`,
+    `timeseries/quantum_kalman.py`, `simulation/pinn_safety_oracle.py`
+  • Read-only: verifier logic, base JEPA model weights, `run_autonomous_loop.py` main
+
+Step 3: VALIDATION (regression testing)
+  • Held-in: D_in  — does the specific failure pattern resolve?
+  • Held-out: D_out — does existing passing behavior regress?
+  • Accept: merge edit → h_{t+1}
+  • Reject: log in harness/memory/rejected_edits.json without modifying harness
+```
+
+**Implementation:** `omnistats/modules/harness/self_harness_evolver.py` *(new)*
+
+**Permission boundaries (critical — Weng 2026 caution):**
+- The evolver **cannot** disable the PINN safety oracle.
+- The evolver **cannot** swap the base JEPA model.
+- The evolver **cannot** modify the human-in-the-loop ATT approval gate.
+- All accepted edits are versioned in `harness/versions/h_<timestamp>/`.
+
+---
+
+### 9.4 AlphaEvolve / Darwin Gödel Machine Pattern for DoE Workflow Search
+
+Adapting Novikov et al. (2025) AlphaEvolve and Zhang et al. (2025) Darwin Gödel Machine to automatically discover optimal DoE-JEPA workflow configurations:
+
+```python
+# EVOLVE-BLOCK-START: doe_workflow_config
+DOE_WORKFLOW = {
+    "screening_design": "DSD",      # candidates: DSD, PB, FF
+    "blocking_design":  "Alpha",    # candidates: Alpha, RCD, RRCD, CIBD
+    "rsm_design":       "CCD",      # candidates: CCD, BBD, SCD, APD
+    "sequential_stages": 3,
+    "beta_schedule":    "cosine",   # candidates: cosine, linear, step
+    "mppi_horizon":     5,
+}
+# EVOLVE-BLOCK-END
+```
+
+The meta-agent evaluates each workflow config by comparing `WAIC` scores across DoE designs and selects configurations on the **Pareto frontier** of {ATT lift, run efficiency, safety certificate pass rate}.
+
+**Implementation:** `omnistats/modules/harness/workflow_evolver.py` *(new)*
+
+---
+
+### 9.5 service-agent Integration Specification
+
+[`service-agent/agent.py`](../service-agent/agent.py) is an **ADK LlmAgent** (Gemini 2.0 Flash) with:
+- **Google Drive MCP** — indexes domain PDFs (GDPR, compliance, benchmarks).
+- **Firecrawl MCP** — scrapes JS-rendered competitor pages & market reports.
+- **Tavily MCP** — real-time search for updated market statistics.
+- **ChromaDB RAG** — vector retrieval over all indexed documents.
+
+**Integration into the OmniStats Harness:**
+
+```python
+# omnistats/modules/harness/service_agent_bridge.py  (new)
+
+class ServiceAgentBridge:
+    """
+    Calls the service-agent's RAG tool to fetch domain context
+    before DSD factor specification, ensuring experiment factors
+    are grounded in verified market intelligence rather than guesswork.
+    """
+
+    def enrich_doe_factors(self, candidate_factors: list[str]) -> dict:
+        """
+        For each candidate DSD factor, query service-agent ChromaDB for:
+        - Historical benchmark values (baseline conversion, revenue/user)
+        - Regulatory constraints (GDPR relevance flags)
+        - Competitor A/B test patterns from scraped reports
+        Returns enriched factor spec with recommended level boundaries.
+        """
+        ...
+
+    def fetch_pre_experiment_context(self, metric: str) -> dict:
+        """
+        Returns verified baseline_mean, baseline_std, and confounders
+        for the target metric — fed into quantum_kalman.estimate_att()
+        pre-period calibration.
+        """
+        ...
+```
+
+**Harness memory bridge:** After each experiment iteration, service-agent indexes the `apa_report_iterN.md` APA reports back into ChromaDB — creating a **self-growing RAG knowledge base** of past experiment results that informs future DoE factor specifications.
+
+---
+
+### 9.6 growmetrics Integration Specification
+
+[`growmetrics/`](../growmetrics/) is a **Manim + Edge-TTS AI video generation service** with:
+- 4-stage quality gate self-correction loop.
+- Self-correcting fallback router for failed Manim codegen.
+- Planned A2A Protocol endpoint (`/a2a/v1/tasks`) for harness delegation.
+
+**Integration into the OmniStats Harness:**
+
+```python
+# omnistats/modules/harness/growmetrics_bridge.py  (new)
+
+class GrowmetricsBridge:
+    """
+    Delegates XAI explanation video generation to growmetrics after
+    each autonomous loop iteration completes, for human-readable
+    briefings on winning concept attributions.
+    """
+
+    def generate_xai_briefing(
+        self,
+        concept_attributions: dict,  # from bayesian_inverse_score()
+        att_result: dict,            # from QuantumKalmanFilter.estimate_att()
+        rsm_optimum: dict,           # from ResponseSurfaceBuilder.find_stationary_point()
+        output_path: str,
+    ) -> str:
+        """
+        Sends a structured scene spec to growmetrics:
+        - Scene 1: Energy landscape V(z) with winning concept highlighted
+        - Scene 2: RSM response surface contour with x* marked
+        - Scene 3: ATT confidence interval bar chart (Quantum Kalman)
+        Returns path to generated .mp4 briefing video.
+        """
+        ...
+```
+
+**Planned A2A integration (growmetrics Phase 2 roadmap):**
+Once growmetrics exposes `/a2a/v1/tasks`, `oahl_controller.py` will fire-and-forget video generation jobs asynchronously between iterations, so human reviewers have a video briefing ready when approving the next iteration's safety gate.
+
+---
+
+### 9.7 Known Failure Modes & Harness Safeguards
+
+Adapting Trehan & Chopra (2026) and Weng (2026) failure taxonomies to OmniStats:
+
+| Failure Mode | OmniStats Manifestation | Harness Safeguard |
+|---|---|---|
+| **Training-data default bias** | JEPA predictor anchors to dominant cohort embedding | Adaptive Concept Bank re-discovery after each fine-tune step |
+| **Implementation drift** | RSM fit silently falls back to linear model under curvature | `verify_dsd_properties()` assertion + WAIC model comparison forced |
+| **Memory & context degradation** | ATT history lost between iterations | File-system harness memory: `harness/memory/att_timeline.parquet` |
+| **Over-optimism / p-hacking** | World Model declares lift on noisy pre-period data | PINN Safety Oracle mandatory: `ATT_lower_CI > 0` + Neumann bound $r < 1$ |
+| **Reward hacking** | Agent disables safety oracle to pass gate | Safety oracle and verifier are **read-only** surfaces in harness evolver |
+| **Diversity collapse** | Evolutionary DoE search converges to CCD always | ShinkaEvolve cosine similarity rejection: reject configs too similar to pool |
+| **Weak evaluator** | WAIC scores for all causal models within noise | Expand `compare_models()` to include conformal prediction calibration |
+
+---
+
+### 9.8 Harness File Layout
+
+```
+omnistats/
+├── modules/
+│   └── harness/                          # NEW: Harness Engineering Layer
+│       ├── oahl_controller.py            # Goal-directed autonomous loop orchestrator
+│       ├── subagent_manager.py           # Sub-agent launch, poll, merge
+│       ├── service_agent_bridge.py       # ADK RAG enrichment for DoE factors
+│       ├── growmetrics_bridge.py         # A2A video briefing delegation
+│       ├── self_harness_evolver.py       # Weakness mining → harness edit → validate
+│       └── workflow_evolver.py           # AlphaEvolve-style DoE workflow search
+│
+├── harness/                              # NEW: Persistent Harness Memory (file-system)
+│   ├── memory/
+│   │   ├── context_playbook.json         # ACE/MCE structured context (itemized bullets)
+│   │   ├── experiment_graph.json         # Provenance DAG of all experiment iterations
+│   │   ├── att_timeline.parquet          # Queryable ATT history for QKF calibration
+│   │   ├── doe_schedules/               # Per-iteration DoE layouts
+│   │   ├── safety_certificates/         # PINN interval enclosures per rollout
+│   │   └── failure_traces/             # Structured JSON failure records
+│   ├── jobs/                            # Sub-agent job specs & status files
+│   ├── versions/                        # Harness edit version history
+│   └── rejected_edits.json             # Logged but not applied harness proposals
 ```
 
 ---
 
-### 8.2 Multi-Objective ATT Pareto Frontier
+### 9.9 Reference Index — Harness Engineering
 
-The current cost function is a scalar weighted sum:
-
-$$Cost = -w_{att} \cdot ATT + w_{risk} \cdot Risk + w_{disp} \cdot Disparity$$
-
-**Open direction:** Replace with a **Pareto front optimizer** (NSGA-II or MOEA/D) that maintains a population of Pareto-optimal experiment designs — allowing decision-makers to pick their own trade-off point between ATT lift, risk tolerance, and fairness constraints at deployment time.
-
-**Files to create:**
-- `omnistats/modules/optimization/pareto_cem.py` — Multi-objective CEM with Pareto front tracking
-- `omnistats/modules/optimization/fairness_constraint.py` — Subgroup disparity constraint (DR-OLS ATT parity)
-
----
-
-### 8.3 Causal MFG Closing the Loop (Density-Level Feedback)
-
-Phases I–V operate on **sample-level** ATT estimates. Mean Field Game (MFG) extensions in Phase 2.3 (`mfg_did.py`, `mfg_iv.py`, `mfg_rdd.py`) open a path to **density-level** causal inference:
-
-**Open direction:** After each autonomous iteration, fit a `MFGCounterfactualFlow` on the winning population's density $\rho(x, t)$ and use it as a regularizer for the JEPA predictor's transition kernel — enforcing that the World Model's imagined counterfactuals are consistent with the observed equilibrium density.
-
-**Key equation to implement:**
-$$\min_{\theta} \underbrace{\mathcal{L}_{JEPA}}_{\text{latent prediction}} + \lambda \underbrace{W_2(\hat{\rho}_{t+1}, \rho^*_{t+1})}_{\text{Wasserstein density consistency}}$$
-
----
-
-### 8.4 Adaptive Concept Bank (Online TCAV)
-
-The current TCAV implementation uses a **fixed** concept bank defined by demographic quantiles (High Income, Risk Averse, etc.). After each autonomous loop iteration, the model's latent geometry shifts as JEPA is fine-tuned.
-
-**Open direction:** Build an **online concept bank** that automatically re-discovers the top-k most predictive directions in latent space after each JEPA fine-tuning step using:
-1. `PCA(n_components=k)` on the delta-embeddings between winning and losing feature populations.
-2. Cluster the PC directions into semantically coherent concepts via `bayesian_inverse_score()` against a lexicon of known demographic features.
-3. Replace the TCAV fixed concept set with these discovered directions for the next iteration.
-
-**File to create:** `omnistats/modules/simulation/adaptive_concept_bank.py`
-
----
-
-### 8.5 Experiment Graph Memory (Episodic Causal Replay)
-
-Each autonomous loop iteration produces a `leaderboard_iterN.csv` and `autonomous_loop_log.csv`, but these are treated as flat logs. A richer episodic memory would enable:
-
-**Open direction:** Build a **Causal Experiment Knowledge Graph** where:
-- Each **node** = an experiment (feature candidate) with attributes: ATT, SE, personas tested, XAI concept scores.
-- Each **edge** = "parent experiment that proposed this one" (provenance chain).
-- New feature candidates are proposed by a **graph neural network** that encodes the full experiment history and predicts which unexplored feature directions maximize expected ATT gain.
-
-**Connects to:** `datastructure/story_teller.py` (existing graph narration engine) and `MLModel/AIModel/run/mst_msa_interaction.py` (Kruskal MST + Multi-Perturbation Shapley Analysis for identifying the most structurally important experiment nodes in the history graph).
-
----
-
-### 8.6 PINN Residual Re-Weighting & Computer-Assisted Trajectory Verification (`PINNSafetyOracle`)
-
-**Open direction:** Integrate Tristan Buckmaster's high-precision PINN residual re-weighting and computer-assisted proof (CAP) enclosures into the autonomous loop safety pipeline:
-
-1. **Gradient-Normalized Residual Re-Weighting:** Train `LatentODE_JEPA` using adaptive loss weights inverse to residual gradient norms:
-   $$\mathcal{L}_{ODE} = \sum_{k} w_k \| \dot{z}_k - f_\theta(z_k, t_k) \|^2 \qquad w_k = \frac{1}{\| \nabla_z \mathcal{R}_k \| + \epsilon}$$
-   This resolves sharp gradient transitions and prevents trajectory drift across long prediction horizons.
-
-2. **Computer-Assisted Trajectory Proofs (`PINNSafetyOracle`):** Before routing feature candidates to real users (Section 8.1), construct an interval enclosure $[z_{lower}(t), z_{upper}(t)]$ around the imagined trajectory. Verify that the contraction mapping radius $r < 1$ (Neumann series bound) holds, proving mathematically that counterfactual rollouts will not explode or enter unsafe latent regions.
-
-**File to create:** `omnistats/modules/simulation/pinn_safety_oracle.py`
-
-
-
+| Source | Key Contribution |
+|---|---|
+| **Weng, L. (2026)** | *Harness Engineering for Self-Improvement.* Comprehensive RSI harness taxonomy |
+| **Zhang et al. (2026)** | Self-Harness: weakness mining → bounded proposal → validation loop |
+| **Lin et al. (2026)** | AHE: component/experience/decision observability triad for harness evolution |
+| **Novikov et al. (2025)** | AlphaEvolve: evolutionary search with `# EVOLVE-BLOCK` markers & meta-prompt co-evolution |
+| **Zhang et al. (2025)** | Darwin Gödel Machine: LLM coding agent modifies its own harness codebase |
+| **Zhang et al. (2025)** | ACE: Agentic Context Engineering — generator, reflector, curator pattern |
+| **Ye et al. (2026)** | MCE: Meta Context Engineering — bi-level skill evolution for context management |
+| **Zelikman et al. (2023)** | STOP: Self-Taught Optimizer — recursive scaffolding improvement ($I_t = I_{t-1}(\hat{u}, I_{t-1}; M)$) |
+| **Hu et al. (2025)** | ADAS: Automated Design of Agentic Systems — meta-agent proposes workflows in code |
+| **Trehan & Chopra (2026)** | Six failure modes in LLM auto-research (drift, over-optimism, memory degradation) |
