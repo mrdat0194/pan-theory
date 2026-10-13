@@ -24,6 +24,6 @@ quickda==0.2.2
 requests==2.24.0
 scikit-learn
 seaborn
-urllib3==1.25.9
+urllib3==2.8.0
 uvloop
 ydata-profiling==4.18.4
